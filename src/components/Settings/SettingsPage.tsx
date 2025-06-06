@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import { Palette, Save, RotateCcw, Upload, FileSpreadsheet } from 'lucide-react';
+import { Palette, Save, RotateCcw, Upload, FileSpreadsheet, Image } from 'lucide-react';
+import BackgroundRemover from '@/components/BackgroundRemover/BackgroundRemover';
 
 interface ColorSettings {
   primary: string;
@@ -51,7 +52,6 @@ const SettingsPage: React.FC = () => {
 
       if (data?.tema_cores) {
         try {
-          // Parse do JSON se for string, ou use diretamente se já for objeto
           const colors = typeof data.tema_cores === 'string' 
             ? JSON.parse(data.tema_cores) 
             : data.tema_cores;
@@ -75,7 +75,6 @@ const SettingsPage: React.FC = () => {
     console.log('Aplicando cores:', colors);
     const root = document.documentElement;
     
-    // Converte hex para HSL para usar com CSS variables
     const hexToHsl = (hex: string) => {
       const r = parseInt(hex.slice(1, 3), 16) / 255;
       const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -99,13 +98,11 @@ const SettingsPage: React.FC = () => {
       return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
     };
 
-    // Aplicar as cores no CSS
     root.style.setProperty('--primary', hexToHsl(colors.primary));
     root.style.setProperty('--secondary', hexToHsl(colors.secondary));
     root.style.setProperty('--accent', hexToHsl(colors.accent));
     root.style.setProperty('--background', hexToHsl(colors.background));
     
-    // Aplicar cor de fundo diretamente no body
     document.body.style.backgroundColor = colors.background;
   };
 
@@ -123,10 +120,8 @@ const SettingsPage: React.FC = () => {
     console.log('Salvando configurações:', colorSettings);
     
     try {
-      // Converte para JSON string para garantir compatibilidade
       const colorsJson = JSON.stringify(colorSettings);
       
-      // Primeiro, verifica se já existe uma configuração para o usuário
       const { data: existingConfig } = await supabase
         .from('configuracoes')
         .select('id')
@@ -207,7 +202,6 @@ const SettingsPage: React.FC = () => {
       [colorType]: value
     };
     setColorSettings(newColors);
-    // Aplica as cores em tempo real para pré-visualização
     applyColors(newColors);
   };
 
@@ -221,6 +215,7 @@ const SettingsPage: React.FC = () => {
       <Tabs defaultValue="colors" className="w-full">
         <TabsList>
           <TabsTrigger value="colors">Personalização de Cores</TabsTrigger>
+          <TabsTrigger value="image">Edição de Imagens</TabsTrigger>
           <TabsTrigger value="import">Importação de Dados</TabsTrigger>
         </TabsList>
 
@@ -353,6 +348,20 @@ const SettingsPage: React.FC = () => {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="image">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Image className="h-5 w-5" />
+                Edição de Imagens
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BackgroundRemover />
             </CardContent>
           </Card>
         </TabsContent>
