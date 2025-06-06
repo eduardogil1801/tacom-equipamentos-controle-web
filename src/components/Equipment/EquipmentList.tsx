@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash } from 'lucide-react';
+import { Plus, Search, Edit, Trash, Move } from 'lucide-react';
 import EquipmentForm from './EquipmentForm';
+import EquipmentMovement from './EquipmentMovement';
 import BulkImportDialog from './BulkImportDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -34,8 +36,10 @@ const EquipmentList: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showMovement, setShowMovement] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [filters, setFilters] = useState({
     numero_serie: '',
     company: '',
@@ -93,6 +97,11 @@ const EquipmentList: React.FC = () => {
     setEditingEquipment(null);
   };
 
+  const handleMovementSuccess = () => {
+    loadData();
+    setShowMovement(false);
+  };
+
   const handleDeleteEquipment = async (id: string) => {
     try {
       const { error } = await supabase
@@ -116,6 +125,18 @@ const EquipmentList: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    const newTimeout = setTimeout(() => {
+      setFilters(prev => ({ ...prev, [field]: value }));
+    }, 500);
+
+    setSearchTimeout(newTimeout);
   };
 
   const filteredEquipments = equipments.filter(equipment => {
@@ -151,6 +172,15 @@ const EquipmentList: React.FC = () => {
     );
   }
 
+  if (showMovement) {
+    return (
+      <EquipmentMovement
+        onCancel={() => setShowMovement(false)}
+        onSuccess={handleMovementSuccess}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -163,13 +193,23 @@ const EquipmentList: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Controle de Equipamentos</h1>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="bg-primary hover:bg-primary/90 flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar Equipamento
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowMovement(true)}
+            className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Move className="h-4 w-4" />
+            Movimentação
+          </Button>
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar Equipamento
+          </Button>
+          <BulkImportDialog companies={companies} onImportComplete={loadData} />
+        </div>
       </div>
 
       {/* Filters */}
@@ -187,8 +227,7 @@ const EquipmentList: React.FC = () => {
               <Input
                 id="serialFilter"
                 placeholder="Filtrar por série..."
-                value={filters.numero_serie}
-                onChange={(e) => setFilters({...filters, numero_serie: e.target.value})}
+                onChange={(e) => handleFilterChange('numero_serie', e.target.value)}
               />
             </div>
             <div>
@@ -196,8 +235,7 @@ const EquipmentList: React.FC = () => {
               <Input
                 id="tipoFilter"
                 placeholder="Filtrar por tipo..."
-                value={filters.tipo}
-                onChange={(e) => setFilters({...filters, tipo: e.target.value})}
+                onChange={(e) => handleFilterChange('tipo', e.target.value)}
               />
             </div>
             <div>
@@ -205,8 +243,7 @@ const EquipmentList: React.FC = () => {
               <Input
                 id="modeloFilter"
                 placeholder="Filtrar por modelo..."
-                value={filters.modelo}
-                onChange={(e) => setFilters({...filters, modelo: e.target.value})}
+                onChange={(e) => handleFilterChange('modelo', e.target.value)}
               />
             </div>
             <div>
