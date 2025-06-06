@@ -45,17 +45,16 @@ const Header: React.FC<HeaderProps> = ({
     <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-6">
-            {/* Logo and Title */}
-            <div className="flex items-center space-x-3">
-              <img 
-                src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" 
-                alt="Logo" 
-                className="h-10 w-auto" 
-              />
-              <div className="flex flex-col">
-                <span className="text-lg font-bold text-gray-800 leading-tight">Controle de Equipamentos</span>
-                <span className="text-xs text-muted-foreground font-medium">Sistema de Gestão</span>
+          <div className="flex items-center space-x-8">
+            {/* Logo only - modern and clean */}
+            <div className="flex items-center">
+              <div className="relative group cursor-pointer">
+                <img 
+                  src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" 
+                  alt="Logo" 
+                  className="h-14 w-auto transition-all duration-300 group-hover:scale-105 drop-shadow-md" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
             </div>
             
