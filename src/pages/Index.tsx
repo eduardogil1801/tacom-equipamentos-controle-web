@@ -18,7 +18,7 @@ import EquipmentHistoryReport from '@/components/Reports/EquipmentHistoryReport'
 const Index = () => {
   const { user } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('equipments'); // Mudança aqui: equipments como padrão
 
   if (!user) {
     return (
@@ -55,7 +55,7 @@ const Index = () => {
       case 'protocol':
         return <ProtocolPage />;
       default:
-        return <Dashboard />;
+        return <EquipmentList />; // Mudança aqui: equipments como fallback
     }
   };
 
