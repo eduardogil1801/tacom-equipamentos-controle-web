@@ -225,7 +225,7 @@ const EquipmentStatusReport: React.FC = () => {
                   <SelectItem value="">Todos os status</SelectItem>
                   <SelectItem value="available">Disponível</SelectItem>
                   <SelectItem value="out">Retirado</SelectItem>
-                  <SelectItem value="long_term">Longo Prazo (>90 dias)</SelectItem>
+                  <SelectItem value="long_term">Longo Prazo ({'>'}90 dias)</SelectItem>
                   <SelectItem value="recent">Recente (≤7 dias)</SelectItem>
                 </SelectContent>
               </Select>
