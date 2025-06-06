@@ -163,19 +163,13 @@ const EquipmentList: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Controle de Equipamentos</h1>
-        <div className="flex gap-2">
-          <BulkImportDialog 
-            companies={companies} 
-            onImportComplete={loadData}
-          />
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Adicionar Equipamento
-          </Button>
-        </div>
+        <Button
+          onClick={() => setShowForm(true)}
+          className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Adicionar Equipamento
+        </Button>
       </div>
 
       {/* Filters */}
