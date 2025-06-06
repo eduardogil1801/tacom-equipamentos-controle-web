@@ -5,77 +5,120 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Search, Edit, Trash } from 'lucide-react';
-import { Equipment, Company } from '@/types';
 import EquipmentForm from './EquipmentForm';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface Equipment {
+  id: string;
+  tipo: string;
+  numero_serie: string;
+  data_entrada: string;
+  data_saida?: string;
+  id_empresa: string;
+  empresas?: {
+    name: string;
+  };
+}
+
+interface Company {
+  id: string;
+  name: string;
+}
 
 const EquipmentList: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    serialNumber: '',
+    numero_serie: '',
     company: '',
-    entryDate: '',
-    exitDate: ''
+    data_entrada: '',
+    data_saida: ''
   });
 
   useEffect(() => {
-    // Load data from localStorage
-    const savedEquipments = localStorage.getItem('tacom-equipments');
-    const savedCompanies = localStorage.getItem('tacom-companies');
-    
-    if (savedEquipments) {
-      setEquipments(JSON.parse(savedEquipments));
-    }
-    
-    if (savedCompanies) {
-      setCompanies(JSON.parse(savedCompanies));
-    } else {
-      // Initialize with some default companies
-      const defaultCompanies = [
-        { id: '1', name: 'Empresa Demo 1', cnpj: '12.345.678/0001-90', contact: '(51) 3333-4444' },
-        { id: '2', name: 'Empresa Demo 2', cnpj: '98.765.432/0001-10', contact: '(51) 9999-8888' }
-      ];
-      setCompanies(defaultCompanies);
-      localStorage.setItem('tacom-companies', JSON.stringify(defaultCompanies));
-    }
+    loadData();
   }, []);
 
-  const handleSaveEquipment = (equipment: Omit<Equipment, 'id'>) => {
-    const newEquipment = {
-      ...equipment,
-      id: editingEquipment?.id || Date.now().toString()
-    };
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load companies
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('empresas')
+        .select('*')
+        .order('name');
 
-    let updatedEquipments;
-    if (editingEquipment) {
-      updatedEquipments = equipments.map(eq => 
-        eq.id === editingEquipment.id ? newEquipment : eq
-      );
-    } else {
-      updatedEquipments = [...equipments, newEquipment];
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
+
+      // Load equipments with company names
+      const { data: equipmentsData, error: equipmentsError } = await supabase
+        .from('equipamentos')
+        .select(`
+          *,
+          empresas (
+            name
+          )
+        `)
+        .order('data_entrada', { ascending: false });
+
+      if (equipmentsError) throw equipmentsError;
+      setEquipments(equipmentsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setEquipments(updatedEquipments);
-    localStorage.setItem('tacom-equipments', JSON.stringify(updatedEquipments));
+  const handleSaveEquipment = () => {
+    loadData();
     setShowForm(false);
     setEditingEquipment(null);
   };
 
-  const handleDeleteEquipment = (id: string) => {
-    const updatedEquipments = equipments.filter(eq => eq.id !== id);
-    setEquipments(updatedEquipments);
-    localStorage.setItem('tacom-equipments', JSON.stringify(updatedEquipments));
+  const handleDeleteEquipment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('equipamentos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Equipamento excluído com sucesso!",
+      });
+      
+      loadData();
+    } catch (error) {
+      console.error('Error deleting equipment:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir equipamento",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredEquipments = equipments.filter(equipment => {
-    const company = companies.find(c => c.id === equipment.companyId);
+    const company = equipment.empresas;
     return (
-      equipment.serialNumber.toLowerCase().includes(filters.serialNumber.toLowerCase()) &&
+      equipment.numero_serie.toLowerCase().includes(filters.numero_serie.toLowerCase()) &&
       (company?.name.toLowerCase().includes(filters.company.toLowerCase()) || !filters.company) &&
-      (equipment.entryDate.includes(filters.entryDate) || !filters.entryDate) &&
-      (equipment.exitDate?.includes(filters.exitDate) || !filters.exitDate)
+      (equipment.data_entrada.includes(filters.data_entrada) || !filters.data_entrada) &&
+      (equipment.data_saida?.includes(filters.data_saida) || !filters.data_saida)
     );
   });
 
@@ -90,6 +133,14 @@ const EquipmentList: React.FC = () => {
           setEditingEquipment(null);
         }}
       />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-lg">Carregando...</div>
+      </div>
     );
   }
 
@@ -121,8 +172,8 @@ const EquipmentList: React.FC = () => {
               <Input
                 id="serialFilter"
                 placeholder="Filtrar por série..."
-                value={filters.serialNumber}
-                onChange={(e) => setFilters({...filters, serialNumber: e.target.value})}
+                value={filters.numero_serie}
+                onChange={(e) => setFilters({...filters, numero_serie: e.target.value})}
               />
             </div>
             <div>
@@ -139,8 +190,8 @@ const EquipmentList: React.FC = () => {
               <Input
                 id="entryDateFilter"
                 type="date"
-                value={filters.entryDate}
-                onChange={(e) => setFilters({...filters, entryDate: e.target.value})}
+                value={filters.data_entrada}
+                onChange={(e) => setFilters({...filters, data_entrada: e.target.value})}
               />
             </div>
             <div>
@@ -148,8 +199,8 @@ const EquipmentList: React.FC = () => {
               <Input
                 id="exitDateFilter"
                 type="date"
-                value={filters.exitDate}
-                onChange={(e) => setFilters({...filters, exitDate: e.target.value})}
+                value={filters.data_saida}
+                onChange={(e) => setFilters({...filters, data_saida: e.target.value})}
               />
             </div>
           </div>
@@ -176,51 +227,48 @@ const EquipmentList: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEquipments.map(equipment => {
-                  const company = companies.find(c => c.id === equipment.companyId);
-                  return (
-                    <tr key={equipment.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">{equipment.type}</td>
-                      <td className="p-2 font-mono">{equipment.serialNumber}</td>
-                      <td className="p-2">{company?.name || 'N/A'}</td>
-                      <td className="p-2">{new Date(equipment.entryDate).toLocaleDateString('pt-BR')}</td>
-                      <td className="p-2">
-                        {equipment.exitDate ? new Date(equipment.exitDate).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                      <td className="p-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          equipment.exitDate 
-                            ? 'bg-gray-100 text-gray-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {equipment.exitDate ? 'Retirado' : 'Em Estoque'}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingEquipment(equipment);
-                              setShowForm(true);
-                            }}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteEquipment(equipment.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredEquipments.map(equipment => (
+                  <tr key={equipment.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{equipment.tipo}</td>
+                    <td className="p-2 font-mono">{equipment.numero_serie}</td>
+                    <td className="p-2">{equipment.empresas?.name || 'N/A'}</td>
+                    <td className="p-2">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-2">
+                      {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
+                    </td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        equipment.data_saida 
+                          ? 'bg-gray-100 text-gray-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {equipment.data_saida ? 'Retirado' : 'Em Estoque'}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingEquipment(equipment);
+                            setShowForm(true);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteEquipment(equipment.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
             {filteredEquipments.length === 0 && (

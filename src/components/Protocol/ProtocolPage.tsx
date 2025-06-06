@@ -115,83 +115,98 @@ const ProtocolPage: React.FC = () => {
       return;
     }
 
-    // Create PDF
-    const doc = new jsPDF();
-    
-    // Set font
-    doc.setFont('helvetica');
-    
-    // Title
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`PROTOCOLO DE ${protocolType.toUpperCase()} DE EQUIPAMENTO`, 20, 30);
-    
-    // Line separator
-    doc.setLineWidth(0.5);
-    doc.line(20, 35, 190, 35);
-    
-    // Company data
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DADOS DA EMPRESA:', 20, 50);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Nome: ${company.name}`, 20, 60);
-    doc.text(`CNPJ: ${company.cnpj || 'N/A'}`, 20, 70);
-    doc.text(`Contato: ${company.contact || 'N/A'}`, 20, 80);
-    
-    // Equipment data
-    doc.setFont('helvetica', 'bold');
-    doc.text('DADOS DO EQUIPAMENTO:', 20, 100);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Tipo: ${equipment.tipo}`, 20, 110);
-    doc.text(`Número de Série: ${equipment.numero_serie}`, 20, 120);
-    doc.text(`Data de Entrada: ${new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}`, 20, 130);
-    doc.text(`Status: Em Estoque`, 20, 140);
-    
-    // Protocol data
-    doc.setFont('helvetica', 'bold');
-    doc.text('DADOS DO PROTOCOLO:', 20, 160);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Tipo: ${protocolType === 'entrada' ? 'Entrada' : 'Saída'}`, 20, 170);
-    doc.text(`Data do Protocolo: ${new Date(selectedDate).toLocaleDateString('pt-BR')}`, 20, 180);
-    doc.text(`Hora de Geração: ${new Date().toLocaleTimeString('pt-BR')}`, 20, 190);
-    
-    // Line separator
-    doc.line(20, 200, 190, 200);
-    
-    // Signatures
-    doc.setFont('helvetica', 'bold');
-    doc.text(`RESPONSÁVEL PELA ${protocolType.toUpperCase()}:`, 20, 220);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text('Nome: _________________________________________________', 20, 235);
-    doc.text('Assinatura: ___________________________________________', 20, 250);
-    doc.text('Data: _________________________________________________', 20, 265);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESPONSÁVEL PELA TACOM:', 20, 285);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.text('Nome: _________________________________________________', 20, 300);
-    doc.text('Assinatura: ___________________________________________', 20, 315);
-    doc.text('Data: _________________________________________________', 20, 330);
-    
-    // Footer
-    doc.line(20, 340, 190, 340);
-    doc.setFontSize(10);
-    doc.text('Este protocolo foi gerado automaticamente pelo Sistema TACOM', 20, 350);
-    doc.text(new Date().toLocaleString('pt-BR'), 20, 360);
-    
-    // Save PDF
-    doc.save(`protocolo_${protocolType}_${equipment.numero_serie}_${selectedDate}.pdf`);
+    try {
+      // Create PDF with proper encoding
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Set font
+      doc.setFont('helvetica');
+      
+      // Title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      const title = `PROTOCOLO DE ${protocolType.toUpperCase()} DE EQUIPAMENTO`;
+      doc.text(title, 20, 30);
+      
+      // Line separator
+      doc.setLineWidth(0.5);
+      doc.line(20, 35, 190, 35);
+      
+      // Company data
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DA EMPRESA:', 20, 50);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Nome: ${company.name}`, 20, 60);
+      doc.text(`CNPJ: ${company.cnpj || 'N/A'}`, 20, 70);
+      doc.text(`Contato: ${company.contact || 'N/A'}`, 20, 80);
+      
+      // Equipment data
+      doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DO EQUIPAMENTO:', 20, 100);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tipo: ${equipment.tipo}`, 20, 110);
+      doc.text(`Numero de Serie: ${equipment.numero_serie}`, 20, 120);
+      doc.text(`Data de Entrada: ${new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}`, 20, 130);
+      doc.text('Status: Em Estoque', 20, 140);
+      
+      // Protocol data
+      doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DO PROTOCOLO:', 20, 160);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Tipo: ${protocolType === 'entrada' ? 'Entrada' : 'Saida'}`, 20, 170);
+      doc.text(`Data do Protocolo: ${new Date(selectedDate).toLocaleDateString('pt-BR')}`, 20, 180);
+      doc.text(`Hora de Geracao: ${new Date().toLocaleTimeString('pt-BR')}`, 20, 190);
+      
+      // Line separator
+      doc.line(20, 200, 190, 200);
+      
+      // Signatures
+      doc.setFont('helvetica', 'bold');
+      doc.text(`RESPONSAVEL PELA ${protocolType.toUpperCase()}:`, 20, 220);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text('Nome: _________________________________________________', 20, 235);
+      doc.text('Assinatura: ___________________________________________', 20, 250);
+      doc.text('Data: _________________________________________________', 20, 265);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESPONSAVEL PELA TACOM:', 20, 285);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text('Nome: _________________________________________________', 20, 300);
+      doc.text('Assinatura: ___________________________________________', 20, 315);
+      doc.text('Data: _________________________________________________', 20, 330);
+      
+      // Footer
+      doc.line(20, 340, 190, 340);
+      doc.setFontSize(10);
+      doc.text('Este protocolo foi gerado automaticamente pelo Sistema TACOM', 20, 350);
+      doc.text(new Date().toLocaleString('pt-BR'), 20, 360);
+      
+      // Save PDF
+      const fileName = `protocolo_${protocolType}_${equipment.numero_serie}_${selectedDate}.pdf`;
+      doc.save(fileName);
 
-    toast({
-      title: "Sucesso",
-      description: "Protocolo PDF gerado com sucesso!",
-    });
+      toast({
+        title: "Sucesso",
+        description: "Protocolo PDF gerado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar PDF. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredEquipments = getFilteredEquipments();
@@ -226,7 +241,7 @@ const ProtocolPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="entrada">Protocolo de Entrada</SelectItem>
-                  <SelectItem value="saida">Protocolo de Saída</SelectItem>
+                  <SelectItem value="saida">Protocolo de Saida</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -310,7 +325,7 @@ const ProtocolPage: React.FC = () => {
       {selectedEquipment && (
         <Card>
           <CardHeader>
-            <CardTitle>Prévia do Equipamento Selecionado</CardTitle>
+            <CardTitle>Previa do Equipamento Selecionado</CardTitle>
           </CardHeader>
           <CardContent>
             {(() => {
@@ -334,7 +349,7 @@ const ProtocolPage: React.FC = () => {
                     <p className="text-lg">{equipment.tipo}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Número de Série</Label>
+                    <Label className="text-sm font-medium text-gray-500">Numero de Serie</Label>
                     <p className="text-lg font-mono">{equipment.numero_serie}</p>
                   </div>
                   <div>

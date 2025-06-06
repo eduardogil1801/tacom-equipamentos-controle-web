@@ -7,13 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
-import { Equipment, Company } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Equipment {
+  id: string;
+  tipo: string;
+  numero_serie: string;
+  data_entrada: string;
+  data_saida?: string;
+  id_empresa: string;
+}
+
+interface Company {
+  id: string;
+  name: string;
+}
 
 interface EquipmentFormProps {
   equipment?: Equipment | null;
   companies: Company[];
-  onSave: (equipment: Omit<Equipment, 'id'>) => void;
+  onSave: () => void;
   onCancel: () => void;
 }
 
@@ -24,35 +38,36 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   onCancel
 }) => {
   const [formData, setFormData] = useState({
-    type: '',
-    serialNumber: '',
-    entryDate: '',
-    exitDate: '',
-    companyId: ''
+    tipo: '',
+    numero_serie: '',
+    data_entrada: '',
+    data_saida: '',
+    id_empresa: ''
   });
   const [isInStock, setIsInStock] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (equipment) {
       setFormData({
-        type: equipment.type,
-        serialNumber: equipment.serialNumber,
-        entryDate: equipment.entryDate,
-        exitDate: equipment.exitDate || '',
-        companyId: equipment.companyId
+        tipo: equipment.tipo,
+        numero_serie: equipment.numero_serie,
+        data_entrada: equipment.data_entrada,
+        data_saida: equipment.data_saida || '',
+        id_empresa: equipment.id_empresa
       });
-      setIsInStock(!equipment.exitDate);
+      setIsInStock(!equipment.data_saida);
     } else {
       // Set today as default entry date
       const today = new Date().toISOString().split('T')[0];
-      setFormData(prev => ({ ...prev, entryDate: today }));
+      setFormData(prev => ({ ...prev, data_entrada: today }));
     }
   }, [equipment]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.type || !formData.serialNumber || !formData.entryDate || !formData.companyId) {
+    if (!formData.tipo || !formData.numero_serie || !formData.data_entrada || !formData.id_empresa) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -61,7 +76,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       return;
     }
 
-    if (!isInStock && formData.exitDate && new Date(formData.exitDate) < new Date(formData.entryDate)) {
+    if (!isInStock && formData.data_saida && new Date(formData.data_saida) < new Date(formData.data_entrada)) {
       toast({
         title: "Erro",
         description: "A data de saída não pode ser anterior à data de entrada.",
@@ -70,18 +85,55 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       return;
     }
 
-    onSave({
-      type: formData.type,
-      serialNumber: formData.serialNumber,
-      entryDate: formData.entryDate,
-      exitDate: isInStock ? undefined : formData.exitDate || undefined,
-      companyId: formData.companyId
-    });
+    setLoading(true);
 
-    toast({
-      title: "Sucesso",
-      description: equipment ? "Equipamento atualizado com sucesso!" : "Equipamento cadastrado com sucesso!",
-    });
+    try {
+      const equipmentData = {
+        tipo: formData.tipo,
+        numero_serie: formData.numero_serie,
+        data_entrada: formData.data_entrada,
+        data_saida: isInStock ? null : formData.data_saida || null,
+        id_empresa: formData.id_empresa
+      };
+
+      if (equipment) {
+        // Update existing equipment
+        const { error } = await supabase
+          .from('equipamentos')
+          .update(equipmentData)
+          .eq('id', equipment.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Equipamento atualizado com sucesso!",
+        });
+      } else {
+        // Create new equipment
+        const { error } = await supabase
+          .from('equipamentos')
+          .insert([equipmentData]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Equipamento cadastrado com sucesso!",
+        });
+      }
+
+      onSave();
+    } catch (error) {
+      console.error('Error saving equipment:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar equipamento",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -91,7 +143,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const handleStockStatusChange = (inStock: boolean) => {
     setIsInStock(inStock);
     if (inStock) {
-      setFormData(prev => ({ ...prev, exitDate: '' }));
+      setFormData(prev => ({ ...prev, data_saida: '' }));
     }
   };
 
@@ -115,30 +167,30 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="type">Tipo de Equipamento *</Label>
+                <Label htmlFor="tipo">Tipo de Equipamento *</Label>
                 <Input
-                  id="type"
+                  id="tipo"
                   placeholder="Ex: Notebook, Monitor, Impressora..."
-                  value={formData.type}
-                  onChange={(e) => handleChange('type', e.target.value)}
+                  value={formData.tipo}
+                  onChange={(e) => handleChange('tipo', e.target.value)}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="serialNumber">Número de Série *</Label>
+                <Label htmlFor="numero_serie">Número de Série *</Label>
                 <Input
-                  id="serialNumber"
+                  id="numero_serie"
                   placeholder="Ex: ABC123456"
-                  value={formData.serialNumber}
-                  onChange={(e) => handleChange('serialNumber', e.target.value)}
+                  value={formData.numero_serie}
+                  onChange={(e) => handleChange('numero_serie', e.target.value)}
                   required
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
-                <Select value={formData.companyId} onValueChange={(value) => handleChange('companyId', value)}>
+                <Select value={formData.id_empresa} onValueChange={(value) => handleChange('id_empresa', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
@@ -153,12 +205,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="entryDate">Data de Entrada *</Label>
+                <Label htmlFor="data_entrada">Data de Entrada *</Label>
                 <Input
-                  id="entryDate"
+                  id="data_entrada"
                   type="date"
-                  value={formData.entryDate}
-                  onChange={(e) => handleChange('entryDate', e.target.value)}
+                  value={formData.data_entrada}
+                  onChange={(e) => handleChange('data_entrada', e.target.value)}
                   required
                 />
               </div>
@@ -191,12 +243,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               {!isInStock && (
                 <div className="space-y-2">
-                  <Label htmlFor="exitDate">Data de Saída *</Label>
+                  <Label htmlFor="data_saida">Data de Saída *</Label>
                   <Input
-                    id="exitDate"
+                    id="data_saida"
                     type="date"
-                    value={formData.exitDate}
-                    onChange={(e) => handleChange('exitDate', e.target.value)}
+                    value={formData.data_saida}
+                    onChange={(e) => handleChange('data_saida', e.target.value)}
                     required={!isInStock}
                   />
                 </div>
@@ -204,8 +256,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
             </div>
 
             <div className="flex gap-4 pt-4">
-              <Button type="submit" className="bg-primary hover:bg-primary/90">
-                {equipment ? 'Atualizar' : 'Cadastrar'} Equipamento
+              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
+                {loading ? 'Salvando...' : (equipment ? 'Atualizar' : 'Cadastrar')} Equipamento
               </Button>
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancelar
