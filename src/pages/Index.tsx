@@ -8,6 +8,7 @@ import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
 import CompanyList from '@/components/Company/CompanyList';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
+import SettingsPage from '@/components/Settings/SettingsPage';
 import InventoryReport from '@/components/Reports/InventoryReport';
 import MovementsReport from '@/components/Reports/MovementsReport';
 import CompaniesReport from '@/components/Reports/CompaniesReport';
@@ -20,7 +21,7 @@ import EquipmentHistoryReport from '@/components/Reports/EquipmentHistoryReport'
 const Index = () => {
   const { user } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
-  const [currentPage, setCurrentPage] = useState('equipments');
+  const [currentPage, setCurrentPage] = useState('dashboard');
 
   if (!user) {
     return (
@@ -36,12 +37,14 @@ const Index = () => {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard />;
       case 'equipments':
         return <EquipmentList />;
       case 'companies':
         return <CompanyList />;
-      case 'dashboard':
-        return <Dashboard />;
+      case 'settings':
+        return <SettingsPage />;
       case 'reports-inventory':
         return <InventoryReport />;
       case 'reports-movements':
@@ -61,7 +64,7 @@ const Index = () => {
       case 'protocol':
         return <ProtocolPage />;
       default:
-        return <EquipmentList />;
+        return <Dashboard />;
     }
   };
 
