@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -44,30 +45,36 @@ const Header: React.FC<HeaderProps> = ({
     <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-4 bg-white/90 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg border border-primary/20 hover:shadow-xl transition-all duration-300">
-              <div className="relative">
-                <img 
-                  src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" 
-                  alt="Logo" 
-                  className="h-12 w-auto drop-shadow-lg" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-full mix-blend-overlay"></div>
-              </div>
+          <div className="flex items-center space-x-6">
+            {/* Logo and Title */}
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" 
+                alt="Logo" 
+                className="h-10 w-auto" 
+              />
               <div className="flex flex-col">
-                <span className="text-lg font-bold text-gray-800 tracking-wide">Controle de Equipamentos</span>
-                <span className="text-xs text-muted-foreground font-medium tracking-wider opacity-75">Sistema de Gestão</span>
+                <span className="text-lg font-bold text-gray-800 leading-tight">Controle de Equipamentos</span>
+                <span className="text-xs text-muted-foreground font-medium">Sistema de Gestão</span>
               </div>
             </div>
             
-            <nav className="flex space-x-1">
+            {/* Navigation */}
+            <nav className="hidden lg:flex space-x-1">
               {navigationItems.map(item => {
-              const Icon = item.icon;
-              return <Button key={item.id} variant={currentPage === item.id ? "default" : "ghost"} onClick={() => onNavigate(item.id)} className="flex items-center gap-2 transition-all duration-200 hover:shadow-md">
+                const Icon = item.icon;
+                return (
+                  <Button 
+                    key={item.id} 
+                    variant={currentPage === item.id ? "default" : "ghost"} 
+                    onClick={() => onNavigate(item.id)} 
+                    className="flex items-center gap-2 transition-all duration-200 hover:shadow-md"
+                  >
                     <Icon className="h-4 w-4" />
                     {item.label}
-                  </Button>;
-            })}
+                  </Button>
+                );
+              })}
               
               <DropdownMenu open={reportsOpen} onOpenChange={setReportsOpen}>
                 <DropdownMenuTrigger asChild>
@@ -78,12 +85,18 @@ const Header: React.FC<HeaderProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
-                  {reportItems.map(item => <DropdownMenuItem key={item.id} onClick={() => {
-                  onNavigate(item.id);
-                  setReportsOpen(false);
-                }} className={currentPage === item.id ? "bg-primary/10" : ""}>
+                  {reportItems.map(item => (
+                    <DropdownMenuItem 
+                      key={item.id} 
+                      onClick={() => {
+                        onNavigate(item.id);
+                        setReportsOpen(false);
+                      }} 
+                      className={currentPage === item.id ? "bg-primary/10" : ""}
+                    >
                       {item.label}
-                    </DropdownMenuItem>)}
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -99,6 +112,7 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           </div>
 
+          {/* User Menu */}
           <div className="flex items-center space-x-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
