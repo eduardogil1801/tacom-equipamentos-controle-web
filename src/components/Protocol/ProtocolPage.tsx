@@ -12,12 +12,12 @@ import jsPDF from 'jspdf';
 
 interface Equipment {
   id: string;
-  type: string;
-  serial_number: string;
-  entry_date: string;
-  exit_date?: string;
-  company_id: string;
-  companies?: {
+  tipo: string;
+  numero_serie: string;
+  data_entrada: string;
+  data_saida?: string;
+  id_empresa: string;
+  empresas?: {
     name: string;
     cnpj?: string;
     contact?: string;
@@ -53,26 +53,26 @@ const ProtocolPage: React.FC = () => {
       
       // Load companies
       const { data: companiesData, error: companiesError } = await supabase
-        .from('companies')
+        .from('empresas')
         .select('*')
         .order('name');
 
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
-      // Load only equipments that are in stock (no exit_date) with company names
+      // Load only equipments that are in stock (no data_saida) with company names
       const { data: equipmentsData, error: equipmentsError } = await supabase
-        .from('equipments')
+        .from('equipamentos')
         .select(`
           *,
-          companies (
+          empresas (
             name,
             cnpj,
             contact
           )
         `)
-        .is('exit_date', null)
-        .order('entry_date', { ascending: false });
+        .is('data_saida', null)
+        .order('data_entrada', { ascending: false });
 
       if (equipmentsError) throw equipmentsError;
       setEquipments(equipmentsData || []);
@@ -90,7 +90,7 @@ const ProtocolPage: React.FC = () => {
 
   const getFilteredEquipments = () => {
     if (!selectedCompany) return [];
-    return equipments.filter(equipment => equipment.company_id === selectedCompany);
+    return equipments.filter(equipment => equipment.id_empresa === selectedCompany);
   };
 
   const generateProtocolPDF = () => {
@@ -145,9 +145,9 @@ const ProtocolPage: React.FC = () => {
     doc.text('DADOS DO EQUIPAMENTO:', 20, 100);
     
     doc.setFont('helvetica', 'normal');
-    doc.text(`Tipo: ${equipment.type}`, 20, 110);
-    doc.text(`Número de Série: ${equipment.serial_number}`, 20, 120);
-    doc.text(`Data de Entrada: ${new Date(equipment.entry_date).toLocaleDateString('pt-BR')}`, 20, 130);
+    doc.text(`Tipo: ${equipment.tipo}`, 20, 110);
+    doc.text(`Número de Série: ${equipment.numero_serie}`, 20, 120);
+    doc.text(`Data de Entrada: ${new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}`, 20, 130);
     doc.text(`Status: Em Estoque`, 20, 140);
     
     // Protocol data
@@ -186,7 +186,7 @@ const ProtocolPage: React.FC = () => {
     doc.text(new Date().toLocaleString('pt-BR'), 20, 360);
     
     // Save PDF
-    doc.save(`protocolo_${protocolType}_${equipment.serial_number}_${selectedDate}.pdf`);
+    doc.save(`protocolo_${protocolType}_${equipment.numero_serie}_${selectedDate}.pdf`);
 
     toast({
       title: "Sucesso",
@@ -265,7 +265,7 @@ const ProtocolPage: React.FC = () => {
                     <SelectItem key={equipment.id} value={equipment.id}>
                       <div className="flex items-center gap-2">
                         <Laptop className="h-4 w-4" />
-                        {equipment.type} - {equipment.serial_number}
+                        {equipment.tipo} - {equipment.numero_serie}
                       </div>
                     </SelectItem>
                   ))}
@@ -331,15 +331,15 @@ const ProtocolPage: React.FC = () => {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Tipo de Equipamento</Label>
-                    <p className="text-lg">{equipment.type}</p>
+                    <p className="text-lg">{equipment.tipo}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Número de Série</Label>
-                    <p className="text-lg font-mono">{equipment.serial_number}</p>
+                    <p className="text-lg font-mono">{equipment.numero_serie}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Data de Entrada</Label>
-                    <p className="text-lg">{new Date(equipment.entry_date).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-lg">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Status</Label>
