@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import { Palette, Save, RotateCcw } from 'lucide-react';
+import { Palette, Save, RotateCcw, Upload, FileSpreadsheet } from 'lucide-react';
 
 interface ColorSettings {
   primary: string;
@@ -35,6 +35,8 @@ const SettingsPage: React.FC = () => {
     if (!user) return;
 
     try {
+      console.log('Carregando configurações para usuário:', user.id);
+      
       const { data, error } = await supabase
         .from('configuracoes')
         .select('tema_cores')
@@ -46,11 +48,23 @@ const SettingsPage: React.FC = () => {
         return;
       }
 
+      console.log('Dados carregados:', data);
+
       if (data?.tema_cores) {
-        const colors = data.tema_cores as unknown as ColorSettings;
-        if (colors && typeof colors === 'object' && 'primary' in colors) {
-          setColorSettings(colors);
-          applyColors(colors);
+        try {
+          // Parse do JSON se for string, ou use diretamente se já for objeto
+          const colors = typeof data.tema_cores === 'string' 
+            ? JSON.parse(data.tema_cores) 
+            : data.tema_cores;
+          
+          console.log('Cores parseadas:', colors);
+          
+          if (colors && typeof colors === 'object' && 'primary' in colors) {
+            setColorSettings(colors as ColorSettings);
+            applyColors(colors as ColorSettings);
+          }
+        } catch (parseError) {
+          console.error('Erro ao fazer parse das cores:', parseError);
         }
       }
     } catch (error) {
@@ -59,18 +73,56 @@ const SettingsPage: React.FC = () => {
   };
 
   const applyColors = (colors: ColorSettings) => {
+    console.log('Aplicando cores:', colors);
     const root = document.documentElement;
-    root.style.setProperty('--primary', colors.primary);
-    root.style.setProperty('--secondary', colors.secondary);
-    root.style.setProperty('--accent', colors.accent);
-    root.style.setProperty('--background', colors.background);
+    
+    // Converte hex para HSL para usar com CSS variables
+    const hexToHsl = (hex: string) => {
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h = 0, s = 0, l = (max + min) / 2;
+      
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      
+      return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+    };
+
+    root.style.setProperty('--primary', hexToHsl(colors.primary));
+    root.style.setProperty('--secondary', hexToHsl(colors.secondary));
+    root.style.setProperty('--accent', hexToHsl(colors.accent));
+    root.style.setProperty('--background', hexToHsl(colors.background));
   };
 
   const saveSettings = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
+    console.log('Salvando configurações:', colorSettings);
+    
     try {
+      // Converte para JSON string para garantir compatibilidade
+      const colorsJson = JSON.stringify(colorSettings);
+      
       // Primeiro, verifica se já existe uma configuração para o usuário
       const { data: existingConfig } = await supabase
         .from('configuracoes')
@@ -78,40 +130,51 @@ const SettingsPage: React.FC = () => {
         .eq('usuario_id', user.id)
         .maybeSingle();
 
+      console.log('Configuração existente:', existingConfig);
+
       let result;
       
       if (existingConfig) {
-        // Atualiza configuração existente
+        console.log('Atualizando configuração existente...');
         result = await supabase
           .from('configuracoes')
           .update({
-            tema_cores: JSON.parse(JSON.stringify(colorSettings)),
+            tema_cores: colorsJson,
             updated_at: new Date().toISOString()
           })
-          .eq('usuario_id', user.id);
+          .eq('usuario_id', user.id)
+          .select();
       } else {
-        // Cria nova configuração
+        console.log('Criando nova configuração...');
         result = await supabase
           .from('configuracoes')
           .insert({
             usuario_id: user.id,
-            tema_cores: JSON.parse(JSON.stringify(colorSettings)),
+            tema_cores: colorsJson,
             updated_at: new Date().toISOString()
-          });
+          })
+          .select();
       }
 
-      if (result.error) throw result.error;
+      console.log('Resultado da operação:', result);
+
+      if (result.error) {
+        console.error('Erro no Supabase:', result.error);
+        throw result.error;
+      }
 
       applyColors(colorSettings);
+      
       toast({
         title: "Configurações salvas",
         description: "Suas personalizações foram aplicadas com sucesso!",
       });
+      
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar configurações. Tente novamente.",
+        description: `Erro ao salvar configurações: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
     } finally {
@@ -128,13 +191,21 @@ const SettingsPage: React.FC = () => {
     };
     setColorSettings(defaultColors);
     applyColors(defaultColors);
+    
+    toast({
+      title: "Configurações redefinidas",
+      description: "As cores foram restauradas para o padrão.",
+    });
   };
 
   const handleColorChange = (colorType: keyof ColorSettings, value: string) => {
-    setColorSettings(prev => ({
-      ...prev,
+    const newColors = {
+      ...colorSettings,
       [colorType]: value
-    }));
+    };
+    setColorSettings(newColors);
+    // Aplica as cores em tempo real para pré-visualização
+    applyColors(newColors);
   };
 
   return (
@@ -147,7 +218,7 @@ const SettingsPage: React.FC = () => {
       <Tabs defaultValue="colors" className="w-full">
         <TabsList>
           <TabsTrigger value="colors">Personalização de Cores</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="import">Importação de Dados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="colors">
@@ -165,12 +236,13 @@ const SettingsPage: React.FC = () => {
                       type="color"
                       value={colorSettings.primary}
                       onChange={(e) => handleColorChange('primary', e.target.value)}
-                      className="w-16 h-10 p-1 rounded"
+                      className="w-16 h-10 p-1 rounded cursor-pointer"
                     />
                     <Input
                       value={colorSettings.primary}
                       onChange={(e) => handleColorChange('primary', e.target.value)}
                       placeholder="#DC2626"
+                      className="font-mono"
                     />
                   </div>
                 </div>
@@ -183,12 +255,13 @@ const SettingsPage: React.FC = () => {
                       type="color"
                       value={colorSettings.secondary}
                       onChange={(e) => handleColorChange('secondary', e.target.value)}
-                      className="w-16 h-10 p-1 rounded"
+                      className="w-16 h-10 p-1 rounded cursor-pointer"
                     />
                     <Input
                       value={colorSettings.secondary}
                       onChange={(e) => handleColorChange('secondary', e.target.value)}
                       placeholder="#16A34A"
+                      className="font-mono"
                     />
                   </div>
                 </div>
@@ -201,12 +274,13 @@ const SettingsPage: React.FC = () => {
                       type="color"
                       value={colorSettings.accent}
                       onChange={(e) => handleColorChange('accent', e.target.value)}
-                      className="w-16 h-10 p-1 rounded"
+                      className="w-16 h-10 p-1 rounded cursor-pointer"
                     />
                     <Input
                       value={colorSettings.accent}
                       onChange={(e) => handleColorChange('accent', e.target.value)}
                       placeholder="#3B82F6"
+                      className="font-mono"
                     />
                   </div>
                 </div>
@@ -219,23 +293,33 @@ const SettingsPage: React.FC = () => {
                       type="color"
                       value={colorSettings.background}
                       onChange={(e) => handleColorChange('background', e.target.value)}
-                      className="w-16 h-10 p-1 rounded"
+                      className="w-16 h-10 p-1 rounded cursor-pointer"
                     />
                     <Input
                       value={colorSettings.background}
                       onChange={(e) => handleColorChange('background', e.target.value)}
                       placeholder="#F9FAFB"
+                      className="font-mono"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <Button onClick={saveSettings} disabled={loading} className="flex items-center gap-2">
+                <Button 
+                  onClick={saveSettings} 
+                  disabled={loading} 
+                  className="flex items-center gap-2"
+                >
                   <Save className="h-4 w-4" />
                   {loading ? 'Salvando...' : 'Salvar Configurações'}
                 </Button>
-                <Button variant="outline" onClick={resetToDefault} className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={resetToDefault} 
+                  className="flex items-center gap-2"
+                  disabled={loading}
+                >
                   <RotateCcw className="h-4 w-4" />
                   Restaurar Padrão
                 </Button>
@@ -245,22 +329,22 @@ const SettingsPage: React.FC = () => {
                 <h3 className="font-medium mb-2">Pré-visualização</h3>
                 <div className="flex gap-2">
                   <div 
-                    className="w-12 h-12 rounded border-2 border-gray-300" 
+                    className="w-12 h-12 rounded border-2 border-gray-300 shadow-sm" 
                     style={{ backgroundColor: colorSettings.primary }}
                     title="Cor Primária"
                   />
                   <div 
-                    className="w-12 h-12 rounded border-2 border-gray-300" 
+                    className="w-12 h-12 rounded border-2 border-gray-300 shadow-sm" 
                     style={{ backgroundColor: colorSettings.secondary }}
                     title="Cor Secundária"
                   />
                   <div 
-                    className="w-12 h-12 rounded border-2 border-gray-300" 
+                    className="w-12 h-12 rounded border-2 border-gray-300 shadow-sm" 
                     style={{ backgroundColor: colorSettings.accent }}
                     title="Cor de Destaque"
                   />
                   <div 
-                    className="w-12 h-12 rounded border-2 border-gray-300" 
+                    className="w-12 h-12 rounded border-2 border-gray-300 shadow-sm" 
                     style={{ backgroundColor: colorSettings.background }}
                     title="Cor de Fundo"
                   />
@@ -270,15 +354,48 @@ const SettingsPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="dashboard">
+        <TabsContent value="import">
           <Card>
             <CardHeader>
-              <CardTitle>Configurações do Dashboard</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5" />
+                Importação de Dados Excel
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Funcionalidade de personalização do dashboard será implementada em breve.
-              </p>
+            <CardContent className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Alternativas para Importar Excel</h3>
+                <p className="text-gray-600 mb-4">
+                  Como o sistema não suporta arquivos Excel diretamente, você pode usar estas opções:
+                </p>
+                
+                <div className="text-left space-y-3 max-w-md mx-auto">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <h4 className="font-medium text-blue-900">1. Google Sheets</h4>
+                    <p className="text-sm text-blue-700">Carregue no Google Sheets e copie/cole os dados aqui</p>
+                  </div>
+                  
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <h4 className="font-medium text-green-900">2. Converter para CSV</h4>
+                    <p className="text-sm text-green-700">Salve como CSV e descreva a estrutura dos dados</p>
+                  </div>
+                  
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <h4 className="font-medium text-purple-900">3. Copiar Dados</h4>
+                    <p className="text-sm text-purple-700">Copie algumas linhas de exemplo e cole aqui no chat</p>
+                  </div>
+                  
+                  <div className="p-3 bg-orange-50 rounded-lg">
+                    <h4 className="font-medium text-orange-900">4. Descrição Manual</h4>
+                    <p className="text-sm text-orange-700">Descreva a estrutura e alguns dados de exemplo</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center text-sm text-gray-500">
+                <p>Escolha a opção mais conveniente para você e me informe no chat!</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
