@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { User, LogOut, ChevronDown, Package, Building, BarChart3, FileText, Settings, Home } from 'lucide-react';
+
 interface HeaderProps {
   currentPage: string;
   onNavigate: (page: string) => void;
 }
+
 const Header: React.FC<HeaderProps> = ({
   currentPage,
   onNavigate
@@ -16,59 +18,45 @@ const Header: React.FC<HeaderProps> = ({
     logout
   } = useAuth();
   const [reportsOpen, setReportsOpen] = useState(false);
+
   const handleLogout = () => {
     logout();
   };
-  const navigationItems = [{
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: Home
-  }, {
-    id: 'equipments',
-    label: 'Equipamentos',
-    icon: Package
-  }, {
-    id: 'companies',
-    label: 'Empresas',
-    icon: Building
-  }];
-  const reportItems = [{
-    id: 'reports-inventory',
-    label: 'Inventário'
-  }, {
-    id: 'reports-movements',
-    label: 'Movimentações'
-  }, {
-    id: 'reports-companies',
-    label: 'Empresas'
-  }, {
-    id: 'reports-equipment-status',
-    label: 'Status dos Equipamentos'
-  }, {
-    id: 'reports-equipment-distribution',
-    label: 'Distribuição de Equipamentos'
-  }, {
-    id: 'reports-fleet',
-    label: 'Frota'
-  }, {
-    id: 'reports-monthly',
-    label: 'Mensal'
-  }, {
-    id: 'reports-equipment-history',
-    label: 'Histórico de Equipamentos'
-  }];
-  return <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
+
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'equipments', label: 'Equipamentos', icon: Package },
+    { id: 'companies', label: 'Empresas', icon: Building }
+  ];
+
+  const reportItems = [
+    { id: 'reports-inventory', label: 'Inventário' },
+    { id: 'reports-movements', label: 'Movimentações' },
+    { id: 'reports-companies', label: 'Empresas' },
+    { id: 'reports-equipment-status', label: 'Status dos Equipamentos' },
+    { id: 'reports-equipment-distribution', label: 'Distribuição de Equipamentos' },
+    { id: 'reports-fleet', label: 'Frota' },
+    { id: 'reports-monthly', label: 'Mensal' },
+    { id: 'reports-equipment-history', label: 'Histórico de Equipamentos' }
+  ];
+
+  return (
+    <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-3 bg-white/80 backdrop-blur-sm rounded-xl px-4 py-2 shadow-md border border-primary/20">
+            <div className="flex items-center space-x-4 bg-white/90 backdrop-blur-sm rounded-xl px-6 py-3 shadow-lg border border-primary/20 hover:shadow-xl transition-all duration-300">
               <div className="relative">
-                <img src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" alt="TACOM Logo" className="h-8 w-auto drop-shadow-sm" />
+                <img 
+                  src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" 
+                  alt="Logo" 
+                  className="h-12 w-auto drop-shadow-lg" 
+                />
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-full mix-blend-overlay"></div>
               </div>
               <div className="flex flex-col">
-                
-                <span className="text-xs text-muted-foreground font-medium tracking-wider">Controle de Equipamentos</span>
+                <span className="text-lg font-bold text-gray-800 tracking-wide">Controle de Equipamentos</span>
+                <span className="text-xs text-muted-foreground font-medium tracking-wider opacity-75">Sistema de Gestão</span>
               </div>
             </div>
             
@@ -135,6 +123,8 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
-    </header>;
+    </header>
+  );
 };
+
 export default Header;

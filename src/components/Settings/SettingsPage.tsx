@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -100,10 +99,14 @@ const SettingsPage: React.FC = () => {
       return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
     };
 
+    // Aplicar as cores no CSS
     root.style.setProperty('--primary', hexToHsl(colors.primary));
     root.style.setProperty('--secondary', hexToHsl(colors.secondary));
     root.style.setProperty('--accent', hexToHsl(colors.accent));
     root.style.setProperty('--background', hexToHsl(colors.background));
+    
+    // Aplicar cor de fundo diretamente no body
+    document.body.style.backgroundColor = colors.background;
   };
 
   const saveSettings = async () => {
