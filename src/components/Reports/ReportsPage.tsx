@@ -81,7 +81,7 @@ const ReportsPage: React.FC = () => {
 
   const getFilteredEquipments = () => {
     return equipments.filter(equipment => {
-      const matchesCompany = !filters.companyId || equipment.id_empresa === filters.companyId;
+      const matchesCompany = !filters.companyId || filters.companyId === 'all' || equipment.id_empresa === filters.companyId;
       const matchesStartDate = !filters.startDate || equipment.data_entrada >= filters.startDate;
       const matchesEndDate = !filters.endDate || equipment.data_entrada <= filters.endDate;
       const matchesStatus = filters.status === 'all' || 
@@ -202,12 +202,12 @@ const ReportsPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="companySelect">Empresa</Label>
-              <Select value={filters.companyId} onValueChange={(value) => setFilters({...filters, companyId: value})}>
+              <Select value={filters.companyId || 'all'} onValueChange={(value) => setFilters({...filters, companyId: value === 'all' ? '' : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as empresas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as empresas</SelectItem>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
                   {companies.map(company => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
@@ -239,7 +239,7 @@ const ReportsPage: React.FC = () => {
             
             <div>
               <Label htmlFor="statusSelect">Status</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
+              <Select value={filters.status || 'all'} onValueChange={(value) => setFilters({...filters, status: value === 'all' ? 'all' : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>

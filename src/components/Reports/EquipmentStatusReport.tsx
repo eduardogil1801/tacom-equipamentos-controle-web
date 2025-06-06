@@ -64,7 +64,7 @@ const EquipmentStatusReport: React.FC = () => {
       if (filters.equipmentType) {
         query = query.eq('tipo', filters.equipmentType);
       }
-      if (filters.companyId) {
+      if (filters.companyId && filters.companyId !== 'all') {
         query = query.eq('id_empresa', filters.companyId);
       }
 
@@ -102,7 +102,7 @@ const EquipmentStatusReport: React.FC = () => {
       });
 
       // Filtrar por status se especificado
-      const filteredEquipments = filters.status 
+      const filteredEquipments = (filters.status && filters.status !== 'all')
         ? processedEquipments.filter(eq => eq.status === filters.status)
         : processedEquipments;
 
@@ -217,12 +217,12 @@ const EquipmentStatusReport: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="status">Status</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
+              <Select value={filters.status || 'all'} onValueChange={(value) => setFilters({...filters, status: value === 'all' ? '' : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="available">Disponível</SelectItem>
                   <SelectItem value="out">Retirado</SelectItem>
                   <SelectItem value="long_term">Longo Prazo ({'>'}90 dias)</SelectItem>
@@ -241,12 +241,12 @@ const EquipmentStatusReport: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="companyId">Empresa</Label>
-              <Select value={filters.companyId} onValueChange={(value) => setFilters({...filters, companyId: value})}>
+              <Select value={filters.companyId || 'all'} onValueChange={(value) => setFilters({...filters, companyId: value === 'all' ? '' : value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as empresas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as empresas</SelectItem>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
                   {companies.map(company => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}

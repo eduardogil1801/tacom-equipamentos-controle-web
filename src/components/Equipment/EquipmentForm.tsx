@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -224,11 +223,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
-                <Select value={formData.id_empresa} onValueChange={(value) => handleChange('id_empresa', value)}>
+                <Select value={formData.id_empresa || 'placeholder'} onValueChange={(value) => handleChange('id_empresa', value === 'placeholder' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="placeholder" disabled>Selecione uma empresa</SelectItem>
                     {companies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
@@ -240,11 +240,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado do Estoque *</Label>
-                <Select value={formData.estado} onValueChange={(value) => handleChange('estado', value)}>
+                <Select value={formData.estado || 'placeholder'} onValueChange={(value) => handleChange('estado', value === 'placeholder' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um estado" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="placeholder" disabled>Selecione um estado</SelectItem>
                     {estados.map(estado => (
                       <SelectItem key={estado} value={estado}>
                         {estado}
