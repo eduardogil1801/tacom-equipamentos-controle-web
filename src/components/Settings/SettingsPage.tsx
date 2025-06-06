@@ -47,8 +47,11 @@ const SettingsPage: React.FC = () => {
       }
 
       if (data?.tema_cores) {
-        setColorSettings(data.tema_cores as ColorSettings);
-        applyColors(data.tema_cores as ColorSettings);
+        const colors = data.tema_cores as unknown as ColorSettings;
+        if (colors && typeof colors === 'object' && 'primary' in colors) {
+          setColorSettings(colors);
+          applyColors(colors);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
@@ -72,7 +75,7 @@ const SettingsPage: React.FC = () => {
         .from('configuracoes')
         .upsert({
           usuario_id: user.id,
-          tema_cores: colorSettings,
+          tema_cores: colorSettings as any,
           updated_at: new Date().toISOString()
         });
 
