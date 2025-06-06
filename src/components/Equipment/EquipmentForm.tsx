@@ -80,20 +80,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     'Connections 5.0'
   ];
 
-  const getModelosByTipo = (tipo: string) => {
-    switch (tipo) {
-      case 'CCIT 4.0':
-      case 'CCIT 5.0':
-        return ['H2'];
-      case 'PM (Painel de Motorista)':
-        return ['DMX200', 'DMX200S', 'DMX200L', 'DMX500'];
-      case 'UPEX':
-        return ['V2000', 'V3000L S/DVR', 'V3000L C/VGA', 'V3000M S/DVR', 'V3000 C/DVR', 'V4000M'];
-      default:
-        return [];
-    }
-  };
-
   useEffect(() => {
     if (equipment) {
       setFormData({
@@ -220,7 +206,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                 <Label htmlFor="tipo">Tipo de Equipamento *</Label>
                 <Select value={formData.tipo || 'placeholder'} onValueChange={(value) => {
                   handleChange('tipo', value === 'placeholder' ? '' : value);
-                  handleChange('modelo', ''); // Reset modelo when tipo changes
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -238,19 +223,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="modelo">Modelo</Label>
-                <Select value={formData.modelo || 'placeholder'} onValueChange={(value) => handleChange('modelo', value === 'placeholder' ? '' : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o modelo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="placeholder" disabled>Selecione o modelo</SelectItem>
-                    {getModelosByTipo(formData.tipo).map(modelo => (
-                      <SelectItem key={modelo} value={modelo}>
-                        {modelo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="modelo"
+                  placeholder="Ex: H2, DMX200, V2000..."
+                  value={formData.modelo}
+                  onChange={(e) => handleChange('modelo', e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">
