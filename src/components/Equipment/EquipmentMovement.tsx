@@ -351,7 +351,7 @@ const EquipmentMovement: React.FC<MovementFormProps> = ({ onCancel, onSuccess })
 
                 <div className="space-y-2">
                   <Label htmlFor="company">Empresa *</Label>
-                  <Select value={formData.id_empresa || ''} onValueChange={handleCompanyChange}>
+                  <Select value={formData.id_empresa} onValueChange={handleCompanyChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma empresa" />
                     </SelectTrigger>
@@ -367,7 +367,7 @@ const EquipmentMovement: React.FC<MovementFormProps> = ({ onCancel, onSuccess })
 
                 <div className="space-y-2">
                   <Label htmlFor="estado">Estado *</Label>
-                  <Select value={formData.estado || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, estado: value }))}>
+                  <Select value={formData.estado} onValueChange={(value) => setFormData(prev => ({ ...prev, estado: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um estado" />
                     </SelectTrigger>
@@ -384,7 +384,7 @@ const EquipmentMovement: React.FC<MovementFormProps> = ({ onCancel, onSuccess })
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
                   <Select 
-                    value={formData.status || ''} 
+                    value={formData.status} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                     disabled={!isCompanyTacom(companies.find(c => c.id === formData.id_empresa)?.name)}
                   >
