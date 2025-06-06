@@ -7,6 +7,8 @@ import Header from '@/components/Layout/Header';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
 import CompanyList from '@/components/Company/CompanyList';
+import ReportsPage from '@/components/Reports/ReportsPage';
+import ProtocolPage from '@/components/Protocol/ProtocolPage';
 
 const Index = () => {
   const { user } = useAuth();
@@ -34,25 +36,9 @@ const Index = () => {
       case 'dashboard':
         return <Dashboard />;
       case 'reports':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-            <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
-              <p className="text-gray-600">Funcionalidade de relatórios em desenvolvimento</p>
-              <p className="text-sm text-gray-500 mt-2">Em breve: Exportação para Excel e CSV</p>
-            </div>
-          </div>
-        );
+        return <ReportsPage />;
       case 'protocol':
-        return (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Protocolo de Entrega</h1>
-            <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
-              <p className="text-gray-600">Funcionalidade de protocolo em desenvolvimento</p>
-              <p className="text-sm text-gray-500 mt-2">Em breve: Geração e impressão de protocolos</p>
-            </div>
-          </div>
-        );
+        return <ProtocolPage />;
       default:
         return <Dashboard />;
     }

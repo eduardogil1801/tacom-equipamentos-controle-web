@@ -9,7 +9,101 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      empresas: {
+        Row: {
+          cnpj: string | null
+          contact: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          contact?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          contact?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      equipamentos: {
+        Row: {
+          at_criado: string
+          at_update: string
+          data_entrada: string
+          data_saida: string | null
+          id: string
+          id_empresa: string
+          numero_serie: string
+          tipo: string
+        }
+        Insert: {
+          at_criado?: string
+          at_update?: string
+          data_entrada: string
+          data_saida?: string | null
+          id?: string
+          id_empresa: string
+          numero_serie: string
+          tipo: string
+        }
+        Update: {
+          at_criado?: string
+          at_update?: string
+          data_entrada?: string
+          data_saida?: string | null
+          id?: string
+          id_empresa?: string
+          numero_serie?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipments_company_id_fkey"
+            columns: ["id_empresa"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      login: {
+        Row: {
+          at_criado: string
+          at_update: string
+          email: string
+          id: string
+          nome: string
+          sobrenome: string
+        }
+        Insert: {
+          at_criado?: string
+          at_update?: string
+          email: string
+          id: string
+          nome: string
+          sobrenome: string
+        }
+        Update: {
+          at_criado?: string
+          at_update?: string
+          email?: string
+          id?: string
+          nome?: string
+          sobrenome?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

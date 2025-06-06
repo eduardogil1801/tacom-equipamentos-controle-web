@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft } from 'lucide-react';
 import { Equipment, Company } from '@/types';
 import { toast } from '@/hooks/use-toast';
@@ -29,6 +30,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     exitDate: '',
     companyId: ''
   });
+  const [isInStock, setIsInStock] = useState(true);
 
   useEffect(() => {
     if (equipment) {
@@ -39,6 +41,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         exitDate: equipment.exitDate || '',
         companyId: equipment.companyId
       });
+      setIsInStock(!equipment.exitDate);
     } else {
       // Set today as default entry date
       const today = new Date().toISOString().split('T')[0];
@@ -58,7 +61,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       return;
     }
 
-    if (formData.exitDate && new Date(formData.exitDate) < new Date(formData.entryDate)) {
+    if (!isInStock && formData.exitDate && new Date(formData.exitDate) < new Date(formData.entryDate)) {
       toast({
         title: "Erro",
         description: "A data de saída não pode ser anterior à data de entrada.",
@@ -71,7 +74,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       type: formData.type,
       serialNumber: formData.serialNumber,
       entryDate: formData.entryDate,
-      exitDate: formData.exitDate || undefined,
+      exitDate: isInStock ? undefined : formData.exitDate || undefined,
       companyId: formData.companyId
     });
 
@@ -83,6 +86,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleStockStatusChange = (inStock: boolean) => {
+    setIsInStock(inStock);
+    if (inStock) {
+      setFormData(prev => ({ ...prev, exitDate: '' }));
+    }
   };
 
   return (
@@ -153,15 +163,44 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="exitDate">Data de Saída</Label>
-                <Input
-                  id="exitDate"
-                  type="date"
-                  value={formData.exitDate}
-                  onChange={(e) => handleChange('exitDate', e.target.value)}
-                />
+              <div className="col-span-full space-y-3">
+                <Label>Status do Equipamento *</Label>
+                <div className="flex gap-6">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="inStock"
+                      checked={isInStock}
+                      onCheckedChange={(checked) => handleStockStatusChange(checked as boolean)}
+                    />
+                    <Label htmlFor="inStock" className="text-sm font-normal">
+                      Em Estoque
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="outOfStock"
+                      checked={!isInStock}
+                      onCheckedChange={(checked) => handleStockStatusChange(!(checked as boolean))}
+                    />
+                    <Label htmlFor="outOfStock" className="text-sm font-normal">
+                      Fora de Estoque
+                    </Label>
+                  </div>
+                </div>
               </div>
+
+              {!isInStock && (
+                <div className="space-y-2">
+                  <Label htmlFor="exitDate">Data de Saída *</Label>
+                  <Input
+                    id="exitDate"
+                    type="date"
+                    value={formData.exitDate}
+                    onChange={(e) => handleChange('exitDate', e.target.value)}
+                    required={!isInStock}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4 pt-4">
