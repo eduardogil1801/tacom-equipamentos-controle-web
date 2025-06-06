@@ -10,7 +10,7 @@ export const updateAllCompaniesState = async () => {
 
     if (error) throw error;
     
-    console.log('Updated companies with Rio Grande do Sul state');
+    console.log(`Updated ${data?.length || 0} companies with Rio Grande do Sul state`);
     return data;
   } catch (error) {
     console.error('Error updating companies state:', error);
