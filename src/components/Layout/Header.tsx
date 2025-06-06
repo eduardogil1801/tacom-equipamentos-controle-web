@@ -56,7 +56,14 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <h1 className="text-xl font-bold text-gray-900">TACOM</h1>
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/lovable-uploads/be97db19-c61d-4e37-905a-65b5d5b74d82.png" 
+                alt="TACOM Logo" 
+                className="h-8 w-auto"
+              />
+              <h1 className="text-xl font-bold text-gray-900">TACOM</h1>
+            </div>
             
             <nav className="flex space-x-1">
               {navigationItems.map((item) => {

@@ -39,9 +39,9 @@ const SettingsPage: React.FC = () => {
         .from('configuracoes')
         .select('tema_cores')
         .eq('usuario_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Erro ao carregar configurações:', error);
         return;
       }
@@ -71,15 +71,36 @@ const SettingsPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      // Primeiro, verifica se já existe uma configuração para o usuário
+      const { data: existingConfig } = await supabase
         .from('configuracoes')
-        .upsert({
-          usuario_id: user.id,
-          tema_cores: colorSettings as any,
-          updated_at: new Date().toISOString()
-        });
+        .select('id')
+        .eq('usuario_id', user.id)
+        .maybeSingle();
 
-      if (error) throw error;
+      let result;
+      
+      if (existingConfig) {
+        // Atualiza configuração existente
+        result = await supabase
+          .from('configuracoes')
+          .update({
+            tema_cores: JSON.parse(JSON.stringify(colorSettings)),
+            updated_at: new Date().toISOString()
+          })
+          .eq('usuario_id', user.id);
+      } else {
+        // Cria nova configuração
+        result = await supabase
+          .from('configuracoes')
+          .insert({
+            usuario_id: user.id,
+            tema_cores: JSON.parse(JSON.stringify(colorSettings)),
+            updated_at: new Date().toISOString()
+          });
+      }
+
+      if (result.error) throw result.error;
 
       applyColors(colorSettings);
       toast({
@@ -90,7 +111,7 @@ const SettingsPage: React.FC = () => {
       console.error('Erro ao salvar configurações:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar configurações.",
+        description: "Erro ao salvar configurações. Tente novamente.",
         variant: "destructive",
       });
     } finally {
