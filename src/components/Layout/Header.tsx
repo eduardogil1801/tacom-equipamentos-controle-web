@@ -1,15 +1,12 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { User, LogOut, ChevronDown, Package, Building, BarChart3, FileText, Settings, Home } from 'lucide-react';
-
 interface HeaderProps {
   currentPage: string;
   onNavigate: (page: string) => void;
 }
-
 const Header: React.FC<HeaderProps> = ({
   currentPage,
   onNavigate
@@ -19,60 +16,67 @@ const Header: React.FC<HeaderProps> = ({
     logout
   } = useAuth();
   const [reportsOpen, setReportsOpen] = useState(false);
-
   const handleLogout = () => {
     logout();
   };
-
-  const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'equipments', label: 'Equipamentos', icon: Package },
-    { id: 'companies', label: 'Empresas', icon: Building }
-  ];
-
-  const reportItems = [
-    { id: 'reports-inventory', label: 'Inventário' },
-    { id: 'reports-movements', label: 'Movimentações' },
-    { id: 'reports-companies', label: 'Empresas' },
-    { id: 'reports-equipment-status', label: 'Status dos Equipamentos' },
-    { id: 'reports-equipment-distribution', label: 'Distribuição de Equipamentos' },
-    { id: 'reports-fleet', label: 'Frota' },
-    { id: 'reports-monthly', label: 'Mensal' },
-    { id: 'reports-equipment-history', label: 'Histórico de Equipamentos' }
-  ];
-
-  return (
-    <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
+  const navigationItems = [{
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: Home
+  }, {
+    id: 'equipments',
+    label: 'Equipamentos',
+    icon: Package
+  }, {
+    id: 'companies',
+    label: 'Empresas',
+    icon: Building
+  }];
+  const reportItems = [{
+    id: 'reports-inventory',
+    label: 'Inventário'
+  }, {
+    id: 'reports-movements',
+    label: 'Movimentações'
+  }, {
+    id: 'reports-companies',
+    label: 'Empresas'
+  }, {
+    id: 'reports-equipment-status',
+    label: 'Status dos Equipamentos'
+  }, {
+    id: 'reports-equipment-distribution',
+    label: 'Distribuição de Equipamentos'
+  }, {
+    id: 'reports-fleet',
+    label: 'Frota'
+  }, {
+    id: 'reports-monthly',
+    label: 'Mensal'
+  }, {
+    id: 'reports-equipment-history',
+    label: 'Histórico de Equipamentos'
+  }];
+  return <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
             {/* Logo TACOM sem fundo e maior */}
             <div className="flex items-center">
               <div className="relative group cursor-pointer">
-                <img 
-                  src="/lovable-uploads/3f258a34-e20d-4ca8-98a3-6b977db4fb93.png" 
-                  alt="TACOM Logo" 
-                  className="h-10 w-auto transition-all duration-300 group-hover:scale-105" 
-                />
+                <img src="/lovable-uploads/3f258a34-e20d-4ca8-98a3-6b977db4fb93.png" alt="TACOM Logo" className="h-20 w-auto transition-all duration-300 group-hover:scale-105" />
               </div>
             </div>
             
             {/* Navigation */}
             <nav className="hidden lg:flex space-x-1">
               {navigationItems.map(item => {
-                const Icon = item.icon;
-                return (
-                  <Button 
-                    key={item.id} 
-                    variant={currentPage === item.id ? "default" : "ghost"} 
-                    onClick={() => onNavigate(item.id)} 
-                    className="flex items-center gap-2 transition-all duration-200 hover:shadow-md"
-                  >
+              const Icon = item.icon;
+              return <Button key={item.id} variant={currentPage === item.id ? "default" : "ghost"} onClick={() => onNavigate(item.id)} className="flex items-center gap-2 transition-all duration-200 hover:shadow-md">
                     <Icon className="h-4 w-4" />
                     {item.label}
-                  </Button>
-                );
-              })}
+                  </Button>;
+            })}
               
               <DropdownMenu open={reportsOpen} onOpenChange={setReportsOpen}>
                 <DropdownMenuTrigger asChild>
@@ -83,18 +87,12 @@ const Header: React.FC<HeaderProps> = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
-                  {reportItems.map(item => (
-                    <DropdownMenuItem 
-                      key={item.id} 
-                      onClick={() => {
-                        onNavigate(item.id);
-                        setReportsOpen(false);
-                      }} 
-                      className={currentPage === item.id ? "bg-primary/10" : ""}
-                    >
+                  {reportItems.map(item => <DropdownMenuItem key={item.id} onClick={() => {
+                  onNavigate(item.id);
+                  setReportsOpen(false);
+                }} className={currentPage === item.id ? "bg-primary/10" : ""}>
                       {item.label}
-                    </DropdownMenuItem>
-                  ))}
+                    </DropdownMenuItem>)}
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -135,8 +133,6 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
-
 export default Header;
