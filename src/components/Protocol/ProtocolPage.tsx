@@ -6,38 +6,91 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Download, Calendar, Building, Laptop } from 'lucide-react';
-import { Equipment, Company } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+
+interface Equipment {
+  id: string;
+  type: string;
+  serial_number: string;
+  entry_date: string;
+  exit_date?: string;
+  company_id: string;
+  companies?: {
+    name: string;
+    cnpj?: string;
+    contact?: string;
+  };
+}
+
+interface Company {
+  id: string;
+  name: string;
+  cnpj?: string;
+  contact?: string;
+}
 
 const ProtocolPage: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedEquipment, setSelectedEquipment] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
-  const [protocolType, setProtocolType] = useState('entrada'); // 'entrada' ou 'saida'
+  const [protocolType, setProtocolType] = useState('entrada');
 
   useEffect(() => {
-    // Load data from localStorage
-    const savedEquipments = localStorage.getItem('tacom-equipments');
-    const savedCompanies = localStorage.getItem('tacom-companies');
-    
-    if (savedEquipments) {
-      setEquipments(JSON.parse(savedEquipments));
-    }
-    
-    if (savedCompanies) {
-      setCompanies(JSON.parse(savedCompanies));
-    }
-
+    loadData();
     // Set today as default date
     const today = new Date().toISOString().split('T')[0];
     setSelectedDate(today);
   }, []);
 
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load companies
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name');
+
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
+
+      // Load only equipments that are in stock (no exit_date) with company names
+      const { data: equipmentsData, error: equipmentsError } = await supabase
+        .from('equipments')
+        .select(`
+          *,
+          companies (
+            name,
+            cnpj,
+            contact
+          )
+        `)
+        .is('exit_date', null)
+        .order('entry_date', { ascending: false });
+
+      if (equipmentsError) throw equipmentsError;
+      setEquipments(equipmentsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getFilteredEquipments = () => {
     if (!selectedCompany) return [];
-    return equipments.filter(equipment => equipment.companyId === selectedCompany);
+    return equipments.filter(equipment => equipment.company_id === selectedCompany);
   };
 
   const generateProtocolPDF = () => {
@@ -62,72 +115,94 @@ const ProtocolPage: React.FC = () => {
       return;
     }
 
-    // Create protocol content
-    const protocolContent = `
-PROTOCOLO DE ${protocolType.toUpperCase()} DE EQUIPAMENTO
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-DADOS DA EMPRESA:
-Nome: ${company.name}
-CNPJ: ${company.cnpj || 'N/A'}
-Contato: ${company.contact || 'N/A'}
-
-DADOS DO EQUIPAMENTO:
-Tipo: ${equipment.type}
-Número de Série: ${equipment.serialNumber}
-Data de Entrada: ${new Date(equipment.entryDate).toLocaleDateString('pt-BR')}
-Data de Saída: ${equipment.exitDate ? new Date(equipment.exitDate).toLocaleDateString('pt-BR') : 'N/A'}
-Status: ${equipment.exitDate ? 'Retirado' : 'Em Estoque'}
-
-DADOS DO PROTOCOLO:
-Tipo: ${protocolType === 'entrada' ? 'Entrada' : 'Saída'}
-Data do Protocolo: ${new Date(selectedDate).toLocaleDateString('pt-BR')}
-Hora de Geração: ${new Date().toLocaleTimeString('pt-BR')}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-RESPONSÁVEL PELA ${protocolType.toUpperCase()}:
-
-Nome: _________________________________________________
-
-Assinatura: ___________________________________________
-
-Data: _________________________________________________
-
-
-RESPONSÁVEL PELA TACOM:
-
-Nome: _________________________________________________
-
-Assinatura: ___________________________________________
-
-Data: _________________________________________________
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Este protocolo foi gerado automaticamente pelo Sistema TACOM
-${new Date().toLocaleString('pt-BR')}
-    `;
-
-    // Create and download PDF-like file (as text for now)
-    const blob = new Blob([protocolContent], { type: 'text/plain;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `protocolo_${protocolType}_${equipment.serialNumber}_${selectedDate}.txt`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create PDF
+    const doc = new jsPDF();
+    
+    // Set font
+    doc.setFont('helvetica');
+    
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`PROTOCOLO DE ${protocolType.toUpperCase()} DE EQUIPAMENTO`, 20, 30);
+    
+    // Line separator
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, 190, 35);
+    
+    // Company data
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DADOS DA EMPRESA:', 20, 50);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nome: ${company.name}`, 20, 60);
+    doc.text(`CNPJ: ${company.cnpj || 'N/A'}`, 20, 70);
+    doc.text(`Contato: ${company.contact || 'N/A'}`, 20, 80);
+    
+    // Equipment data
+    doc.setFont('helvetica', 'bold');
+    doc.text('DADOS DO EQUIPAMENTO:', 20, 100);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Tipo: ${equipment.type}`, 20, 110);
+    doc.text(`Número de Série: ${equipment.serial_number}`, 20, 120);
+    doc.text(`Data de Entrada: ${new Date(equipment.entry_date).toLocaleDateString('pt-BR')}`, 20, 130);
+    doc.text(`Status: Em Estoque`, 20, 140);
+    
+    // Protocol data
+    doc.setFont('helvetica', 'bold');
+    doc.text('DADOS DO PROTOCOLO:', 20, 160);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Tipo: ${protocolType === 'entrada' ? 'Entrada' : 'Saída'}`, 20, 170);
+    doc.text(`Data do Protocolo: ${new Date(selectedDate).toLocaleDateString('pt-BR')}`, 20, 180);
+    doc.text(`Hora de Geração: ${new Date().toLocaleTimeString('pt-BR')}`, 20, 190);
+    
+    // Line separator
+    doc.line(20, 200, 190, 200);
+    
+    // Signatures
+    doc.setFont('helvetica', 'bold');
+    doc.text(`RESPONSÁVEL PELA ${protocolType.toUpperCase()}:`, 20, 220);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text('Nome: _________________________________________________', 20, 235);
+    doc.text('Assinatura: ___________________________________________', 20, 250);
+    doc.text('Data: _________________________________________________', 20, 265);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESPONSÁVEL PELA TACOM:', 20, 285);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text('Nome: _________________________________________________', 20, 300);
+    doc.text('Assinatura: ___________________________________________', 20, 315);
+    doc.text('Data: _________________________________________________', 20, 330);
+    
+    // Footer
+    doc.line(20, 340, 190, 340);
+    doc.setFontSize(10);
+    doc.text('Este protocolo foi gerado automaticamente pelo Sistema TACOM', 20, 350);
+    doc.text(new Date().toLocaleString('pt-BR'), 20, 360);
+    
+    // Save PDF
+    doc.save(`protocolo_${protocolType}_${equipment.serial_number}_${selectedDate}.pdf`);
 
     toast({
       title: "Sucesso",
-      description: "Protocolo gerado com sucesso!",
+      description: "Protocolo PDF gerado com sucesso!",
     });
   };
 
   const filteredEquipments = getFilteredEquipments();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -176,7 +251,7 @@ ${new Date().toLocaleString('pt-BR')}
             </div>
 
             <div>
-              <Label htmlFor="equipment">Equipamento *</Label>
+              <Label htmlFor="equipment">Equipamento (Em Estoque) *</Label>
               <Select 
                 value={selectedEquipment} 
                 onValueChange={setSelectedEquipment}
@@ -190,12 +265,17 @@ ${new Date().toLocaleString('pt-BR')}
                     <SelectItem key={equipment.id} value={equipment.id}>
                       <div className="flex items-center gap-2">
                         <Laptop className="h-4 w-4" />
-                        {equipment.type} - {equipment.serialNumber}
+                        {equipment.type} - {equipment.serial_number}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {selectedCompany && filteredEquipments.length === 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Nenhum equipamento em estoque para esta empresa
+                </p>
+              )}
             </div>
 
             <div>
@@ -255,20 +335,16 @@ ${new Date().toLocaleString('pt-BR')}
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Número de Série</Label>
-                    <p className="text-lg font-mono">{equipment.serialNumber}</p>
+                    <p className="text-lg font-mono">{equipment.serial_number}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Data de Entrada</Label>
-                    <p className="text-lg">{new Date(equipment.entryDate).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-lg">{new Date(equipment.entry_date).toLocaleDateString('pt-BR')}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">Status</Label>
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                      equipment.exitDate 
-                        ? 'bg-gray-100 text-gray-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {equipment.exitDate ? 'Retirado' : 'Em Estoque'}
+                    <span className="inline-block px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                      Em Estoque
                     </span>
                   </div>
                 </div>

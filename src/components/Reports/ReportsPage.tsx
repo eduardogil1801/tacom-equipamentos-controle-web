@@ -6,12 +6,30 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileDown, FileSpreadsheet, Calendar } from 'lucide-react';
-import { Equipment, Company } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+
+interface Equipment {
+  id: string;
+  type: string;
+  serial_number: string;
+  entry_date: string;
+  exit_date?: string;
+  company_id: string;
+  companies?: {
+    name: string;
+  };
+}
+
+interface Company {
+  id: string;
+  name: string;
+}
 
 const ReportsPage: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     companyId: '',
     startDate: '',
@@ -20,28 +38,55 @@ const ReportsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    // Load data from localStorage
-    const savedEquipments = localStorage.getItem('tacom-equipments');
-    const savedCompanies = localStorage.getItem('tacom-companies');
-    
-    if (savedEquipments) {
-      setEquipments(JSON.parse(savedEquipments));
-    }
-    
-    if (savedCompanies) {
-      setCompanies(JSON.parse(savedCompanies));
-    }
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load companies
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('companies')
+        .select('*')
+        .order('name');
+
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
+
+      // Load equipments with company names
+      const { data: equipmentsData, error: equipmentsError } = await supabase
+        .from('equipments')
+        .select(`
+          *,
+          companies (
+            name
+          )
+        `)
+        .order('entry_date', { ascending: false });
+
+      if (equipmentsError) throw equipmentsError;
+      setEquipments(equipmentsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getFilteredEquipments = () => {
     return equipments.filter(equipment => {
-      const company = companies.find(c => c.id === equipment.companyId);
-      const matchesCompany = !filters.companyId || equipment.companyId === filters.companyId;
-      const matchesStartDate = !filters.startDate || equipment.entryDate >= filters.startDate;
-      const matchesEndDate = !filters.endDate || equipment.entryDate <= filters.endDate;
+      const matchesCompany = !filters.companyId || equipment.company_id === filters.companyId;
+      const matchesStartDate = !filters.startDate || equipment.entry_date >= filters.startDate;
+      const matchesEndDate = !filters.endDate || equipment.entry_date <= filters.endDate;
       const matchesStatus = filters.status === 'all' || 
-        (filters.status === 'in-stock' && !equipment.exitDate) ||
-        (filters.status === 'out-of-stock' && equipment.exitDate);
+        (filters.status === 'in-stock' && !equipment.exit_date) ||
+        (filters.status === 'out-of-stock' && equipment.exit_date);
 
       return matchesCompany && matchesStartDate && matchesEndDate && matchesStatus;
     });
@@ -62,14 +107,13 @@ const ReportsPage: React.FC = () => {
     const csvContent = [
       headers.join(','),
       ...filteredData.map(equipment => {
-        const company = companies.find(c => c.id === equipment.companyId);
         return [
-          equipment.type,
-          equipment.serialNumber,
-          company?.name || 'N/A',
-          new Date(equipment.entryDate).toLocaleDateString('pt-BR'),
-          equipment.exitDate ? new Date(equipment.exitDate).toLocaleDateString('pt-BR') : '-',
-          equipment.exitDate ? 'Retirado' : 'Em Estoque'
+          `"${equipment.type}"`,
+          `"${equipment.serial_number}"`,
+          `"${equipment.companies?.name || 'N/A'}"`,
+          new Date(equipment.entry_date).toLocaleDateString('pt-BR'),
+          equipment.exit_date ? new Date(equipment.exit_date).toLocaleDateString('pt-BR') : '-',
+          equipment.exit_date ? 'Retirado' : 'Em Estoque'
         ].join(',');
       })
     ].join('\n');
@@ -91,7 +135,6 @@ const ReportsPage: React.FC = () => {
   };
 
   const exportToExcel = () => {
-    // For now, we'll use CSV format with .xlsx extension as a simple solution
     const filteredData = getFilteredEquipments();
     if (filteredData.length === 0) {
       toast({
@@ -106,14 +149,13 @@ const ReportsPage: React.FC = () => {
     const excelContent = [
       headers.join(''),
       ...filteredData.map(equipment => {
-        const company = companies.find(c => c.id === equipment.companyId);
         return [
           equipment.type,
-          equipment.serialNumber,
-          company?.name || 'N/A',
-          new Date(equipment.entryDate).toLocaleDateString('pt-BR'),
-          equipment.exitDate ? new Date(equipment.exitDate).toLocaleDateString('pt-BR') : '-',
-          equipment.exitDate ? 'Retirado' : 'Em Estoque'
+          equipment.serial_number,
+          equipment.companies?.name || 'N/A',
+          new Date(equipment.entry_date).toLocaleDateString('pt-BR'),
+          equipment.exit_date ? new Date(equipment.exit_date).toLocaleDateString('pt-BR') : '-',
+          equipment.exit_date ? 'Retirado' : 'Em Estoque'
         ].join('\t');
       })
     ].join('\n');
@@ -135,6 +177,14 @@ const ReportsPage: React.FC = () => {
   };
 
   const filteredEquipments = getFilteredEquipments();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -242,29 +292,26 @@ const ReportsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredEquipments.slice(0, 10).map(equipment => {
-                  const company = companies.find(c => c.id === equipment.companyId);
-                  return (
-                    <tr key={equipment.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2">{equipment.type}</td>
-                      <td className="p-2 font-mono">{equipment.serialNumber}</td>
-                      <td className="p-2">{company?.name || 'N/A'}</td>
-                      <td className="p-2">{new Date(equipment.entryDate).toLocaleDateString('pt-BR')}</td>
-                      <td className="p-2">
-                        {equipment.exitDate ? new Date(equipment.exitDate).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                      <td className="p-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          equipment.exitDate 
-                            ? 'bg-gray-100 text-gray-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {equipment.exitDate ? 'Retirado' : 'Em Estoque'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredEquipments.slice(0, 10).map(equipment => (
+                  <tr key={equipment.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2">{equipment.type}</td>
+                    <td className="p-2 font-mono">{equipment.serial_number}</td>
+                    <td className="p-2">{equipment.companies?.name || 'N/A'}</td>
+                    <td className="p-2">{new Date(equipment.entry_date).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-2">
+                      {equipment.exit_date ? new Date(equipment.exit_date).toLocaleDateString('pt-BR') : '-'}
+                    </td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        equipment.exit_date 
+                          ? 'bg-gray-100 text-gray-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {equipment.exit_date ? 'Retirado' : 'Em Estoque'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
             {filteredEquipments.length === 0 && (
