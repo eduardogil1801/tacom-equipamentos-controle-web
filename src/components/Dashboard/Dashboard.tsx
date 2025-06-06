@@ -1,9 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Building, Database, TrendingUp, Package, MapPin } from 'lucide-react';
+import { Building, Database, TrendingUp, Package, MapPin, Upload, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { updateAllCompaniesState } from '@/utils/updateCompaniesState';
+import { insertCcitEquipmentsWithDuplicateCheck } from '@/utils/insertCcitEquipments';
+import DashboardFilters from './DashboardFilters';
 
 interface Equipment {
   id: string;
@@ -13,6 +18,7 @@ interface Equipment {
   data_saida?: string;
   id_empresa: string;
   estado?: string;
+  status?: string;
   empresas?: {
     name: string;
     estado?: string;
@@ -27,12 +33,25 @@ interface Company {
 
 const Dashboard: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingBulkOperations, setProcessingBulkOperations] = useState(false);
+
+  // Filter states
+  const [selectedCompany, setSelectedCompany] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [serialSearch, setSerialSearch] = useState('');
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [equipments, selectedCompany, selectedState, selectedStatus, selectedType, serialSearch]);
 
   const loadData = async () => {
     try {
@@ -68,14 +87,94 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Calculate statistics
-  const totalEquipments = equipments.length;
-  const inStockEquipments = equipments.filter(eq => !eq.data_saida).length;
-  const outEquipments = equipments.filter(eq => eq.data_saida).length;
+  const applyFilters = () => {
+    let filtered = [...equipments];
+
+    if (selectedCompany) {
+      filtered = filtered.filter(eq => eq.id_empresa === selectedCompany);
+    }
+
+    if (selectedState) {
+      filtered = filtered.filter(eq => 
+        eq.estado === selectedState || eq.empresas?.estado === selectedState
+      );
+    }
+
+    if (selectedStatus) {
+      filtered = filtered.filter(eq => eq.status === selectedStatus);
+    }
+
+    if (selectedType) {
+      filtered = filtered.filter(eq => eq.tipo === selectedType);
+    }
+
+    if (serialSearch) {
+      filtered = filtered.filter(eq => 
+        eq.numero_serie.toLowerCase().includes(serialSearch.toLowerCase())
+      );
+    }
+
+    setFilteredEquipments(filtered);
+  };
+
+  const clearFilters = () => {
+    setSelectedCompany('');
+    setSelectedState('');
+    setSelectedStatus('');
+    setSelectedType('');
+    setSerialSearch('');
+  };
+
+  const handleUpdateCompaniesState = async () => {
+    setProcessingBulkOperations(true);
+    try {
+      await updateAllCompaniesState();
+      toast({
+        title: "Sucesso",
+        description: "Estado de todas as empresas atualizado para Rio Grande do Sul!",
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error updating companies state:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar estado das empresas.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingBulkOperations(false);
+    }
+  };
+
+  const handleInsertCcitEquipments = async () => {
+    setProcessingBulkOperations(true);
+    try {
+      const result = await insertCcitEquipmentsWithDuplicateCheck();
+      toast({
+        title: "Sucesso",
+        description: `${result.inserted} equipamentos CCIT 5.0 inseridos com sucesso! (${result.duplicates} duplicatas ignoradas)`,
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error inserting CCIT equipments:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao inserir equipamentos CCIT 5.0.",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingBulkOperations(false);
+    }
+  };
+
+  // Calculate statistics based on filtered data
+  const totalEquipments = filteredEquipments.length;
+  const inStockEquipments = filteredEquipments.filter(eq => !eq.data_saida).length;
+  const outEquipments = filteredEquipments.filter(eq => eq.data_saida).length;
   const totalCompanies = companies.length;
 
-  // Data for equipment by state
-  const stateData = equipments.reduce((acc: any[], equipment) => {
+  // Data for equipment by state (filtered)
+  const stateData = filteredEquipments.reduce((acc: any[], equipment) => {
     const estado = equipment.estado || equipment.empresas?.estado || 'Não informado';
     const existing = acc.find(item => item.estado === estado);
     const inStock = !equipment.data_saida;
@@ -95,21 +194,24 @@ const Dashboard: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.total - a.total);
 
-  // Data for company equipment chart
-  const companyData = companies.map(company => ({
-    name: company.name,
-    total: equipments.filter(eq => eq.id_empresa === company.id).length,
-    inStock: equipments.filter(eq => eq.id_empresa === company.id && !eq.data_saida).length
-  })).filter(item => item.total > 0).sort((a, b) => b.total - a.total);
+  // Data for company equipment chart (filtered)
+  const companyData = companies.map(company => {
+    const companyEquipments = filteredEquipments.filter(eq => eq.id_empresa === company.id);
+    return {
+      name: company.name,
+      total: companyEquipments.length,
+      inStock: companyEquipments.filter(eq => !eq.data_saida).length
+    };
+  }).filter(item => item.total > 0).sort((a, b) => b.total - a.total);
 
-  // Data for pie chart
+  // Data for pie chart (filtered)
   const pieData = [
     { name: 'Em Estoque', value: inStockEquipments, color: '#16A34A' },
     { name: 'Retirados', value: outEquipments, color: '#DC2626' }
   ];
 
-  // Equipment types data
-  const typeData = equipments.reduce((acc: any[], equipment) => {
+  // Equipment types data (filtered)
+  const typeData = filteredEquipments.reduce((acc: any[], equipment) => {
     const existing = acc.find(item => item.type === equipment.tipo);
     if (existing) {
       existing.count += 1;
@@ -119,8 +221,8 @@ const Dashboard: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.count - a.count);
 
-  // Get unique states for stats
-  const uniqueStates = [...new Set(equipments.map(eq => eq.estado || eq.empresas?.estado).filter(Boolean))];
+  // Get unique states for stats (filtered)
+  const uniqueStates = [...new Set(filteredEquipments.map(eq => eq.estado || eq.empresas?.estado).filter(Boolean))];
 
   if (loading) {
     return (
@@ -132,7 +234,45 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleUpdateCompaniesState}
+            disabled={processingBulkOperations}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            {processingBulkOperations ? 'Atualizando...' : 'Atualizar Estado Empresas'}
+          </Button>
+          <Button 
+            onClick={handleInsertCcitEquipments}
+            disabled={processingBulkOperations}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            {processingBulkOperations ? 'Inserindo...' : 'Inserir CCIT 5.0'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <DashboardFilters
+        companies={companies}
+        selectedCompany={selectedCompany}
+        selectedState={selectedState}
+        selectedStatus={selectedStatus}
+        selectedType={selectedType}
+        serialSearch={serialSearch}
+        onCompanyChange={setSelectedCompany}
+        onStateChange={setSelectedState}
+        onStatusChange={setSelectedStatus}
+        onTypeChange={setSelectedType}
+        onSerialSearchChange={setSerialSearch}
+        onClearFilters={clearFilters}
+      />
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -143,7 +283,9 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{totalEquipments}</div>
-            <p className="text-xs text-muted-foreground">Equipamentos cadastrados</p>
+            <p className="text-xs text-muted-foreground">
+              {totalEquipments === equipments.length ? 'Equipamentos cadastrados' : 'Equipamentos filtrados'}
+            </p>
           </CardContent>
         </Card>
 
