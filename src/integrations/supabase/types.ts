@@ -14,6 +14,7 @@ export type Database = {
           cnpj: string | null
           contact: string | null
           created_at: string
+          estado: string | null
           id: string
           name: string
           updated_at: string
@@ -22,6 +23,7 @@ export type Database = {
           cnpj?: string | null
           contact?: string | null
           created_at?: string
+          estado?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -30,6 +32,7 @@ export type Database = {
           cnpj?: string | null
           contact?: string | null
           created_at?: string
+          estado?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -42,6 +45,7 @@ export type Database = {
           at_update: string
           data_entrada: string
           data_saida: string | null
+          estado: string | null
           id: string
           id_empresa: string
           numero_serie: string
@@ -52,6 +56,7 @@ export type Database = {
           at_update?: string
           data_entrada: string
           data_saida?: string | null
+          estado?: string | null
           id?: string
           id_empresa: string
           numero_serie: string
@@ -62,6 +67,7 @@ export type Database = {
           at_update?: string
           data_entrada?: string
           data_saida?: string | null
+          estado?: string | null
           id?: string
           id_empresa?: string
           numero_serie?: string

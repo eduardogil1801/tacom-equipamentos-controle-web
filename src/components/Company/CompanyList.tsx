@@ -4,66 +4,144 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash, Building } from 'lucide-react';
-import { Company } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Company {
+  id: string;
+  name: string;
+  cnpj?: string;
+  contact?: string;
+  estado?: string;
+}
 
 const CompanyList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     cnpj: '',
-    contact: ''
+    contact: '',
+    estado: ''
   });
 
+  const estados = [
+    'Acre',
+    'Alagoas',
+    'Amapá',
+    'Amazonas',
+    'Bahia',
+    'Ceará',
+    'Distrito Federal',
+    'Espírito Santo',
+    'Goiás',
+    'Maranhão',
+    'Mato Grosso',
+    'Mato Grosso do Sul',
+    'Minas Gerais',
+    'Pará',
+    'Paraíba',
+    'Paraná',
+    'Pernambuco',
+    'Piauí',
+    'Rio de Janeiro',
+    'Rio Grande do Norte',
+    'Rio Grande do Sul',
+    'Rondônia',
+    'Roraima',
+    'Santa Catarina',
+    'São Paulo',
+    'Sergipe',
+    'Tocantins'
+  ];
+
   useEffect(() => {
-    const savedCompanies = localStorage.getItem('tacom-companies');
-    if (savedCompanies) {
-      setCompanies(JSON.parse(savedCompanies));
-    }
+    loadCompanies();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name) {
+  const loadCompanies = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Error loading companies:', error);
       toast({
         title: "Erro",
-        description: "Nome da empresa é obrigatório.",
+        description: "Erro ao carregar empresas",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.estado) {
+      toast({
+        title: "Erro",
+        description: "Nome da empresa e estado são obrigatórios.",
         variant: "destructive",
       });
       return;
     }
 
-    const newCompany = {
-      id: editingCompany?.id || Date.now().toString(),
-      name: formData.name,
-      cnpj: formData.cnpj,
-      contact: formData.contact
-    };
+    try {
+      const companyData = {
+        name: formData.name,
+        cnpj: formData.cnpj || null,
+        contact: formData.contact || null,
+        estado: formData.estado
+      };
 
-    let updatedCompanies;
-    if (editingCompany) {
-      updatedCompanies = companies.map(comp => 
-        comp.id === editingCompany.id ? newCompany : comp
-      );
-    } else {
-      updatedCompanies = [...companies, newCompany];
+      if (editingCompany) {
+        const { error } = await supabase
+          .from('empresas')
+          .update(companyData)
+          .eq('id', editingCompany.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Empresa atualizada com sucesso!",
+        });
+      } else {
+        const { error } = await supabase
+          .from('empresas')
+          .insert([companyData]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Empresa cadastrada com sucesso!",
+        });
+      }
+
+      loadCompanies();
+      setFormData({ name: '', cnpj: '', contact: '', estado: '' });
+      setShowForm(false);
+      setEditingCompany(null);
+    } catch (error) {
+      console.error('Error saving company:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar empresa",
+        variant: "destructive",
+      });
     }
-
-    setCompanies(updatedCompanies);
-    localStorage.setItem('tacom-companies', JSON.stringify(updatedCompanies));
-    
-    setFormData({ name: '', cnpj: '', contact: '' });
-    setShowForm(false);
-    setEditingCompany(null);
-
-    toast({
-      title: "Sucesso",
-      description: editingCompany ? "Empresa atualizada com sucesso!" : "Empresa cadastrada com sucesso!",
-    });
   };
 
   const handleEdit = (company: Company) => {
@@ -71,27 +149,50 @@ const CompanyList: React.FC = () => {
     setFormData({
       name: company.name,
       cnpj: company.cnpj || '',
-      contact: company.contact || ''
+      contact: company.contact || '',
+      estado: company.estado || ''
     });
     setShowForm(true);
   };
 
-  const handleDelete = (id: string) => {
-    const updatedCompanies = companies.filter(comp => comp.id !== id);
-    setCompanies(updatedCompanies);
-    localStorage.setItem('tacom-companies', JSON.stringify(updatedCompanies));
-    
-    toast({
-      title: "Sucesso",
-      description: "Empresa removida com sucesso!",
-    });
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('empresas')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Empresa removida com sucesso!",
+      });
+      
+      loadCompanies();
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir empresa",
+        variant: "destructive",
+      });
+    }
   };
 
   const cancelForm = () => {
     setShowForm(false);
     setEditingCompany(null);
-    setFormData({ name: '', cnpj: '', contact: '' });
+    setFormData({ name: '', cnpj: '', contact: '', estado: '' });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -117,7 +218,7 @@ const CompanyList: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome da Empresa *</Label>
                   <Input
@@ -148,6 +249,22 @@ const CompanyList: React.FC = () => {
                     onChange={(e) => setFormData({...formData, contact: e.target.value})}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estado">Estado *</Label>
+                  <Select value={formData.estado} onValueChange={(value) => setFormData({...formData, estado: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {estados.map(estado => (
+                        <SelectItem key={estado} value={estado}>
+                          {estado}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex gap-4">
@@ -176,6 +293,7 @@ const CompanyList: React.FC = () => {
                   <th className="text-left p-2">Nome</th>
                   <th className="text-left p-2">CNPJ</th>
                   <th className="text-left p-2">Contato</th>
+                  <th className="text-left p-2">Estado</th>
                   <th className="text-left p-2">Ações</th>
                 </tr>
               </thead>
@@ -185,6 +303,7 @@ const CompanyList: React.FC = () => {
                     <td className="p-2 font-medium">{company.name}</td>
                     <td className="p-2">{company.cnpj || '-'}</td>
                     <td className="p-2">{company.contact || '-'}</td>
+                    <td className="p-2">{company.estado || '-'}</td>
                     <td className="p-2">
                       <div className="flex gap-2">
                         <Button

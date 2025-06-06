@@ -17,6 +17,7 @@ interface Equipment {
   data_entrada: string;
   data_saida?: string;
   id_empresa: string;
+  estado?: string;
 }
 
 interface Company {
@@ -42,10 +43,41 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     numero_serie: '',
     data_entrada: '',
     data_saida: '',
-    id_empresa: ''
+    id_empresa: '',
+    estado: ''
   });
   const [isInStock, setIsInStock] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  const estados = [
+    'Acre',
+    'Alagoas',
+    'Amapá',
+    'Amazonas',
+    'Bahia',
+    'Ceará',
+    'Distrito Federal',
+    'Espírito Santo',
+    'Goiás',
+    'Maranhão',
+    'Mato Grosso',
+    'Mato Grosso do Sul',
+    'Minas Gerais',
+    'Pará',
+    'Paraíba',
+    'Paraná',
+    'Pernambuco',
+    'Piauí',
+    'Rio de Janeiro',
+    'Rio Grande do Norte',
+    'Rio Grande do Sul',
+    'Rondônia',
+    'Roraima',
+    'Santa Catarina',
+    'São Paulo',
+    'Sergipe',
+    'Tocantins'
+  ];
 
   useEffect(() => {
     if (equipment) {
@@ -54,7 +86,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         numero_serie: equipment.numero_serie,
         data_entrada: equipment.data_entrada,
         data_saida: equipment.data_saida || '',
-        id_empresa: equipment.id_empresa
+        id_empresa: equipment.id_empresa,
+        estado: equipment.estado || ''
       });
       setIsInStock(!equipment.data_saida);
     } else {
@@ -67,7 +100,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.tipo || !formData.numero_serie || !formData.data_entrada || !formData.id_empresa) {
+    if (!formData.tipo || !formData.numero_serie || !formData.data_entrada || !formData.id_empresa || !formData.estado) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -93,7 +126,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         numero_serie: formData.numero_serie,
         data_entrada: formData.data_entrada,
         data_saida: isInStock ? null : formData.data_saida || null,
-        id_empresa: formData.id_empresa
+        id_empresa: formData.id_empresa,
+        estado: formData.estado
       };
 
       if (equipment) {
@@ -198,6 +232,22 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                     {companies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado do Estoque *</Label>
+                <Select value={formData.estado} onValueChange={(value) => handleChange('estado', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {estados.map(estado => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
                       </SelectItem>
                     ))}
                   </SelectContent>

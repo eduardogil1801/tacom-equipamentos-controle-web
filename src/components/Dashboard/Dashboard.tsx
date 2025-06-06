@@ -2,62 +2,140 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Building, Database, TrendingUp, Package } from 'lucide-react';
-import { Equipment, Company } from '@/types';
+import { Building, Database, TrendingUp, Package, MapPin } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Equipment {
+  id: string;
+  tipo: string;
+  numero_serie: string;
+  data_entrada: string;
+  data_saida?: string;
+  id_empresa: string;
+  estado?: string;
+  empresas?: {
+    name: string;
+    estado?: string;
+  };
+}
+
+interface Company {
+  id: string;
+  name: string;
+  estado?: string;
+}
 
 const Dashboard: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedEquipments = localStorage.getItem('tacom-equipments');
-    const savedCompanies = localStorage.getItem('tacom-companies');
-    
-    if (savedEquipments) {
-      setEquipments(JSON.parse(savedEquipments));
-    }
-    
-    if (savedCompanies) {
-      setCompanies(JSON.parse(savedCompanies));
-    }
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load companies
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('empresas')
+        .select('*')
+        .order('name');
+
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
+
+      // Load equipments with company data
+      const { data: equipmentsData, error: equipmentsError } = await supabase
+        .from('equipamentos')
+        .select(`
+          *,
+          empresas (
+            name,
+            estado
+          )
+        `)
+        .order('data_entrada', { ascending: false });
+
+      if (equipmentsError) throw equipmentsError;
+      setEquipments(equipmentsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calculate statistics
   const totalEquipments = equipments.length;
-  const inStockEquipments = equipments.filter(eq => !eq.exitDate).length;
-  const outEquipments = equipments.filter(eq => eq.exitDate).length;
+  const inStockEquipments = equipments.filter(eq => !eq.data_saida).length;
+  const outEquipments = equipments.filter(eq => eq.data_saida).length;
   const totalCompanies = companies.length;
+
+  // Data for equipment by state
+  const stateData = equipments.reduce((acc: any[], equipment) => {
+    const estado = equipment.estado || equipment.empresas?.estado || 'Não informado';
+    const existing = acc.find(item => item.estado === estado);
+    const inStock = !equipment.data_saida;
+    
+    if (existing) {
+      existing.total += 1;
+      if (inStock) existing.emEstoque += 1;
+      else existing.retirados += 1;
+    } else {
+      acc.push({ 
+        estado, 
+        total: 1, 
+        emEstoque: inStock ? 1 : 0,
+        retirados: inStock ? 0 : 1
+      });
+    }
+    return acc;
+  }, []).sort((a, b) => b.total - a.total);
 
   // Data for company equipment chart
   const companyData = companies.map(company => ({
     name: company.name,
-    total: equipments.filter(eq => eq.companyId === company.id).length,
-    inStock: equipments.filter(eq => eq.companyId === company.id && !eq.exitDate).length
-  }));
+    total: equipments.filter(eq => eq.id_empresa === company.id).length,
+    inStock: equipments.filter(eq => eq.id_empresa === company.id && !eq.data_saida).length
+  })).filter(item => item.total > 0).sort((a, b) => b.total - a.total);
 
   // Data for pie chart
   const pieData = [
-    { name: 'Em Estoque', value: inStockEquipments, color: '#DC2626' },
-    { name: 'Retirados', value: outEquipments, color: '#374151' }
+    { name: 'Em Estoque', value: inStockEquipments, color: '#16A34A' },
+    { name: 'Retirados', value: outEquipments, color: '#DC2626' }
   ];
 
   // Equipment types data
   const typeData = equipments.reduce((acc: any[], equipment) => {
-    const existing = acc.find(item => item.type === equipment.type);
+    const existing = acc.find(item => item.type === equipment.tipo);
     if (existing) {
       existing.count += 1;
     } else {
-      acc.push({ type: equipment.type, count: 1 });
+      acc.push({ type: equipment.tipo, count: 1 });
     }
     return acc;
   }, []).sort((a, b) => b.count - a.count);
+
+  // Get unique states for stats
+  const uniqueStates = [...new Set(equipments.map(eq => eq.estado || eq.empresas?.estado).filter(Boolean))];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Equipamentos</CardTitle>
@@ -86,7 +164,7 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{outEquipments}</div>
+            <div className="text-2xl font-bold text-red-600">{outEquipments}</div>
             <p className="text-xs text-muted-foreground">Fora do estoque</p>
           </CardContent>
         </Card>
@@ -101,21 +179,32 @@ const Dashboard: React.FC = () => {
             <p className="text-xs text-muted-foreground">Empresas cadastradas</p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Estados</CardTitle>
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{uniqueStates.length}</div>
+            <p className="text-xs text-muted-foreground">Estados com equipamentos</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Equipment by Company */}
+        {/* Equipment by State */}
         <Card>
           <CardHeader>
-            <CardTitle>Equipamentos por Empresa</CardTitle>
+            <CardTitle>Equipamentos por Estado</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={companyData}>
+              <BarChart data={stateData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
-                  dataKey="name" 
+                  dataKey="estado" 
                   angle={-45}
                   textAnchor="end"
                   height={80}
@@ -124,7 +213,7 @@ const Dashboard: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="total" fill="#DC2626" name="Total" />
-                <Bar dataKey="inStock" fill="#16A34A" name="Em Estoque" />
+                <Bar dataKey="emEstoque" fill="#16A34A" name="Em Estoque" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -157,6 +246,33 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Equipment by Company */}
+      {companyData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Equipamentos por Empresa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={companyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  fontSize={12}
+                />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="total" fill="#DC2626" name="Total" />
+                <Bar dataKey="inStock" fill="#16A34A" name="Em Estoque" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Equipment Types */}
       {typeData.length > 0 && (

@@ -16,6 +16,7 @@ interface Equipment {
   data_entrada: string;
   data_saida?: string;
   id_empresa: string;
+  estado?: string;
   empresas?: {
     name: string;
   };
@@ -36,7 +37,8 @@ const EquipmentList: React.FC = () => {
     numero_serie: '',
     company: '',
     data_entrada: '',
-    data_saida: ''
+    data_saida: '',
+    estado: ''
   });
 
   useEffect(() => {
@@ -118,7 +120,8 @@ const EquipmentList: React.FC = () => {
       equipment.numero_serie.toLowerCase().includes(filters.numero_serie.toLowerCase()) &&
       (company?.name.toLowerCase().includes(filters.company.toLowerCase()) || !filters.company) &&
       (equipment.data_entrada.includes(filters.data_entrada) || !filters.data_entrada) &&
-      (equipment.data_saida?.includes(filters.data_saida) || !filters.data_saida)
+      (equipment.data_saida?.includes(filters.data_saida) || !filters.data_saida) &&
+      (equipment.estado?.toLowerCase().includes(filters.estado.toLowerCase()) || !filters.estado)
     );
   });
 
@@ -166,7 +169,7 @@ const EquipmentList: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <Label htmlFor="serialFilter">Número de Série</Label>
               <Input
@@ -183,6 +186,15 @@ const EquipmentList: React.FC = () => {
                 placeholder="Filtrar por empresa..."
                 value={filters.company}
                 onChange={(e) => setFilters({...filters, company: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="estadoFilter">Estado</Label>
+              <Input
+                id="estadoFilter"
+                placeholder="Filtrar por estado..."
+                value={filters.estado}
+                onChange={(e) => setFilters({...filters, estado: e.target.value})}
               />
             </div>
             <div>
@@ -220,6 +232,7 @@ const EquipmentList: React.FC = () => {
                   <th className="text-left p-2">Tipo</th>
                   <th className="text-left p-2">Série</th>
                   <th className="text-left p-2">Empresa</th>
+                  <th className="text-left p-2">Estado</th>
                   <th className="text-left p-2">Entrada</th>
                   <th className="text-left p-2">Saída</th>
                   <th className="text-left p-2">Status</th>
@@ -232,6 +245,7 @@ const EquipmentList: React.FC = () => {
                     <td className="p-2">{equipment.tipo}</td>
                     <td className="p-2 font-mono">{equipment.numero_serie}</td>
                     <td className="p-2">{equipment.empresas?.name || 'N/A'}</td>
+                    <td className="p-2">{equipment.estado || '-'}</td>
                     <td className="p-2">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
                     <td className="p-2">
                       {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
