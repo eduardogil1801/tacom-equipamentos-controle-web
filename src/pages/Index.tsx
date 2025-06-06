@@ -7,7 +7,6 @@ import Header from '@/components/Layout/Header';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
 import CompanyList from '@/components/Company/CompanyList';
-import ReportsPage from '@/components/Reports/ReportsPage';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
 import InventoryReport from '@/components/Reports/InventoryReport';
 import MovementsReport from '@/components/Reports/MovementsReport';
@@ -41,8 +40,6 @@ const Index = () => {
         return <CompanyList />;
       case 'dashboard':
         return <Dashboard />;
-      case 'reports':
-        return <ReportsPage />;
       case 'reports-inventory':
         return <InventoryReport />;
       case 'reports-movements':

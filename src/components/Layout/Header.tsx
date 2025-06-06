@@ -9,9 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 
 interface HeaderProps {
@@ -31,19 +28,16 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'equipments', label: 'Equipamentos' },
     { id: 'companies', label: 'Empresas' },
-    { 
-      id: 'reports', 
-      label: 'Relatórios',
-      submenu: [
-        { id: 'reports-inventory', label: 'Relatório de Estoque' },
-        { id: 'reports-movements', label: 'Movimentações' },
-        { id: 'reports-companies', label: 'Relatório de Empresas' },
-        { id: 'reports-equipment-status', label: 'Status dos Equipamentos' },
-        { id: 'reports-monthly', label: 'Relatório Mensal' },
-        { id: 'reports-equipment-history', label: 'Histórico de Equipamentos' }
-      ]
-    },
     { id: 'protocol', label: 'Protocolo' },
+  ];
+
+  const reportItems = [
+    { id: 'reports-inventory', label: 'Relatório de Estoque' },
+    { id: 'reports-movements', label: 'Movimentações' },
+    { id: 'reports-companies', label: 'Relatório de Empresas' },
+    { id: 'reports-equipment-status', label: 'Status dos Equipamentos' },
+    { id: 'reports-monthly', label: 'Relatório Mensal' },
+    { id: 'reports-equipment-history', label: 'Histórico de Equipamentos' }
   ];
 
   return (
@@ -61,39 +55,38 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-4">
             {navigationItems.map((item) => (
-              item.submenu ? (
-                <DropdownMenu key={item.id}>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant={currentPage.startsWith('reports') ? 'default' : 'ghost'}
-                      className={currentPage.startsWith('reports') ? 'bg-primary text-white' : ''}
-                    >
-                      {item.label}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {item.submenu.map((subItem) => (
-                      <DropdownMenuItem
-                        key={subItem.id}
-                        onClick={() => onNavigate(subItem.id)}
-                        className={currentPage === subItem.id ? 'bg-primary/10' : ''}
-                      >
-                        {subItem.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button
-                  key={item.id}
-                  variant={currentPage === item.id ? 'default' : 'ghost'}
-                  onClick={() => onNavigate(item.id)}
-                  className={currentPage === item.id ? 'bg-primary text-white' : ''}
-                >
-                  {item.label}
-                </Button>
-              )
+              <Button
+                key={item.id}
+                variant={currentPage === item.id ? 'default' : 'ghost'}
+                onClick={() => onNavigate(item.id)}
+                className={currentPage === item.id ? 'bg-primary text-white' : ''}
+              >
+                {item.label}
+              </Button>
             ))}
+            
+            {/* Relatórios Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={currentPage.startsWith('reports') ? 'default' : 'ghost'}
+                  className={currentPage.startsWith('reports') ? 'bg-primary text-white' : ''}
+                >
+                  Relatórios
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {reportItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.id}
+                    onClick={() => onNavigate(item.id)}
+                    className={currentPage === item.id ? 'bg-primary/10' : ''}
+                  >
+                    {item.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           {/* User Menu */}
@@ -123,45 +116,44 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
           <div className="md:hidden py-4 border-t">
             <nav className="space-y-2">
               {navigationItems.map((item) => (
-                item.submenu ? (
-                  <DropdownMenu key={item.id}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant={currentPage.startsWith('reports') ? 'default' : 'ghost'}
-                        className={`w-full justify-start ${currentPage.startsWith('reports') ? 'bg-primary text-white' : ''}`}
-                      >
-                        {item.label}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                      {item.submenu.map((subItem) => (
-                        <DropdownMenuItem
-                          key={subItem.id}
-                          onClick={() => {
-                            onNavigate(subItem.id);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className={currentPage === subItem.id ? 'bg-primary/10' : ''}
-                        >
-                          {subItem.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button
-                    key={item.id}
-                    variant={currentPage === item.id ? 'default' : 'ghost'}
-                    onClick={() => {
-                      onNavigate(item.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full justify-start ${currentPage === item.id ? 'bg-primary text-white' : ''}`}
-                  >
-                    {item.label}
-                  </Button>
-                )
+                <Button
+                  key={item.id}
+                  variant={currentPage === item.id ? 'default' : 'ghost'}
+                  onClick={() => {
+                    onNavigate(item.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full justify-start ${currentPage === item.id ? 'bg-primary text-white' : ''}`}
+                >
+                  {item.label}
+                </Button>
               ))}
+              
+              {/* Mobile Relatórios Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={currentPage.startsWith('reports') ? 'default' : 'ghost'}
+                    className={`w-full justify-start ${currentPage.startsWith('reports') ? 'bg-primary text-white' : ''}`}
+                  >
+                    Relatórios
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  {reportItems.map((item) => (
+                    <DropdownMenuItem
+                      key={item.id}
+                      onClick={() => {
+                        onNavigate(item.id);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={currentPage === item.id ? 'bg-primary/10' : ''}
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
           </div>
         )}
