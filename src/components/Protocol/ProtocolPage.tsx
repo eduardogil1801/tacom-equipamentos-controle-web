@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -353,15 +352,14 @@ const ProtocolPage: React.FC = () => {
                     Equipamento {selectedEquipments.length > 1 ? index + 1 : ''}
                   </Label>
                   <Select 
-                    value={item.equipment.id || 'placeholder'} 
-                    onValueChange={(value) => updateSelectedEquipment(item.id, value === 'placeholder' ? '' : value)}
+                    value={item.equipment.id || ''} 
+                    onValueChange={(value) => updateSelectedEquipment(item.id, value)}
                     disabled={!selectedCompany}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={!selectedCompany ? "Selecione uma empresa primeiro" : "Selecione um equipamento"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="placeholder" disabled>Selecione um equipamento</SelectItem>
                       {filteredEquipments.map(equipment => (
                         <SelectItem key={equipment.id} value={equipment.id}>
                           <div className="flex items-center gap-2">
