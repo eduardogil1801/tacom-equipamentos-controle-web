@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Edit, Trash } from 'lucide-react';
 import EquipmentForm from './EquipmentForm';
+import BulkImportDialog from './BulkImportDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -163,13 +163,19 @@ const EquipmentList: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Controle de Equipamentos</h1>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="bg-primary hover:bg-primary/90 flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar Equipamento
-        </Button>
+        <div className="flex gap-2">
+          <BulkImportDialog 
+            companies={companies} 
+            onImportComplete={loadData}
+          />
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar Equipamento
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
