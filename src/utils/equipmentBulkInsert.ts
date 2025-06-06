@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// Dados dos equipamentos CCIT 5.0 usados
+// Dados dos equipamentos CCIT 5.0 usados para FILIAL - TACOM - RS
 const ccit5UsedEquipments = [
   '42555', '49016', '58292',
   '40132', '41035',
@@ -45,6 +45,25 @@ export const insertCcit5UsedEquipments = async (empresaId: string, estado: strin
   }
 
   return data;
+};
+
+export const insertCcit5ForTacomRS = async () => {
+  // Busca a empresa FILIAL - TACOM
+  const { data: companies, error: companiesError } = await supabase
+    .from('empresas')
+    .select('id, name')
+    .ilike('name', '%TACOM%')
+    .limit(1);
+
+  if (companiesError) throw companiesError;
+  
+  if (!companies || companies.length === 0) {
+    throw new Error('Empresa FILIAL - TACOM não encontrada. Verifique se ela está cadastrada no sistema.');
+  }
+
+  const tacomCompany = companies[0];
+  
+  return await insertCcit5UsedEquipments(tacomCompany.id, 'Rio Grande do Sul');
 };
 
 export const getCcit5UsedEquipmentsList = () => {
