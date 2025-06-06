@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash, Building } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useMask } from '@/hooks/useMask';
 
 interface Company {
   id: string;
@@ -28,6 +29,8 @@ const CompanyList: React.FC = () => {
     contact: '',
     estado: ''
   });
+
+  const { formatCNPJ, formatPhone } = useMask();
 
   const estados = [
     'Acre',
@@ -148,8 +151,8 @@ const CompanyList: React.FC = () => {
     setEditingCompany(company);
     setFormData({
       name: company.name,
-      cnpj: company.cnpj || '',
-      contact: company.contact || '',
+      cnpj: company.cnpj ? formatCNPJ(company.cnpj) : '',
+      contact: company.contact ? formatPhone(company.contact) : '',
       estado: company.estado || ''
     });
     setShowForm(true);
@@ -232,8 +235,9 @@ const CompanyList: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input
+                  <MaskedInput
                     id="cnpj"
+                    mask="cnpj"
                     placeholder="00.000.000/0000-00"
                     value={formData.cnpj}
                     onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
@@ -242,9 +246,10 @@ const CompanyList: React.FC = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="contact">Contato</Label>
-                  <Input
+                  <MaskedInput
                     id="contact"
-                    placeholder="(00) 0000-0000"
+                    mask="phone"
+                    placeholder="(00) 00000-0000"
                     value={formData.contact}
                     onChange={(e) => setFormData({...formData, contact: e.target.value})}
                   />
