@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Edit, Trash } from 'lucide-react';
 import EquipmentForm from './EquipmentForm';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,11 +13,13 @@ import { toast } from '@/hooks/use-toast';
 interface Equipment {
   id: string;
   tipo: string;
+  modelo?: string;
   numero_serie: string;
   data_entrada: string;
   data_saida?: string;
   id_empresa: string;
   estado?: string;
+  status?: string;
   empresas?: {
     name: string;
   };
@@ -38,7 +41,10 @@ const EquipmentList: React.FC = () => {
     company: '',
     data_entrada: '',
     data_saida: '',
-    estado: ''
+    estado: '',
+    tipo: '',
+    modelo: '',
+    status: ''
   });
 
   useEffect(() => {
@@ -49,7 +55,6 @@ const EquipmentList: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load companies
       const { data: companiesData, error: companiesError } = await supabase
         .from('empresas')
         .select('*')
@@ -58,7 +63,6 @@ const EquipmentList: React.FC = () => {
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
-      // Load equipments with company names
       const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
@@ -121,9 +125,17 @@ const EquipmentList: React.FC = () => {
       (company?.name.toLowerCase().includes(filters.company.toLowerCase()) || !filters.company) &&
       (equipment.data_entrada.includes(filters.data_entrada) || !filters.data_entrada) &&
       (equipment.data_saida?.includes(filters.data_saida) || !filters.data_saida) &&
-      (equipment.estado?.toLowerCase().includes(filters.estado.toLowerCase()) || !filters.estado)
+      (equipment.estado?.toLowerCase().includes(filters.estado.toLowerCase()) || !filters.estado) &&
+      (equipment.tipo?.toLowerCase().includes(filters.tipo.toLowerCase()) || !filters.tipo) &&
+      (equipment.modelo?.toLowerCase().includes(filters.modelo.toLowerCase()) || !filters.modelo) &&
+      (equipment.status?.toLowerCase().includes(filters.status.toLowerCase()) || !filters.status)
     );
   });
+
+  const getStatusLabel = (status?: string) => {
+    if (!status) return 'N/A';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
 
   if (showForm) {
     return (
@@ -169,7 +181,7 @@ const EquipmentList: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="serialFilter">Número de Série</Label>
               <Input
@@ -180,40 +192,40 @@ const EquipmentList: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="companyFilter">Empresa</Label>
+              <Label htmlFor="tipoFilter">Tipo</Label>
               <Input
-                id="companyFilter"
-                placeholder="Filtrar por empresa..."
-                value={filters.company}
-                onChange={(e) => setFilters({...filters, company: e.target.value})}
+                id="tipoFilter"
+                placeholder="Filtrar por tipo..."
+                value={filters.tipo}
+                onChange={(e) => setFilters({...filters, tipo: e.target.value})}
               />
             </div>
             <div>
-              <Label htmlFor="estadoFilter">Estado</Label>
+              <Label htmlFor="modeloFilter">Modelo</Label>
               <Input
-                id="estadoFilter"
-                placeholder="Filtrar por estado..."
-                value={filters.estado}
-                onChange={(e) => setFilters({...filters, estado: e.target.value})}
+                id="modeloFilter"
+                placeholder="Filtrar por modelo..."
+                value={filters.modelo}
+                onChange={(e) => setFilters({...filters, modelo: e.target.value})}
               />
             </div>
             <div>
-              <Label htmlFor="entryDateFilter">Data de Entrada</Label>
-              <Input
-                id="entryDateFilter"
-                type="date"
-                value={filters.data_entrada}
-                onChange={(e) => setFilters({...filters, data_entrada: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="exitDateFilter">Data de Saída</Label>
-              <Input
-                id="exitDateFilter"
-                type="date"
-                value={filters.data_saida}
-                onChange={(e) => setFilters({...filters, data_saida: e.target.value})}
-              />
+              <Label htmlFor="statusFilter">Status</Label>
+              <Select value={filters.status || 'all'} onValueChange={(value) => setFilters({...filters, status: value === 'all' ? '' : value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="disponivel">Disponível</SelectItem>
+                  <SelectItem value="recuperados">Recuperados</SelectItem>
+                  <SelectItem value="aguardando_despacho_contagem">Aguardando Despacho</SelectItem>
+                  <SelectItem value="enviados_manutencao_contagem">Enviados Manutenção</SelectItem>
+                  <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
+                  <SelectItem value="em_uso">Em Uso</SelectItem>
+                  <SelectItem value="danificado">Danificado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
@@ -230,12 +242,13 @@ const EquipmentList: React.FC = () => {
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-2">Tipo</th>
+                  <th className="text-left p-2">Modelo</th>
                   <th className="text-left p-2">Série</th>
                   <th className="text-left p-2">Empresa</th>
                   <th className="text-left p-2">Estado</th>
+                  <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Entrada</th>
                   <th className="text-left p-2">Saída</th>
-                  <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Ações</th>
                 </tr>
               </thead>
@@ -243,21 +256,23 @@ const EquipmentList: React.FC = () => {
                 {filteredEquipments.map(equipment => (
                   <tr key={equipment.id} className="border-b hover:bg-gray-50">
                     <td className="p-2">{equipment.tipo}</td>
+                    <td className="p-2">{equipment.modelo || '-'}</td>
                     <td className="p-2 font-mono">{equipment.numero_serie}</td>
                     <td className="p-2">{equipment.empresas?.name || 'N/A'}</td>
                     <td className="p-2">{equipment.estado || '-'}</td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
+                        equipment.status === 'danificado' ? 'bg-red-100 text-red-800' :
+                        equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {getStatusLabel(equipment.status)}
+                      </span>
+                    </td>
                     <td className="p-2">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
                     <td className="p-2">
                       {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
-                    </td>
-                    <td className="p-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        equipment.data_saida 
-                          ? 'bg-gray-100 text-gray-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {equipment.data_saida ? 'Retirado' : 'Em Estoque'}
-                      </span>
                     </td>
                     <td className="p-2">
                       <div className="flex gap-2">

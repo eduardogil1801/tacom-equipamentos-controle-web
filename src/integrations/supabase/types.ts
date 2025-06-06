@@ -9,10 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      configuracoes: {
+        Row: {
+          created_at: string
+          dashboard_layout: Json | null
+          id: string
+          tema_cores: Json | null
+          updated_at: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          dashboard_layout?: Json | null
+          id?: string
+          tema_cores?: Json | null
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          dashboard_layout?: Json | null
+          id?: string
+          tema_cores?: Json | null
+          updated_at?: string
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
       empresas: {
         Row: {
           cnpj: string | null
           contact: string | null
+          cor_primaria: string | null
+          cor_secundaria: string | null
           created_at: string
           estado: string | null
           id: string
@@ -22,6 +51,8 @@ export type Database = {
         Insert: {
           cnpj?: string | null
           contact?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
           estado?: string | null
           id?: string
@@ -31,6 +62,8 @@ export type Database = {
         Update: {
           cnpj?: string | null
           contact?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
           estado?: string | null
           id?: string
@@ -48,7 +81,9 @@ export type Database = {
           estado: string | null
           id: string
           id_empresa: string
+          modelo: string | null
           numero_serie: string
+          status: string | null
           tipo: string
         }
         Insert: {
@@ -59,7 +94,9 @@ export type Database = {
           estado?: string | null
           id?: string
           id_empresa: string
+          modelo?: string | null
           numero_serie: string
+          status?: string | null
           tipo: string
         }
         Update: {
@@ -70,7 +107,9 @@ export type Database = {
           estado?: string | null
           id?: string
           id_empresa?: string
+          modelo?: string | null
           numero_serie?: string
+          status?: string | null
           tipo?: string
         }
         Relationships: [
@@ -82,6 +121,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      frota: {
+        Row: {
+          buszoom: number | null
+          citgis: number | null
+          cod_operadora: string
+          created_at: string
+          id: string
+          mes_referencia: string
+          nome_empresa: string
+          nuvem: number | null
+          secao: number | null
+          simples_com_imagem: number | null
+          simples_sem_imagem: number | null
+          total: number | null
+          updated_at: string
+        }
+        Insert: {
+          buszoom?: number | null
+          citgis?: number | null
+          cod_operadora: string
+          created_at?: string
+          id?: string
+          mes_referencia: string
+          nome_empresa: string
+          nuvem?: number | null
+          secao?: number | null
+          simples_com_imagem?: number | null
+          simples_sem_imagem?: number | null
+          total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          buszoom?: number | null
+          citgis?: number | null
+          cod_operadora?: string
+          created_at?: string
+          id?: string
+          mes_referencia?: string
+          nome_empresa?: string
+          nuvem?: number | null
+          secao?: number | null
+          simples_com_imagem?: number | null
+          simples_sem_imagem?: number | null
+          total?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       login: {
         Row: {

@@ -12,13 +12,15 @@ import InventoryReport from '@/components/Reports/InventoryReport';
 import MovementsReport from '@/components/Reports/MovementsReport';
 import CompaniesReport from '@/components/Reports/CompaniesReport';
 import EquipmentStatusReport from '@/components/Reports/EquipmentStatusReport';
+import EquipmentDistributionReport from '@/components/Reports/EquipmentDistributionReport';
+import FleetReport from '@/components/Reports/FleetReport';
 import MonthlyReport from '@/components/Reports/MonthlyReport';
 import EquipmentHistoryReport from '@/components/Reports/EquipmentHistoryReport';
 
 const Index = () => {
   const { user } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
-  const [currentPage, setCurrentPage] = useState('equipments'); // Mudança aqui: equipments como padrão
+  const [currentPage, setCurrentPage] = useState('equipments');
 
   if (!user) {
     return (
@@ -48,6 +50,10 @@ const Index = () => {
         return <CompaniesReport />;
       case 'reports-equipment-status':
         return <EquipmentStatusReport />;
+      case 'reports-equipment-distribution':
+        return <EquipmentDistributionReport />;
+      case 'reports-fleet':
+        return <FleetReport />;
       case 'reports-monthly':
         return <MonthlyReport />;
       case 'reports-equipment-history':
@@ -55,7 +61,7 @@ const Index = () => {
       case 'protocol':
         return <ProtocolPage />;
       default:
-        return <EquipmentList />; // Mudança aqui: equipments como fallback
+        return <EquipmentList />;
     }
   };
 

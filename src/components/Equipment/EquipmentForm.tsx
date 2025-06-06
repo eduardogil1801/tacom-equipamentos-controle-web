@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +13,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface Equipment {
   id: string;
   tipo: string;
+  modelo?: string;
   numero_serie: string;
   data_entrada: string;
   data_saida?: string;
   id_empresa: string;
   estado?: string;
+  status?: string;
 }
 
 interface Company {
@@ -39,58 +42,72 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     tipo: '',
+    modelo: '',
     numero_serie: '',
     data_entrada: '',
     data_saida: '',
     id_empresa: '',
-    estado: ''
+    estado: '',
+    status: 'disponivel'
   });
   const [isInStock, setIsInStock] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const estados = [
-    'Acre',
-    'Alagoas',
-    'Amapá',
-    'Amazonas',
-    'Bahia',
-    'Ceará',
-    'Distrito Federal',
-    'Espírito Santo',
-    'Goiás',
-    'Maranhão',
-    'Mato Grosso',
-    'Mato Grosso do Sul',
-    'Minas Gerais',
-    'Pará',
-    'Paraíba',
-    'Paraná',
-    'Pernambuco',
-    'Piauí',
-    'Rio de Janeiro',
-    'Rio Grande do Norte',
-    'Rio Grande do Sul',
-    'Rondônia',
-    'Roraima',
-    'Santa Catarina',
-    'São Paulo',
-    'Sergipe',
-    'Tocantins'
+    'Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal',
+    'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul',
+    'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí',
+    'Rio de Janeiro', 'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia',
+    'Roraima', 'Santa Catarina', 'São Paulo', 'Sergipe', 'Tocantins'
   ];
+
+  const statusOptions = [
+    'disponivel',
+    'recuperados',
+    'aguardando_despacho_contagem',
+    'enviados_manutencao_contagem',
+    'aguardando_manutencao',
+    'em_uso',
+    'danificado'
+  ];
+
+  const equipmentTypes = [
+    'CCIT 4.0',
+    'CCIT 5.0',
+    'PM (Painel de Motorista)',
+    'UPEX',
+    'Connections 4.0',
+    'Connections 5.0'
+  ];
+
+  const getModelosByTipo = (tipo: string) => {
+    switch (tipo) {
+      case 'CCIT 4.0':
+      case 'CCIT 5.0':
+        return ['H2'];
+      case 'PM (Painel de Motorista)':
+        return ['DMX200', 'DMX200S', 'DMX200L', 'DMX500'];
+      case 'UPEX':
+        return ['V2000', 'V3000L S/DVR', 'V3000L C/VGA', 'V3000M S/DVR', 'V3000 C/DVR', 'V4000M'];
+      default:
+        return [];
+    }
+  };
 
   useEffect(() => {
     if (equipment) {
       setFormData({
         tipo: equipment.tipo,
+        modelo: equipment.modelo || '',
         numero_serie: equipment.numero_serie,
         data_entrada: equipment.data_entrada,
         data_saida: equipment.data_saida || '',
         id_empresa: equipment.id_empresa,
-        estado: equipment.estado || ''
+        estado: equipment.estado || '',
+        status: equipment.status || 'disponivel'
       });
       setIsInStock(!equipment.data_saida);
     } else {
-      // Set today as default entry date
       const today = new Date().toISOString().split('T')[0];
       setFormData(prev => ({ ...prev, data_entrada: today }));
     }
@@ -122,15 +139,16 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     try {
       const equipmentData = {
         tipo: formData.tipo,
+        modelo: formData.modelo,
         numero_serie: formData.numero_serie,
         data_entrada: formData.data_entrada,
         data_saida: isInStock ? null : formData.data_saida || null,
         id_empresa: formData.id_empresa,
-        estado: formData.estado
+        estado: formData.estado,
+        status: formData.status
       };
 
       if (equipment) {
-        // Update existing equipment
         const { error } = await supabase
           .from('equipamentos')
           .update(equipmentData)
@@ -143,7 +161,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
           description: "Equipamento atualizado com sucesso!",
         });
       } else {
-        // Create new equipment
         const { error } = await supabase
           .from('equipamentos')
           .insert([equipmentData]);
@@ -201,13 +218,39 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo de Equipamento *</Label>
-                <Input
-                  id="tipo"
-                  placeholder="Ex: Notebook, Monitor, Impressora..."
-                  value={formData.tipo}
-                  onChange={(e) => handleChange('tipo', e.target.value)}
-                  required
-                />
+                <Select value={formData.tipo || 'placeholder'} onValueChange={(value) => {
+                  handleChange('tipo', value === 'placeholder' ? '' : value);
+                  handleChange('modelo', ''); // Reset modelo when tipo changes
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>Selecione o tipo</SelectItem>
+                    {equipmentTypes.map(tipo => (
+                      <SelectItem key={tipo} value={tipo}>
+                        {tipo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="modelo">Modelo</Label>
+                <Select value={formData.modelo || 'placeholder'} onValueChange={(value) => handleChange('modelo', value === 'placeholder' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>Selecione o modelo</SelectItem>
+                    {getModelosByTipo(formData.tipo).map(modelo => (
+                      <SelectItem key={modelo} value={modelo}>
+                        {modelo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -249,6 +292,23 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                     {estados.map(estado => (
                       <SelectItem key={estado} value={estado}>
                         {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select value={formData.status || 'placeholder'} onValueChange={(value) => handleChange('status', value === 'placeholder' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>Selecione o status</SelectItem>
+                    {statusOptions.map(status => (
+                      <SelectItem key={status} value={status}>
+                        {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </SelectItem>
                     ))}
                   </SelectContent>

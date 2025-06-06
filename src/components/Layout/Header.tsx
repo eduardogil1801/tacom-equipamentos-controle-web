@@ -36,6 +36,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
     { id: 'reports-movements', label: 'Movimentações' },
     { id: 'reports-companies', label: 'Relatório de Empresas' },
     { id: 'reports-equipment-status', label: 'Status dos Equipamentos' },
+    { id: 'reports-equipment-distribution', label: 'Distribuição de Equipamentos' },
+    { id: 'reports-fleet', label: 'Relatório de Frota' },
     { id: 'reports-monthly', label: 'Relatório Mensal' },
     { id: 'reports-equipment-history', label: 'Histórico de Equipamentos' }
   ];
