@@ -9,6 +9,12 @@ import EquipmentList from '@/components/Equipment/EquipmentList';
 import CompanyList from '@/components/Company/CompanyList';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
+import InventoryReport from '@/components/Reports/InventoryReport';
+import MovementsReport from '@/components/Reports/MovementsReport';
+import CompaniesReport from '@/components/Reports/CompaniesReport';
+import EquipmentStatusReport from '@/components/Reports/EquipmentStatusReport';
+import MonthlyReport from '@/components/Reports/MonthlyReport';
+import EquipmentHistoryReport from '@/components/Reports/EquipmentHistoryReport';
 
 const Index = () => {
   const { user } = useAuth();
@@ -37,6 +43,18 @@ const Index = () => {
         return <Dashboard />;
       case 'reports':
         return <ReportsPage />;
+      case 'reports-inventory':
+        return <InventoryReport />;
+      case 'reports-movements':
+        return <MovementsReport />;
+      case 'reports-companies':
+        return <CompaniesReport />;
+      case 'reports-equipment-status':
+        return <EquipmentStatusReport />;
+      case 'reports-monthly':
+        return <MonthlyReport />;
+      case 'reports-equipment-history':
+        return <EquipmentHistoryReport />;
       case 'protocol':
         return <ProtocolPage />;
       default:

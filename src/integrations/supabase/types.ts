@@ -110,6 +110,77 @@ export type Database = {
         }
         Relationships: []
       }
+      movimentacoes: {
+        Row: {
+          data_criacao: string | null
+          data_movimento: string
+          id: string
+          id_equipamento: string | null
+          observacoes: string | null
+          tipo_movimento: string
+          usuario_responsavel: string | null
+        }
+        Insert: {
+          data_criacao?: string | null
+          data_movimento: string
+          id?: string
+          id_equipamento?: string | null
+          observacoes?: string | null
+          tipo_movimento: string
+          usuario_responsavel?: string | null
+        }
+        Update: {
+          data_criacao?: string | null
+          data_movimento?: string
+          id?: string
+          id_equipamento?: string | null
+          observacoes?: string | null
+          tipo_movimento?: string
+          usuario_responsavel?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_id_equipamento_fkey"
+            columns: ["id_equipamento"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usuarios: {
+        Row: {
+          ativo: boolean | null
+          data_atualizacao: string | null
+          data_criacao: string | null
+          email: string
+          id: string
+          nome: string
+          senha: string
+          sobrenome: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          data_atualizacao?: string | null
+          data_criacao?: string | null
+          email: string
+          id?: string
+          nome: string
+          senha: string
+          sobrenome: string
+        }
+        Update: {
+          ativo?: boolean | null
+          data_atualizacao?: string | null
+          data_criacao?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          senha?: string
+          sobrenome?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

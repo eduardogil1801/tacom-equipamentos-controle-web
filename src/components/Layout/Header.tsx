@@ -1,8 +1,18 @@
 
 import React, { useState } from 'react';
-import { Menu, X, LogOut, Building, Database, BarChart2, FileText, Printer } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { LogOut, Menu, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface HeaderProps {
   currentPage: string;
@@ -10,112 +20,149 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-
-  const menuItems = [
-    { id: 'equipments', label: 'Equipamentos', icon: Database },
-    { id: 'companies', label: 'Empresas', icon: Building },
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
-    { id: 'reports', label: 'Relatórios', icon: FileText },
-    { id: 'protocol', label: 'Protocolo', icon: Printer },
-  ];
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    setIsMenuOpen(false);
   };
 
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'equipments', label: 'Equipamentos' },
+    { id: 'companies', label: 'Empresas' },
+    { 
+      id: 'reports', 
+      label: 'Relatórios',
+      submenu: [
+        { id: 'reports-inventory', label: 'Relatório de Estoque' },
+        { id: 'reports-movements', label: 'Movimentações' },
+        { id: 'reports-companies', label: 'Relatório de Empresas' },
+        { id: 'reports-equipment-status', label: 'Status dos Equipamentos' },
+        { id: 'reports-monthly', label: 'Relatório Mensal' },
+        { id: 'reports-equipment-history', label: 'Histórico de Equipamentos' }
+      ]
+    },
+    { id: 'protocol', label: 'Protocolo' },
+  ];
+
   return (
-    <header className="bg-white shadow-lg border-b-4 border-primary">
+    <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="tacom-gradient text-white px-4 py-2 rounded-lg font-bold text-xl">
-              TACOM
+            <div className="tacom-gradient text-white p-2 rounded-lg">
+              <h1 className="text-xl font-bold">TACOM</h1>
             </div>
-            <span className="ml-3 text-gray-600 font-medium">Filial POA</span>
+            <span className="ml-3 text-gray-600 text-sm">Controle de Equipamentos - Filial POA</span>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-4">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
+            {navigationItems.map((item) => (
+              item.submenu ? (
+                <DropdownMenu key={item.id}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant={currentPage.startsWith('reports') ? 'default' : 'ghost'}
+                      className={currentPage.startsWith('reports') ? 'bg-primary text-white' : ''}
+                    >
+                      {item.label}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {item.submenu.map((subItem) => (
+                      <DropdownMenuItem
+                        key={subItem.id}
+                        onClick={() => onNavigate(subItem.id)}
+                        className={currentPage === subItem.id ? 'bg-primary/10' : ''}
+                      >
+                        {subItem.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
                 <Button
                   key={item.id}
-                  variant={currentPage === item.id ? "default" : "ghost"}
-                  className={`flex items-center space-x-2 ${
-                    currentPage === item.id ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary'
-                  }`}
+                  variant={currentPage === item.id ? 'default' : 'ghost'}
                   onClick={() => onNavigate(item.id)}
+                  className={currentPage === item.id ? 'bg-primary text-white' : ''}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
+                  {item.label}
                 </Button>
-              );
-            })}
+              )
+            ))}
           </nav>
 
-          {/* User Info & Logout */}
-          <div className="hidden md:flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
+          {/* User Menu */}
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600 hidden sm:block">
               Olá, {user?.name} {user?.surname}
             </span>
-            <Button variant="outline" onClick={handleLogout} className="flex items-center space-x-2">
-              <LogOut className="h-4 w-4" />
-              <span>Sair</span>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
             </Button>
-          </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
+            {/* Mobile menu button */}
             <Button
               variant="ghost"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </Button>
           </div>
         </div>
 
         {/* Mobile Navigation */}
-        {isMenuOpen && (
+        {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t">
-            <div className="flex flex-col space-y-2">
-              <div className="px-4 py-2 text-sm text-gray-600 border-b">
-                {user?.name} {user?.surname}
-              </div>
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
+            <nav className="space-y-2">
+              {navigationItems.map((item) => (
+                item.submenu ? (
+                  <DropdownMenu key={item.id}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant={currentPage.startsWith('reports') ? 'default' : 'ghost'}
+                        className={`w-full justify-start ${currentPage.startsWith('reports') ? 'bg-primary text-white' : ''}`}
+                      >
+                        {item.label}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      {item.submenu.map((subItem) => (
+                        <DropdownMenuItem
+                          key={subItem.id}
+                          onClick={() => {
+                            onNavigate(subItem.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={currentPage === subItem.id ? 'bg-primary/10' : ''}
+                        >
+                          {subItem.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
                   <Button
                     key={item.id}
-                    variant={currentPage === item.id ? "default" : "ghost"}
-                    className={`justify-start flex items-center space-x-2 ${
-                      currentPage === item.id ? 'bg-primary text-white' : 'text-gray-700'
-                    }`}
+                    variant={currentPage === item.id ? 'default' : 'ghost'}
                     onClick={() => {
                       onNavigate(item.id);
-                      setIsMenuOpen(false);
+                      setIsMobileMenuOpen(false);
                     }}
+                    className={`w-full justify-start ${currentPage === item.id ? 'bg-primary text-white' : ''}`}
                   >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    {item.label}
                   </Button>
-                );
-              })}
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="justify-start flex items-center space-x-2 mt-4"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sair</span>
-              </Button>
-            </div>
+                )
+              ))}
+            </nav>
           </div>
         )}
       </div>
