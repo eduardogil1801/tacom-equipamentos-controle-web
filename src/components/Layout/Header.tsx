@@ -46,15 +46,14 @@ const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            {/* Nova Logo TACOM */}
+            {/* Logo TACOM com tamanho ajustado */}
             <div className="flex items-center">
-              <div className="relative group cursor-pointer">
+              <div className="relative group cursor-pointer bg-red-600 px-3 py-1 rounded">
                 <img 
                   src="/lovable-uploads/3f258a34-e20d-4ca8-98a3-6b977db4fb93.png" 
                   alt="TACOM Logo" 
-                  className="h-8 w-auto transition-all duration-300 group-hover:scale-105 drop-shadow-md" 
+                  className="h-7 w-auto transition-all duration-300 group-hover:scale-105" 
                 />
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
             </div>
             
