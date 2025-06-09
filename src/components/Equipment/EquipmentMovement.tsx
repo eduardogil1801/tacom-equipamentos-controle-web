@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,7 +45,12 @@ interface MovementData {
   numero_serie: string;
 }
 
-const EquipmentMovement: React.FC = () => {
+interface EquipmentMovementProps {
+  onCancel: () => void;
+  onSuccess: () => void;
+}
+
+const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
   const { user } = useAuth();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
@@ -285,7 +289,7 @@ const EquipmentMovement: React.FC = () => {
       setSelectedEquipments([]);
       setResponsibleUserSearch('');
       
-      loadData();
+      onSuccess();
     } catch (error) {
       console.error('Erro ao registrar movimentação:', error);
       toast({
@@ -327,7 +331,17 @@ const EquipmentMovement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Movimentação de Equipamentos</h1>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        <h1 className="text-2xl font-bold text-gray-900">Movimentação de Equipamentos</h1>
+      </div>
 
       <Card>
         <CardHeader>
