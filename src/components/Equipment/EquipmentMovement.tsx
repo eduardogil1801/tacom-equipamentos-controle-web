@@ -1,26 +1,27 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarIcon, Plus } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+
+interface EquipmentMovementProps {
+  onCancel: () => void;
+  onSuccess: () => void;
+}
 
 interface Equipment {
   id: string;
-  numero_serie: string;
   tipo: string;
-  modelo: string;
-  status: string;
+  modelo?: string;
+  numero_serie: string;
+  empresas?: {
+    name: string;
+  };
 }
 
 interface MaintenanceType {
@@ -29,16 +30,16 @@ interface MaintenanceType {
   descricao: string;
 }
 
-const EquipmentMovement = () => {
+const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState('');
   const [movementType, setMovementType] = useState('');
-  const [movementDate, setMovementDate] = useState<Date>();
+  const [maintenanceType, setMaintenanceType] = useState('');
+  const [movementDate, setMovementDate] = useState('');
   const [observations, setObservations] = useState('');
-  const [responsibleUser, setResponsibleUser] = useState('');
-  const [selectedMaintenanceType, setSelectedMaintenanceType] = useState('');
   const [maintenanceDetails, setMaintenanceDetails] = useState('');
+  const [responsibleUser, setResponsibleUser] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -50,19 +51,18 @@ const EquipmentMovement = () => {
     try {
       const { data, error } = await supabase
         .from('equipamentos')
-        .select('id, numero_serie, tipo, modelo, status')
-        .eq('status', 'disponivel')
+        .select(`
+          *,
+          empresas (
+            name
+          )
+        `)
         .order('numero_serie');
 
-      if (error) {
-        console.error('Erro ao carregar equipamentos:', error);
-        throw error;
-      }
-
-      console.log('Equipamentos carregados:', data);
+      if (error) throw error;
       setEquipments(data || []);
     } catch (error) {
-      console.error('Erro ao carregar equipamentos:', error);
+      console.error('Error loading equipments:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar equipamentos",
@@ -79,22 +79,18 @@ const EquipmentMovement = () => {
         .eq('ativo', true)
         .order('codigo');
 
-      if (error) {
-        console.error('Erro ao carregar tipos de manutenção:', error);
-        throw error;
-      }
-
+      if (error) throw error;
+      
       // Ordenar numericamente pelo código
-      const sortedTypes = (data || []).sort((a, b) => {
-        const numA = parseInt(a.codigo);
-        const numB = parseInt(b.codigo);
-        return numA - numB;
+      const sortedData = (data || []).sort((a, b) => {
+        const aNum = parseInt(a.codigo);
+        const bNum = parseInt(b.codigo);
+        return aNum - bNum;
       });
       
-      console.log('Tipos de manutenção carregados:', sortedTypes);
-      setMaintenanceTypes(sortedTypes);
+      setMaintenanceTypes(sortedData);
     } catch (error) {
-      console.error('Erro ao carregar tipos de manutenção:', error);
+      console.error('Error loading maintenance types:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar tipos de manutenção",
@@ -109,16 +105,16 @@ const EquipmentMovement = () => {
     if (!selectedEquipment || !movementType || !movementDate) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios",
         variant: "destructive",
       });
       return;
     }
 
-    if (movementType === 'manutencao' && !selectedMaintenanceType) {
+    if (movementType === 'manutencao' && !maintenanceType) {
       toast({
         title: "Erro",
-        description: "Selecione o tipo de manutenção",
+        description: "Por favor, selecione o tipo de manutenção",
         variant: "destructive",
       });
       return;
@@ -127,62 +123,66 @@ const EquipmentMovement = () => {
     setLoading(true);
 
     try {
-      console.log('Dados da movimentação:', {
-        id_equipamento: selectedEquipment,
-        tipo_movimento: movementType,
-        data_movimento: format(movementDate, 'yyyy-MM-dd'),
-        observacoes: observations,
-        usuario_responsavel: responsibleUser,
-        tipo_manutencao_id: movementType === 'manutencao' ? selectedMaintenanceType : null,
-        detalhes_manutencao: movementType === 'manutencao' ? maintenanceDetails : null
+      console.log('Registrando movimentação:', {
+        selectedEquipment,
+        movementType,
+        movementDate,
+        maintenanceType,
+        observations,
+        maintenanceDetails,
+        responsibleUser
       });
 
-      const { error: movementError } = await supabase
-        .from('movimentacoes')
-        .insert([{
-          id_equipamento: selectedEquipment,
-          tipo_movimento: movementType,
-          data_movimento: format(movementDate, 'yyyy-MM-dd'),
-          observacoes: observations,
-          usuario_responsavel: responsibleUser,
-          tipo_manutencao_id: movementType === 'manutencao' ? selectedMaintenanceType : null,
-          detalhes_manutencao: movementType === 'manutencao' ? maintenanceDetails : null
-        }]);
+      const movementData = {
+        id_equipamento: selectedEquipment,
+        tipo_movimento: movementType,
+        data_movimento: movementDate,
+        observacoes: observations || null,
+        usuario_responsavel: responsibleUser || null,
+        tipo_manutencao_id: movementType === 'manutencao' ? maintenanceType : null,
+        detalhes_manutencao: movementType === 'manutencao' ? maintenanceDetails : null,
+      };
 
-      if (movementError) {
-        console.error('Erro ao registrar movimentação:', movementError);
-        throw movementError;
+      console.log('Dados da movimentação a serem inseridos:', movementData);
+
+      const { data, error } = await supabase
+        .from('movimentacoes')
+        .insert([movementData])
+        .select();
+
+      if (error) {
+        console.error('Erro ao inserir movimentação:', error);
+        throw error;
       }
 
-      // Se é manutenção, atualizar status do equipamento
+      console.log('Movimentação registrada com sucesso:', data);
+
+      // Atualizar status do equipamento se necessário
       if (movementType === 'manutencao') {
-        const { error: equipmentError } = await supabase
+        const { error: updateError } = await supabase
           .from('equipamentos')
           .update({ 
             em_manutencao: true,
-            status: 'manutencao'
+            status: 'aguardando_manutencao'
           })
           .eq('id', selectedEquipment);
 
-        if (equipmentError) {
-          console.error('Erro ao atualizar status do equipamento:', equipmentError);
-          throw equipmentError;
+        if (updateError) {
+          console.error('Erro ao atualizar status do equipamento:', updateError);
+          throw updateError;
         }
-      }
-
-      // Se é saída, atualizar data de saída
-      if (movementType === 'saida') {
-        const { error: equipmentError } = await supabase
+      } else if (movementType === 'saida') {
+        const { error: updateError } = await supabase
           .from('equipamentos')
           .update({ 
-            data_saida: format(movementDate, 'yyyy-MM-dd'),
-            status: 'indisponivel'
+            data_saida: movementDate,
+            status: 'em_uso'
           })
           .eq('id', selectedEquipment);
 
-        if (equipmentError) {
-          console.error('Erro ao atualizar data de saída:', equipmentError);
-          throw equipmentError;
+        if (updateError) {
+          console.error('Erro ao atualizar data de saída:', updateError);
+          throw updateError;
         }
       }
 
@@ -191,22 +191,12 @@ const EquipmentMovement = () => {
         description: "Movimentação registrada com sucesso!",
       });
 
-      // Resetar formulário
-      setSelectedEquipment('');
-      setMovementType('');
-      setMovementDate(undefined);
-      setObservations('');
-      setResponsibleUser('');
-      setSelectedMaintenanceType('');
-      setMaintenanceDetails('');
-      
-      // Recarregar equipamentos
-      loadEquipments();
+      onSuccess();
     } catch (error) {
-      console.error('Erro ao registrar movimentação:', error);
+      console.error('Error registering movement:', error);
       toast({
         title: "Erro",
-        description: "Erro ao registrar movimentação",
+        description: `Erro ao registrar movimentação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
     } finally {
@@ -215,130 +205,135 @@ const EquipmentMovement = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="space-y-6 p-6">
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Button>
+        <h1 className="text-2xl font-bold">Registrar Movimentação</h1>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Registrar Movimentação de Equipamento
-          </CardTitle>
+          <CardTitle>Nova Movimentação de Equipamento</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="equipment">Equipamento *</Label>
+              <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um equipamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {equipments.map(equipment => (
+                    <SelectItem key={equipment.id} value={equipment.id}>
+                      {equipment.numero_serie} - {equipment.tipo} ({equipment.empresas?.name || 'Sem empresa'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="movementType">Tipo de Movimentação *</Label>
+              <Select value={movementType} onValueChange={setMovementType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entrada">Entrada</SelectItem>
+                  <SelectItem value="saida">Saída</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {movementType === 'manutencao' && (
               <div>
-                <Label htmlFor="equipment">Equipamento *</Label>
-                <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
+                <Label htmlFor="maintenanceType">Tipo de Manutenção *</Label>
+                <Select value={maintenanceType} onValueChange={setMaintenanceType}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um equipamento" />
+                    <SelectValue placeholder="Selecione o tipo de manutenção" />
                   </SelectTrigger>
                   <SelectContent>
-                    {equipments.map((equipment) => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.numero_serie} - {equipment.tipo} {equipment.modelo}
+                    {maintenanceTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.codigo} - {type.descricao}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <Label htmlFor="movementType">Tipo de Movimentação *</Label>
-                <Select value={movementType} onValueChange={setMovementType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="entrada">Entrada</SelectItem>
-                    <SelectItem value="saida">Saída</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {movementType === 'manutencao' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="maintenanceType">Tipo de Manutenção *</Label>
-                  <Select value={selectedMaintenanceType} onValueChange={setSelectedMaintenanceType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de manutenção" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {maintenanceTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.codigo} - {type.descricao}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="maintenanceDetails">Detalhes da Manutenção</Label>
-                  <Textarea
-                    id="maintenanceDetails"
-                    placeholder="Descreva os detalhes da manutenção"
-                    value={maintenanceDetails}
-                    onChange={(e) => setMaintenanceDetails(e.target.value)}
-                  />
-                </div>
-              </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Data da Movimentação *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !movementDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {movementDate ? format(movementDate, "PPP", { locale: ptBR }) : "Selecione a data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={movementDate}
-                      onSelect={setMovementDate}
-                      initialFocus
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+            <div>
+              <Label htmlFor="movementDate">Data da Movimentação *</Label>
+              <Input
+                id="movementDate"
+                type="date"
+                value={movementDate}
+                onChange={(e) => setMovementDate(e.target.value)}
+              />
+            </div>
 
-              <div>
-                <Label htmlFor="responsibleUser">Usuário Responsável</Label>
-                <Input
-                  id="responsibleUser"
-                  placeholder="Nome do responsável"
-                  value={responsibleUser}
-                  onChange={(e) => setResponsibleUser(e.target.value)}
-                />
-              </div>
+            <div>
+              <Label htmlFor="responsibleUser">Usuário Responsável</Label>
+              <Input
+                id="responsibleUser"
+                value={responsibleUser}
+                onChange={(e) => setResponsibleUser(e.target.value)}
+                placeholder="Nome do usuário responsável"
+              />
             </div>
 
             <div>
               <Label htmlFor="observations">Observações</Label>
               <Textarea
                 id="observations"
-                placeholder="Observações sobre a movimentação"
                 value={observations}
                 onChange={(e) => setObservations(e.target.value)}
+                placeholder="Observações sobre a movimentação"
+                rows={3}
               />
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Registrando...' : 'Registrar Movimentação'}
-            </Button>
+            {movementType === 'manutencao' && (
+              <div>
+                <Label htmlFor="maintenanceDetails">Detalhes da Manutenção</Label>
+                <Textarea
+                  id="maintenanceDetails"
+                  value={maintenanceDetails}
+                  onChange={(e) => setMaintenanceDetails(e.target.value)}
+                  placeholder="Detalhes específicos da manutenção"
+                  rows={3}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {loading ? 'Registrando...' : 'Registrar Movimentação'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
