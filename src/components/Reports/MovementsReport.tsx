@@ -41,11 +41,8 @@ const MovementsReport: React.FC = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [filteredMovements, setFilteredMovements] = useState<Movement[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [availableSerialNumbers, setAvailableSerialNumbers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [responsibleUserSearch, setResponsibleUserSearch] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [showUserList, setShowUserList] = useState(false);
   
   const [filters, setFilters] = useState({
     tipoMovimento: '',
@@ -64,27 +61,10 @@ const MovementsReport: React.FC = () => {
   }, [movements, filters]);
 
   useEffect(() => {
-    if (searchTerm.length >= 3) {
-      const filtered = movements.filter(movement => 
-        movement.equipamentos?.numero_serie.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredMovements(filtered);
-    }
-  }, [searchTerm, movements]);
-
-  useEffect(() => {
-    if (responsibleUserSearch) {
-      const filtered = users.filter(user => 
-        user.nome.toLowerCase().includes(responsibleUserSearch.toLowerCase()) ||
-        user.username.toLowerCase().includes(responsibleUserSearch.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-      setShowUserList(true);
-    } else {
-      setFilteredUsers([]);
-      setShowUserList(false);
-    }
-  }, [responsibleUserSearch, users]);
+    // Extrair números de série únicos
+    const serialNumbers = [...new Set(movements.map(m => m.equipamentos?.numero_serie).filter(Boolean))].sort();
+    setAvailableSerialNumbers(serialNumbers);
+  }, [movements]);
 
   const loadData = async () => {
     try {
@@ -153,13 +133,13 @@ const MovementsReport: React.FC = () => {
 
     if (filters.numeroSerie) {
       filtered = filtered.filter(item => 
-        item.equipamentos?.numero_serie.toLowerCase().includes(filters.numeroSerie.toLowerCase())
+        item.equipamentos?.numero_serie === filters.numeroSerie
       );
     }
 
     if (filters.usuarioResponsavel) {
       filtered = filtered.filter(item => 
-        item.usuario_responsavel?.toLowerCase().includes(filters.usuarioResponsavel.toLowerCase())
+        item.usuario_responsavel === filters.usuarioResponsavel
       );
     }
 
@@ -214,12 +194,6 @@ const MovementsReport: React.FC = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleUserSelect = (user: User) => {
-    setResponsibleUserSearch(user.nome);
-    setFilters(prev => ({ ...prev, usuarioResponsavel: user.nome }));
-    setShowUserList(false);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -247,14 +221,14 @@ const MovementsReport: React.FC = () => {
             <div>
               <Label htmlFor="tipoMovimento">Tipo de Movimentação</Label>
               <Select 
-                value={filters.tipoMovimento} 
-                onValueChange={(value) => handleFilterChange('tipoMovimento', value)}
+                value={filters.tipoMovimento || 'all'} 
+                onValueChange={(value) => handleFilterChange('tipoMovimento', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="entrada">Entrada</SelectItem>
                   <SelectItem value="saida">Saída</SelectItem>
                   <SelectItem value="manutencao">Manutenção</SelectItem>
@@ -283,45 +257,40 @@ const MovementsReport: React.FC = () => {
               />
             </div>
             
-            <div className="relative">
+            <div>
               <Label htmlFor="numeroSerie">Número de Série</Label>
-              <div className="relative">
-                <Input
-                  id="numeroSerie"
-                  value={filters.numeroSerie}
-                  onChange={(e) => handleFilterChange('numeroSerie', e.target.value)}
-                  placeholder="Digite pelo menos 3 caracteres..."
-                />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
+              <Select 
+                value={filters.numeroSerie || 'all'} 
+                onValueChange={(value) => handleFilterChange('numeroSerie', value === 'all' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os números de série" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os números de série</SelectItem>
+                  {availableSerialNumbers.map(serial => (
+                    <SelectItem key={serial} value={serial}>{serial}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
-            <div className="relative">
+            <div>
               <Label htmlFor="usuarioResponsavel">Usuário Responsável</Label>
-              <div className="relative">
-                <Input
-                  id="usuarioResponsavel"
-                  value={responsibleUserSearch}
-                  onChange={(e) => setResponsibleUserSearch(e.target.value)}
-                  placeholder="Digite para buscar usuário..."
-                />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-              
-              {showUserList && filteredUsers.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                  {filteredUsers.map(user => (
-                    <div 
-                      key={user.id} 
-                      className="p-3 hover:bg-gray-50 cursor-pointer border-b"
-                      onClick={() => handleUserSelect(user)}
-                    >
-                      <div className="font-medium">{user.nome}</div>
-                      <div className="text-sm text-gray-500">@{user.username}</div>
-                    </div>
+              <Select 
+                value={filters.usuarioResponsavel || 'all'} 
+                onValueChange={(value) => handleFilterChange('usuarioResponsavel', value === 'all' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os usuários" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os usuários</SelectItem>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.nome}>{user.nome} (@{user.username})</SelectItem>
                   ))}
-                </div>
-              )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

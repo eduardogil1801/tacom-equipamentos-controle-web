@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -18,7 +19,9 @@ interface MaintenanceReportData {
 const MaintenanceReport = () => {
   const [reportData, setReportData] = useState<MaintenanceReportData[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState<string[]>([]);
   const [selectedCompany, setSelectedCompany] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,7 +30,7 @@ const MaintenanceReport = () => {
 
   useEffect(() => {
     generateReport();
-  }, [selectedCompany]);
+  }, [selectedCompany, selectedType]);
 
   const fetchData = async () => {
     try {
@@ -36,10 +39,21 @@ const MaintenanceReport = () => {
       // Buscar empresas
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
-        .select('id, name');
+        .select('id, name')
+        .order('name');
 
       if (companyError) throw companyError;
       setCompanies(companyData || []);
+
+      // Buscar tipos de equipamento únicos
+      const { data: equipmentData, error: equipmentError } = await supabase
+        .from('equipamentos')
+        .select('tipo')
+        .order('tipo');
+
+      if (equipmentError) throw equipmentError;
+      const uniqueTypes = [...new Set(equipmentData?.map(eq => eq.tipo).filter(Boolean))].sort();
+      setEquipmentTypes(uniqueTypes);
 
       await generateReport();
     } catch (error) {
@@ -68,7 +82,14 @@ const MaintenanceReport = () => {
         `);
 
       if (selectedCompany !== 'all') {
-        query = query.eq('empresas.name', selectedCompany);
+        const company = companies.find(c => c.id === selectedCompany);
+        if (company) {
+          query = query.eq('id_empresa', selectedCompany);
+        }
+      }
+
+      if (selectedType !== 'all') {
+        query = query.eq('tipo', selectedType);
       }
 
       const { data: equipmentData, error } = await query;
@@ -140,7 +161,7 @@ const MaintenanceReport = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Empresa</label>
+              <Label>Empresa</Label>
               <Select value={selectedCompany} onValueChange={setSelectedCompany}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as empresas" />
@@ -148,8 +169,24 @@ const MaintenanceReport = () => {
                 <SelectContent>
                   <SelectItem value="all">Todas as empresas</SelectItem>
                   {companies.map(company => (
-                    <SelectItem key={company.id} value={company.name}>
+                    <SelectItem key={company.id} value={company.id}>
                       {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de Equipamento</Label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {equipmentTypes.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type}
                     </SelectItem>
                   ))}
                 </SelectContent>

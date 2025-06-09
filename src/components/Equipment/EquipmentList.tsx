@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +44,7 @@ const EquipmentList: React.FC = () => {
   // Estados para as opções dos filtros
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
   
   const [filters, setFilters] = useState({
     numero_serie: '',
@@ -62,12 +62,14 @@ const EquipmentList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Extrair tipos e modelos únicos dos equipamentos
+    // Extrair tipos, modelos e estados únicos dos equipamentos
     const types = [...new Set(equipments.map(eq => eq.tipo).filter(Boolean))].sort();
     const models = [...new Set(equipments.map(eq => eq.modelo).filter(Boolean))].sort();
+    const states = [...new Set(equipments.map(eq => eq.estado).filter(Boolean))].sort();
     
     setAvailableTypes(types);
     setAvailableModels(models);
+    setAvailableStates(states);
   }, [equipments]);
 
   const loadData = async () => {
@@ -166,7 +168,7 @@ const EquipmentList: React.FC = () => {
       (company?.name.toLowerCase().includes(filters.company.toLowerCase()) || !filters.company) &&
       (equipment.data_entrada.includes(filters.data_entrada) || !filters.data_entrada) &&
       (equipment.data_saida?.includes(filters.data_saida) || !filters.data_saida) &&
-      (equipment.estado?.toLowerCase().includes(filters.estado.toLowerCase()) || !filters.estado) &&
+      (equipment.estado === filters.estado || !filters.estado) &&
       (equipment.tipo === filters.tipo || !filters.tipo) &&
       (equipment.modelo === filters.modelo || !filters.modelo) &&
       (equipment.status?.toLowerCase().includes(filters.status.toLowerCase()) || !filters.status)
@@ -261,6 +263,20 @@ const EquipmentList: React.FC = () => {
               />
             </div>
             <div>
+              <Label htmlFor="companyFilter">Empresa</Label>
+              <Select value={filters.company || 'all'} onValueChange={(value) => setFilters({...filters, company: value === 'all' ? '' : value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as empresas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.name}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="tipoFilter">Tipo</Label>
               <Select value={filters.tipo || 'all'} onValueChange={(value) => setFilters({...filters, tipo: value === 'all' ? '' : value})}>
                 <SelectTrigger>
@@ -284,6 +300,20 @@ const EquipmentList: React.FC = () => {
                   <SelectItem value="all">Todos os modelos</SelectItem>
                   {availableModels.map(modelo => (
                     <SelectItem key={modelo} value={modelo}>{modelo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="estadoFilter">Estado</Label>
+              <Select value={filters.estado || 'all'} onValueChange={(value) => setFilters({...filters, estado: value === 'all' ? '' : value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os estados</SelectItem>
+                  {availableStates.map(estado => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

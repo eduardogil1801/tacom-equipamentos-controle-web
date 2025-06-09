@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -24,6 +25,7 @@ interface Company {
 const CompaniesReport: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     name: '',
@@ -37,6 +39,12 @@ const CompaniesReport: React.FC = () => {
   useEffect(() => {
     applyFilters();
   }, [companies, filters]);
+
+  useEffect(() => {
+    // Extrair estados únicos
+    const states = [...new Set(companies.map(c => c.estados?.nome || c.estado).filter(Boolean))].sort();
+    setAvailableStates(states);
+  }, [companies]);
 
   const loadCompanies = async () => {
     try {
@@ -76,8 +84,8 @@ const CompaniesReport: React.FC = () => {
 
     if (filters.estado) {
       filtered = filtered.filter(company => 
-        company.estados?.nome.toLowerCase().includes(filters.estado.toLowerCase()) ||
-        company.estado?.toLowerCase().includes(filters.estado.toLowerCase())
+        (company.estados?.nome === filters.estado) ||
+        (company.estado === filters.estado)
       );
     }
 
@@ -161,12 +169,20 @@ const CompaniesReport: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="estado">Estado</Label>
-              <Input
-                id="estado"
-                value={filters.estado}
-                onChange={(e) => handleFilterChange('estado', e.target.value)}
-                placeholder="Digite o estado"
-              />
+              <Select 
+                value={filters.estado || 'all'} 
+                onValueChange={(value) => handleFilterChange('estado', value === 'all' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os estados</SelectItem>
+                  {availableStates.map(estado => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
