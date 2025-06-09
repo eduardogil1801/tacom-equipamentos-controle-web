@@ -7,7 +7,6 @@ import UserManagement from '@/components/Users/UserManagement';
 import PermissionManagement from '@/components/Users/PermissionManagement';
 import ReportPermissionManagement from '@/components/Users/ReportPermissionManagement';
 import StateManager from '@/components/Settings/StateManager';
-import MaintenanceTypeManager from '@/components/Maintenance/MaintenanceTypeManager';
 import { useAuth } from '@/hooks/useAuth';
 
 const SettingsPage: React.FC = () => {
@@ -43,14 +42,10 @@ const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="states" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Estados
-          </TabsTrigger>
-          <TabsTrigger value="maintenance" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Manutenção
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -68,10 +63,6 @@ const SettingsPage: React.FC = () => {
 
         <TabsContent value="states">
           <StateManager />
-        </TabsContent>
-
-        <TabsContent value="maintenance">
-          <MaintenanceTypeManager />
         </TabsContent>
 
         <TabsContent value="users">

@@ -59,7 +59,7 @@ const ChatFloat: React.FC = () => {
 
   const handleConversationClick = (user: any) => {
     startConversation(user);
-    // Não fechar o chat, apenas carregar a conversa
+    setIsOpen(true);
   };
 
   const handleBackToList = () => {
@@ -134,7 +134,7 @@ const ChatFloat: React.FC = () => {
 
           {/* Conteúdo */}
           {!isMinimized && (
-            <div className="h-full flex flex-col">
+            <div className="h-full flex flex-col" style={{ height: 'calc(100% - 60px)' }}>
               {selectedUser ? (
                 // Área de conversa
                 <div className="flex flex-col h-full">

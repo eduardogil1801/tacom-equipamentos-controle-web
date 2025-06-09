@@ -7,6 +7,8 @@ import FleetManagement from '@/components/Fleet/FleetManagement';
 import CompanyManager from '@/components/Company/CompanyManager';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
+import MaintenanceTypeManager from '@/components/Maintenance/MaintenanceTypeManager';
+import ProtocolPage from '@/components/Protocol/ProtocolPage';
 import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
 import ChatFloat from '@/components/Chat/ChatFloat';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +33,10 @@ const Index = () => {
         return <FleetManagement />;
       case 'companies':
         return <CompanyManager />;
+      case 'maintenance':
+        return <MaintenanceTypeManager />;
+      case 'protocol':
+        return <ProtocolPage />;
       case 'reports':
         return <ReportsPage />;
       case 'settings':

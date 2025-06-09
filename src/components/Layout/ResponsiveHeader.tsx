@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings, FileText, Package, Truck, Menu, X, Building, BarChart3 } from 'lucide-react';
+import { LogOut, User, Settings, FileText, Package, Truck, Menu, X, Building, BarChart3, Laptop, Wrench } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
@@ -19,31 +18,41 @@ interface ResponsiveHeaderProps {
 }
 
 const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPageChange }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, checkPermission } = useAuth();
   const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'equipment', label: 'Equipamentos', icon: Laptop },
+    { id: 'fleet', label: 'Frota', icon: Truck },
+    { id: 'companies', label: 'Empresas', icon: Building },
+    { id: 'maintenance', label: 'Manutenção', icon: Wrench },
+    { id: 'protocol', label: 'Protocolo', icon: FileText },
+    { id: 'reports', label: 'Relatórios', icon: FileText },
+    { id: 'settings', label: 'Configurações', icon: Settings },
+  ];
+
+  // Filtrar itens baseado nas permissões
+  const filteredMenuItems = menuItems.filter(item => {
+    if (item.id === 'settings' || item.id === 'maintenance') {
+      return user?.userType === 'administrador';
+    }
+    return true;
+  });
 
   const handleLogout = () => {
     logout();
   };
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, permission: 'dashboard' },
-    { id: 'equipment', label: 'Equipamentos', icon: Package, permission: 'equipment' },
-    { id: 'fleet', label: 'Frota', icon: Truck, permission: 'fleet' },
-    { id: 'companies', label: 'Empresas', icon: Building, permission: 'companies' },
-    { id: 'reports', label: 'Relatórios', icon: FileText, permission: 'reports' },
-    { id: 'settings', label: 'Configurações', icon: Settings, permission: 'settings' }
-  ];
-
   const handlePageChange = (page: string) => {
     onPageChange(page);
-    setMobileMenuOpen(false);
+    setIsMenuOpen(false);
   };
 
   const MobileMenu = () => (
     <div className="flex flex-col space-y-4 p-4">
-      {menuItems.map((item) => {
+      {filteredMenuItems.map((item) => {
         const Icon = item.icon;
         return (
           <button
@@ -97,7 +106,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
           {/* Desktop Navigation */}
           {!isMobile && (
             <nav className="hidden md:flex space-x-1">
-              {menuItems.map((item) => {
+              {filteredMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
@@ -151,7 +160,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
 
           {/* Mobile Menu Button */}
           {isMobile && (
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
                   <Menu className="h-6 w-6" />
