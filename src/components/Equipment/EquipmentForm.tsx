@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,31 +40,14 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   onCancel
 }) => {
   const [formData, setFormData] = useState({
+    numero_serie: '',
     tipo: '',
     modelo: '',
-    numero_serie: '',
-    data_entrada: '',
-    data_saida: '',
     id_empresa: '',
-    estado: '',
-    status: 'disponivel'
+    data_entrada: ''
   });
-  const [isInStock, setIsInStock] = useState(true);
   const [loading, setLoading] = useState(false);
   const [duplicateAlert, setDuplicateAlert] = useState<string | null>(null);
-  
-  // Estados limitados conforme solicitado
-  const [estados] = useState(['Rio Grande do Sul', 'Santa Catarina']);
-
-  const statusOptions = [
-    'disponivel',
-    'recuperados',
-    'aguardando_despacho_contagem',
-    'enviados_manutencao_contagem',
-    'aguardando_manutencao',
-    'em_uso',
-    'danificado'
-  ];
 
   const equipmentTypes = [
     'CCIT 4.0',
@@ -79,16 +61,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   useEffect(() => {
     if (equipment) {
       setFormData({
+        numero_serie: equipment.numero_serie,
         tipo: equipment.tipo,
         modelo: equipment.modelo || '',
-        numero_serie: equipment.numero_serie,
-        data_entrada: equipment.data_entrada,
-        data_saida: equipment.data_saida || '',
         id_empresa: equipment.id_empresa,
-        estado: equipment.estado || '',
-        status: equipment.status || 'disponivel'
+        data_entrada: equipment.data_entrada
       });
-      setIsInStock(!equipment.data_saida);
     } else {
       const today = new Date().toISOString().split('T')[0];
       setFormData(prev => ({ ...prev, data_entrada: today }));
@@ -142,7 +120,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.tipo || !formData.numero_serie || !formData.data_entrada || !formData.id_empresa || !formData.estado) {
+    if (!formData.numero_serie || !formData.tipo || !formData.data_entrada || !formData.id_empresa) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -151,27 +129,26 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       return;
     }
 
-    if (!isInStock && formData.data_saida && new Date(formData.data_saida) < new Date(formData.data_entrada)) {
-      toast({
-        title: "Erro",
-        description: "A data de saída não pode ser anterior à data de entrada.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
+      // Buscar dados da empresa para auto-preencher estado e status
+      const { data: companyData, error: companyError } = await supabase
+        .from('empresas')
+        .select('name, estado')
+        .eq('id', formData.id_empresa)
+        .single();
+
+      if (companyError) throw companyError;
+
       const equipmentData = {
+        numero_serie: formData.numero_serie,
         tipo: formData.tipo,
         modelo: formData.modelo,
-        numero_serie: formData.numero_serie,
-        data_entrada: formData.data_entrada,
-        data_saida: isInStock ? null : formData.data_saida || null,
         id_empresa: formData.id_empresa,
-        estado: formData.estado,
-        status: formData.status
+        data_entrada: formData.data_entrada,
+        estado: companyData?.estado || 'Rio Grande do Sul',
+        status: companyData?.name?.toLowerCase().includes('tacom') ? 'disponivel' : 'em_uso'
       };
 
       if (equipment) {
@@ -216,13 +193,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleStockStatusChange = (inStock: boolean) => {
-    setIsInStock(inStock);
-    if (inStock) {
-      setFormData(prev => ({ ...prev, data_saida: '' }));
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -253,6 +223,17 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="numero_serie">Número de Série *</Label>
+                <Input
+                  id="numero_serie"
+                  placeholder="Ex: ABC123456"
+                  value={formData.numero_serie}
+                  onChange={(e) => handleChange('numero_serie', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo de Equipamento *</Label>
                 <Select value={formData.tipo || 'placeholder-tipo'} onValueChange={(value) => {
                   handleChange('tipo', value === 'placeholder-tipo' ? '' : value);
@@ -282,17 +263,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="numero_serie">Número de Série *</Label>
-                <Input
-                  id="numero_serie"
-                  placeholder="Ex: ABC123456"
-                  value={formData.numero_serie}
-                  onChange={(e) => handleChange('numero_serie', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
                 <Select value={formData.id_empresa || 'placeholder-empresa'} onValueChange={(value) => handleChange('id_empresa', value === 'placeholder-empresa' ? '' : value)}>
                   <SelectTrigger>
@@ -310,41 +280,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="estado">Estado do Estoque *</Label>
-                <Select value={formData.estado || 'placeholder-estado'} onValueChange={(value) => handleChange('estado', value === 'placeholder-estado' ? '' : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="placeholder-estado" disabled>Selecione um estado</SelectItem>
-                    {estados.map(estado => (
-                      <SelectItem key={estado} value={estado}>
-                        {estado}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select value={formData.status || 'placeholder-status'} onValueChange={(value) => handleChange('status', value === 'placeholder-status' ? '' : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="placeholder-status" disabled>Selecione o status</SelectItem>
-                    {statusOptions.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="data_entrada">Data de Entrada *</Label>
+                <Label htmlFor="data_entrada">Data de Cadastro *</Label>
                 <Input
                   id="data_entrada"
                   type="date"
@@ -353,45 +289,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                   required
                 />
               </div>
-
-              <div className="col-span-full space-y-3">
-                <Label>Status do Equipamento *</Label>
-                <div className="flex gap-6">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="inStock"
-                      checked={isInStock}
-                      onCheckedChange={(checked) => handleStockStatusChange(checked as boolean)}
-                    />
-                    <Label htmlFor="inStock" className="text-sm font-normal">
-                      Em Estoque
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="outOfStock"
-                      checked={!isInStock}
-                      onCheckedChange={(checked) => handleStockStatusChange(!(checked as boolean))}
-                    />
-                    <Label htmlFor="outOfStock" className="text-sm font-normal">
-                      Fora de Estoque
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              {!isInStock && (
-                <div className="space-y-2">
-                  <Label htmlFor="data_saida">Data de Saída *</Label>
-                  <Input
-                    id="data_saida"
-                    type="date"
-                    value={formData.data_saida}
-                    onChange={(e) => handleChange('data_saida', e.target.value)}
-                    required={!isInStock}
-                  />
-                </div>
-              )}
             </div>
 
             <div className="flex gap-4 pt-4">
