@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash, Move } from 'lucide-react';
+import { Plus, Search, Edit, Trash, Move, Upload } from 'lucide-react';
 import EquipmentForm from './EquipmentForm';
 import EquipmentMovement from './EquipmentMovement';
 import BulkImportDialog from './BulkImportDialog';
@@ -37,6 +37,7 @@ const EquipmentList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showMovement, setShowMovement] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -102,6 +103,11 @@ const EquipmentList: React.FC = () => {
     setShowMovement(false);
   };
 
+  const handleBulkImportSuccess = () => {
+    loadData();
+    setShowBulkImport(false);
+  };
+
   const handleDeleteEquipment = async (id: string) => {
     try {
       const { error } = await supabase
@@ -158,6 +164,10 @@ const EquipmentList: React.FC = () => {
     return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const formatNumber = (num: number) => {
+    return num.toLocaleString('pt-BR');
+  };
+
   if (showForm) {
     return (
       <EquipmentForm
@@ -208,7 +218,13 @@ const EquipmentList: React.FC = () => {
             <Plus className="h-4 w-4" />
             Adicionar Equipamento
           </Button>
-          <BulkImportDialog companies={companies} onImportComplete={loadData} />
+          <Button
+            onClick={() => setShowBulkImport(true)}
+            className="bg-green-600 hover:bg-green-700 flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Importação em Lote
+          </Button>
         </div>
       </div>
 
@@ -271,7 +287,7 @@ const EquipmentList: React.FC = () => {
       {/* Equipment List */}
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Equipamentos ({filteredEquipments.length})</CardTitle>
+          <CardTitle>Histórico de Equipamentos ({formatNumber(filteredEquipments.length)})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -345,6 +361,12 @@ const EquipmentList: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <BulkImportDialog
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onSuccess={handleBulkImportSuccess}
+      />
     </div>
   );
 };

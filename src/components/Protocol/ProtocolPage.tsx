@@ -35,11 +35,15 @@ const ProtocolPage: React.FC = () => {
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [protocolData, setProtocolData] = useState({
     company: '',
-    responsible: user?.nome || user?.username || '',
+    responsible: user?.name || user?.username || '',
     date: new Date().toISOString().split('T')[0],
     observations: ''
   });
   const [loading, setLoading] = useState(false);
+
+  const formatNumber = (num: number) => {
+    return num.toLocaleString('pt-BR');
+  };
 
   useEffect(() => {
     loadCompanies();
@@ -55,7 +59,7 @@ const ProtocolPage: React.FC = () => {
   useEffect(() => {
     setProtocolData(prev => ({
       ...prev,
-      responsible: user?.nome || user?.username || ''
+      responsible: user?.name || user?.username || ''
     }));
   }, [user]);
 
@@ -189,7 +193,7 @@ const ProtocolPage: React.FC = () => {
     doc.text('_'.repeat(50), 120, finalY + 20);
     doc.text('Assinatura do Responsável pelo Recebimento', 120, finalY + 30);
 
-    doc.text(`Total de equipamentos: ${selectedEquipment.length}`, 14, finalY + 50);
+    doc.text(`Total de equipamentos: ${formatNumber(selectedEquipment.length)}`, 14, finalY + 50);
 
     // Salvar o PDF
     const fileName = `protocolo_${companyName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -320,7 +324,7 @@ const ProtocolPage: React.FC = () => {
             {selectedEquipment.length > 0 && (
               <div className="mt-4 p-3 bg-blue-50 rounded">
                 <div className="font-medium text-blue-900">
-                  {selectedEquipment.length} equipamento(s) selecionado(s)
+                  {formatNumber(selectedEquipment.length)} equipamento(s) selecionado(s)
                 </div>
               </div>
             )}
