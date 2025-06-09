@@ -297,7 +297,7 @@ const FleetManagement: React.FC = () => {
                       <SelectItem value="placeholder-codigo" disabled>Selecione o código</SelectItem>
                       {Object.entries(operadoraMapping).map(([codigo, nome]) => (
                         <SelectItem key={codigo} value={codigo}>
-                          {codigo} - {nome}
+                          {codigo}
                         </SelectItem>
                       ))}
                     </SelectContent>
