@@ -30,7 +30,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, permission: 'dashboard' },
     { id: 'equipment', label: 'Equipamentos', icon: Package, permission: 'equipment' },
-    { id: 'fleet', label: 'Empresas', icon: Building, permission: 'fleet' },
+    { id: 'fleet', label: 'Frota', icon: Truck, permission: 'fleet' },
+    { id: 'companies', label: 'Empresas', icon: Building, permission: 'companies' },
     { id: 'reports', label: 'Relatórios', icon: FileText, permission: 'reports' },
     { id: 'settings', label: 'Configurações', icon: Settings, permission: 'settings' }
   ];

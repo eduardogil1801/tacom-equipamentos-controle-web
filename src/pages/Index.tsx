@@ -4,6 +4,7 @@ import AuthPage from '@/components/Auth/AuthPage';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
 import FleetManagement from '@/components/Fleet/FleetManagement';
+import CompanyManager from '@/components/Company/CompanyManager';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
 import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
@@ -28,6 +29,8 @@ const Index = () => {
         return <EquipmentList />;
       case 'fleet':
         return <FleetManagement />;
+      case 'companies':
+        return <CompanyManager />;
       case 'reports':
         return <ReportsPage />;
       case 'settings':
