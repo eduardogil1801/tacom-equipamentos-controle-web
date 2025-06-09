@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,11 @@ interface User {
   username: string;
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 interface MovementData {
   tipo_movimento: string;
   data_movimento: string;
@@ -40,6 +46,8 @@ interface MovementData {
   detalhes_manutencao: string;
   tipo_manutencao_id: string;
   fora_estoque: boolean;
+  data_saida: string;
+  empresa_id: string;
   selectedEquipments: string[];
   equipmentId: string;
   numero_serie: string;
@@ -56,6 +64,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [showEquipmentList, setShowEquipmentList] = useState(false);
   const [multipleSelection, setMultipleSelection] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
@@ -72,6 +81,8 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     detalhes_manutencao: '',
     tipo_manutencao_id: '',
     fora_estoque: false,
+    data_saida: '',
+    empresa_id: '',
     selectedEquipments: [],
     equipmentId: '',
     numero_serie: ''
@@ -79,7 +90,11 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Definir automaticamente o usuário logado como responsável
+    if (user) {
+      setResponsibleUserSearch(user.name || user.username || '');
+    }
+  }, [user]);
 
   useEffect(() => {
     if (searchTerm.length >= 3) {
@@ -146,6 +161,15 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
       if (userError) throw userError;
       setUsers(userData || []);
+
+      // Carregar empresas
+      const { data: companyData, error: companyError } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (companyError) throw companyError;
+      setCompanies(companyData || []);
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -228,6 +252,26 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       return;
     }
 
+    // Validar campos obrigatórios para "Fora de Estoque"
+    if (formData.fora_estoque && formData.tipo_movimento === 'saida') {
+      if (!formData.data_saida) {
+        toast({
+          title: "Erro",
+          description: "Data de saída é obrigatória quando 'Fora de Estoque' está selecionado",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.empresa_id) {
+        toast({
+          title: "Erro",
+          description: "Empresa é obrigatória quando 'Fora de Estoque' está selecionado",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       const movements = equipmentsToMove.map(equipmentId => ({
         id_equipamento: equipmentId,
@@ -236,7 +280,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         observacoes: formData.observacoes,
         detalhes_manutencao: formData.detalhes_manutencao || null,
         tipo_manutencao_id: formData.tipo_manutencao_id || null,
-        usuario_responsavel: responsibleUserSearch || user?.username || user?.name
+        usuario_responsavel: responsibleUserSearch || user?.name || user?.username
       }));
 
       const { error: movementError } = await supabase
@@ -247,12 +291,18 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
       // Atualizar status dos equipamentos se necessário
       if (formData.tipo_movimento === 'saida') {
+        const updateData: any = { 
+          status: formData.fora_estoque ? 'fora_estoque' : 'em_uso',
+          data_saida: formData.fora_estoque ? formData.data_saida : formData.data_movimento
+        };
+
+        if (formData.fora_estoque && formData.empresa_id) {
+          updateData.id_empresa = formData.empresa_id;
+        }
+
         const { error: updateError } = await supabase
           .from('equipamentos')
-          .update({ 
-            status: formData.fora_estoque ? 'fora_estoque' : 'em_uso',
-            data_saida: formData.data_movimento
-          })
+          .update(updateData)
           .in('id', equipmentsToMove);
 
         if (updateError) throw updateError;
@@ -281,13 +331,17 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         detalhes_manutencao: '',
         tipo_manutencao_id: '',
         fora_estoque: false,
+        data_saida: '',
+        empresa_id: '',
         selectedEquipments: [],
         equipmentId: '',
         numero_serie: ''
       });
       setSearchTerm('');
       setSelectedEquipments([]);
-      setResponsibleUserSearch('');
+      if (user) {
+        setResponsibleUserSearch(user.name || user.username || '');
+      }
       
       onSuccess();
     } catch (error) {
@@ -313,7 +367,12 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   }, []);
 
   const handleForaEstoqueChange = useCallback((checked: boolean) => {
-    setFormData(prev => ({ ...prev, fora_estoque: checked }));
+    setFormData(prev => ({ 
+      ...prev, 
+      fora_estoque: checked,
+      data_saida: checked ? new Date().toISOString().split('T')[0] : '',
+      empresa_id: checked ? '' : ''
+    }));
   }, []);
 
   const handleUserSelect = (user: User) => {
@@ -511,14 +570,49 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           </div>
 
           {formData.tipo_movimento === 'saida' && (
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="fora_estoque"
-                checked={formData.fora_estoque}
-                onCheckedChange={handleForaEstoqueChange}
-              />
-              <Label htmlFor="fora_estoque">Fora de Estoque</Label>
-            </div>
+            <>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="fora_estoque"
+                  checked={formData.fora_estoque}
+                  onCheckedChange={handleForaEstoqueChange}
+                />
+                <Label htmlFor="fora_estoque">Fora de Estoque</Label>
+              </div>
+
+              {formData.fora_estoque && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <Label htmlFor="data_saida">Data de Saída *</Label>
+                    <Input
+                      id="data_saida"
+                      type="date"
+                      value={formData.data_saida}
+                      onChange={(e) => handleChange('data_saida', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="empresa_id">Empresa (Operadora) *</Label>
+                    <Select 
+                      value={formData.empresa_id} 
+                      onValueChange={(value) => handleChange('empresa_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a empresa" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map(company => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <div>

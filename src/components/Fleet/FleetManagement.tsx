@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -378,7 +379,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="nuvem">Telemetria</Label>
+                  <Label htmlFor="nuvem">Nuvem</Label>
                   <Input
                     id="nuvem"
                     type="number"
@@ -427,7 +428,7 @@ const FleetManagement: React.FC = () => {
                   <th className="text-left p-3">Seção</th>
                   <th className="text-left p-3">CITGIS</th>
                   <th className="text-left p-3">BUSZOOM</th>
-                  <th className="text-left p-3">Telemetria</th>
+                  <th className="text-left p-3">Nuvem</th>
                   <th className="text-left p-3">Total</th>
                   <th className="text-left p-3">Responsável</th>
                   <th className="text-left p-3">Ações</th>
