@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,15 +121,23 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       if (equipmentError) throw equipmentError;
       setEquipment(equipmentData || []);
 
-      // Carregar tipos de manutenção (ordenados de baixo para cima)
+      // Carregar tipos de manutenção ordenados por código (01, 02, 03...)
       const { data: maintenanceData, error: maintenanceError } = await supabase
         .from('tipos_manutencao')
         .select('*')
         .eq('ativo', true)
-        .order('descricao', { ascending: false });
+        .order('codigo', { ascending: true });
 
       if (maintenanceError) throw maintenanceError;
-      setMaintenanceTypes(maintenanceData || []);
+      
+      // Ordenar os tipos de manutenção numericamente pelo código
+      const sortedMaintenanceTypes = (maintenanceData || []).sort((a, b) => {
+        const numA = parseInt(a.codigo);
+        const numB = parseInt(b.codigo);
+        return numA - numB;
+      });
+      
+      setMaintenanceTypes(sortedMaintenanceTypes);
 
       // Carregar usuários
       const { data: userData, error: userError } = await supabase
@@ -208,6 +217,8 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   };
 
   const handleApplyMovement = async () => {
+    console.log('Iniciando handleApplyMovement com dados:', formData);
+    
     if (!formData.tipo_movimento) {
       toast({
         title: "Erro",
@@ -220,6 +231,8 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     const equipmentsToMove = multipleSelection && formData.selectedEquipments.length > 0 
       ? formData.selectedEquipments 
       : formData.equipmentId ? [formData.equipmentId] : [];
+
+    console.log('Equipamentos para movimentar:', equipmentsToMove);
 
     if (equipmentsToMove.length === 0) {
       toast({
@@ -251,21 +264,33 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
 
     try {
-      const movements = equipmentsToMove.map(equipmentId => ({
-        id_equipamento: equipmentId,
-        tipo_movimento: formData.tipo_movimento,
-        data_movimento: formData.data_movimento,
-        observacoes: formData.observacoes,
-        detalhes_manutencao: formData.detalhes_manutencao || null,
-        tipo_manutencao_id: formData.tipo_manutencao_id || null,
-        usuario_responsavel: user?.name || user?.username
-      }));
+      const movements = equipmentsToMove.map(equipmentId => {
+        const movementData = {
+          id_equipamento: equipmentId,
+          tipo_movimento: formData.tipo_movimento,
+          data_movimento: formData.data_movimento,
+          observacoes: formData.observacoes || null,
+          detalhes_manutencao: formData.detalhes_manutencao || null,
+          tipo_manutencao_id: formData.tipo_manutencao_id || null,
+          usuario_responsavel: user?.name || user?.username || null
+        };
+        
+        console.log('Dados da movimentação para equipamento', equipmentId, ':', movementData);
+        return movementData;
+      });
+
+      console.log('Inserindo movimentações:', movements);
 
       const { error: movementError } = await supabase
         .from('movimentacoes')
         .insert(movements);
 
-      if (movementError) throw movementError;
+      if (movementError) {
+        console.error('Erro ao inserir movimentação:', movementError);
+        throw movementError;
+      }
+
+      console.log('Movimentações inseridas com sucesso');
 
       // Atualizar status dos equipamentos se necessário
       if (formData.tipo_movimento === 'saida') {
@@ -278,13 +303,20 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           updateData.id_empresa = formData.empresa_id;
         }
 
+        console.log('Atualizando status dos equipamentos:', updateData);
+
         const { error: updateError } = await supabase
           .from('equipamentos')
           .update(updateData)
           .in('id', equipmentsToMove);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Erro ao atualizar equipamentos:', updateError);
+          throw updateError;
+        }
       } else if (formData.tipo_movimento === 'entrada') {
+        console.log('Atualizando equipamentos para status disponível');
+        
         const { error: updateError } = await supabase
           .from('equipamentos')
           .update({ 
@@ -293,7 +325,10 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           })
           .in('id', equipmentsToMove);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Erro ao atualizar equipamentos:', updateError);
+          throw updateError;
+        }
       }
 
       toast({

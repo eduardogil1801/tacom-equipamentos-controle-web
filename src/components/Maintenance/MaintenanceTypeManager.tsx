@@ -33,7 +33,15 @@ const MaintenanceTypeManager = () => {
         .order('codigo');
 
       if (error) throw error;
-      setTypes(data || []);
+      
+      // Ordenar os tipos de manutenção numericamente pelo código
+      const sortedTypes = (data || []).sort((a, b) => {
+        const numA = parseInt(a.codigo);
+        const numB = parseInt(b.codigo);
+        return numA - numB;
+      });
+      
+      setTypes(sortedTypes);
     } catch (error) {
       console.error('Error loading maintenance types:', error);
       toast({
