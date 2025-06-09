@@ -44,8 +44,10 @@ export type Database = {
           cor_secundaria: string | null
           created_at: string
           estado: string | null
+          estado_id: string | null
           id: string
           name: string
+          telefone: string | null
           updated_at: string
         }
         Insert: {
@@ -55,8 +57,10 @@ export type Database = {
           cor_secundaria?: string | null
           created_at?: string
           estado?: string | null
+          estado_id?: string | null
           id?: string
           name: string
+          telefone?: string | null
           updated_at?: string
         }
         Update: {
@@ -66,11 +70,21 @@ export type Database = {
           cor_secundaria?: string | null
           created_at?: string
           estado?: string | null
+          estado_id?: string | null
           id?: string
           name?: string
+          telefone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "empresas_estado_id_fkey"
+            columns: ["estado_id"]
+            isOneToOne: false
+            referencedRelation: "estados"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       equipamentos: {
         Row: {
@@ -125,6 +139,27 @@ export type Database = {
           },
         ]
       }
+      estados: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       frota: {
         Row: {
           buszoom: number | null
@@ -140,6 +175,7 @@ export type Database = {
           simples_sem_imagem: number | null
           total: number | null
           updated_at: string
+          usuario_responsavel: string | null
         }
         Insert: {
           buszoom?: number | null
@@ -155,6 +191,7 @@ export type Database = {
           simples_sem_imagem?: number | null
           total?: number | null
           updated_at?: string
+          usuario_responsavel?: string | null
         }
         Update: {
           buszoom?: number | null
@@ -170,6 +207,7 @@ export type Database = {
           simples_sem_imagem?: number | null
           total?: number | null
           updated_at?: string
+          usuario_responsavel?: string | null
         }
         Relationships: []
       }

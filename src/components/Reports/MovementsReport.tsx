@@ -14,6 +14,7 @@ interface Movement {
   tipo_movimento: string;
   observacoes?: string;
   detalhes_manutencao?: string;
+  usuario_responsavel?: string;
   equipamentos: {
     numero_serie: string;
     tipo: string;
@@ -35,7 +36,8 @@ const MovementsReport = () => {
     company: 'all',
     movementType: 'all',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    usuario: ''
   });
   const [loading, setLoading] = useState(true);
 
@@ -119,6 +121,12 @@ const MovementsReport = () => {
       );
     }
 
+    if (filters.usuario) {
+      filtered = filtered.filter(movement => 
+        movement.usuario_responsavel?.toLowerCase().includes(filters.usuario.toLowerCase())
+      );
+    }
+
     setFilteredMovements(filtered);
   };
 
@@ -165,7 +173,7 @@ const MovementsReport = () => {
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label>Empresa</Label>
               <Select 
@@ -220,6 +228,16 @@ const MovementsReport = () => {
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => setFilters({...filters, endDate: e.target.value})}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Usuário Responsável</Label>
+              <Input
+                type="text"
+                placeholder="Filtrar por usuário..."
+                value={filters.usuario}
+                onChange={(e) => setFilters({...filters, usuario: e.target.value})}
               />
             </div>
           </div>
@@ -277,6 +295,7 @@ const MovementsReport = () => {
                   <th className="border border-gray-300 p-2 text-left">Equipamento</th>
                   <th className="border border-gray-300 p-2 text-left">Série</th>
                   <th className="border border-gray-300 p-2 text-left">Empresa</th>
+                  <th className="border border-gray-300 p-2 text-left">Responsável</th>
                   <th className="border border-gray-300 p-2 text-left">Manutenção</th>
                   <th className="border border-gray-300 p-2 text-left">Observações</th>
                 </tr>
@@ -298,6 +317,11 @@ const MovementsReport = () => {
                     </td>
                     <td className="border border-gray-300 p-2">
                       {movement.equipamentos?.empresas?.name}
+                    </td>
+                    <td className="border border-gray-300 p-2">
+                      <span className="text-sm font-medium text-blue-600">
+                        {movement.usuario_responsavel || 'N/A'}
+                      </span>
                     </td>
                     <td className="border border-gray-300 p-2">
                       {movement.tipos_manutencao && (

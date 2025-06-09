@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Equipment {
   id: string;
@@ -39,6 +40,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   onSave,
   onCancel
 }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     numero_serie: '',
     tipo: '',
@@ -159,16 +161,42 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
         if (error) throw error;
 
+        // Registrar movimentação de atualização
+        await supabase
+          .from('movimentacoes')
+          .insert([{
+            id_equipamento: equipment.id,
+            tipo_movimento: 'entrada',
+            data_movimento: formData.data_entrada,
+            observacoes: 'Equipamento atualizado',
+            usuario_responsavel: user?.username || user?.name
+          }]);
+
         toast({
           title: "Sucesso",
           description: "Equipamento atualizado com sucesso!",
         });
       } else {
-        const { error } = await supabase
+        const { data: newEquipment, error } = await supabase
           .from('equipamentos')
-          .insert([equipmentData]);
+          .insert([equipmentData])
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Registrar movimentação de entrada automática
+        if (newEquipment) {
+          await supabase
+            .from('movimentacoes')
+            .insert([{
+              id_equipamento: newEquipment.id,
+              tipo_movimento: 'entrada',
+              data_movimento: formData.data_entrada,
+              observacoes: 'Entrada automática do equipamento',
+              usuario_responsavel: user?.username || user?.name
+            }]);
+        }
 
         toast({
           title: "Sucesso",

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Save, Trash, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface FleetData {
   id?: string;
@@ -21,37 +22,44 @@ interface FleetData {
   buszoom: number;
   nuvem: number;
   total: number;
+  usuario_responsavel?: string;
 }
 
-// Mapeamento de operadoras
+interface Company {
+  id: string;
+  name: string;
+}
+
+// Mapeamento de operadoras com código primeiro
 const operadoraMapping: { [key: string]: string } = {
-  'Catsul': '32',
-  'Guaíba': '9',
-  'Itapuã': '11',
-  'Sogal': '12',
-  'Soul': '14',
-  'Sogil': '13',
-  'Transcal': '15',
-  'Viamão': '16',
-  'Cmt': '27',
-  'Central': '29',
-  'Transbus': '21',
-  'Tc_Sapi': '23',
-  'Sti': '20',
-  'Sapucaia': '26',
-  'Trensurb': '34',
-  'Nova Santa Rita': '41',
-  'Hamburguesa': '42',
-  'Parobe': '46',
-  'Soul Municipal': '47'
+  '9': 'Guaíba',
+  '11': 'Itapuã',
+  '12': 'Sogal',
+  '13': 'Sogil',
+  '14': 'Soul',
+  '15': 'Transcal',
+  '16': 'Viamão',
+  '20': 'Sti',
+  '21': 'Transbus',
+  '23': 'Tc_Sapi',
+  '26': 'Sapucaia',
+  '27': 'Cmt',
+  '29': 'Central',
+  '32': 'Catsul',
+  '34': 'Trensurb',
+  '41': 'Nova Santa Rita',
+  '42': 'Hamburguesa',
+  '46': 'Parobe',
+  '47': 'Soul Municipal'
 };
 
 const FleetManagement: React.FC = () => {
+  const { user } = useAuth();
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFleet, setEditingFleet] = useState<FleetData | null>(null);
-  const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [formData, setFormData] = useState<FleetData>({
     cod_operadora: '',
     nome_empresa: '',
@@ -131,12 +139,12 @@ const FleetManagement: React.FC = () => {
     }));
   };
 
-  const handleCompanyChange = (companyName: string) => {
-    const codOperadora = operadoraMapping[companyName] || '';
+  const handleOperadoraChange = (codigo: string) => {
+    const nomeOperadora = operadoraMapping[codigo] || '';
     setFormData(prev => ({ 
       ...prev, 
-      nome_empresa: companyName,
-      cod_operadora: codOperadora
+      cod_operadora: codigo,
+      nome_empresa: nomeOperadora
     }));
   };
 
@@ -153,10 +161,15 @@ const FleetManagement: React.FC = () => {
     }
 
     try {
+      const fleetDataWithUser = {
+        ...formData,
+        usuario_responsavel: user?.username || user?.name
+      };
+
       if (editingFleet) {
         const { error } = await supabase
           .from('frota')
-          .update(formData)
+          .update(fleetDataWithUser)
           .eq('id', editingFleet.id);
 
         if (error) throw error;
@@ -168,7 +181,7 @@ const FleetManagement: React.FC = () => {
       } else {
         const { error } = await supabase
           .from('frota')
-          .insert([formData]);
+          .insert([fleetDataWithUser]);
 
         if (error) throw error;
 
@@ -249,7 +262,7 @@ const FleetManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Gerenciamento de Frota</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Cadastro de Frota</h1>
         <Button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2"
@@ -268,31 +281,36 @@ const FleetManagement: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="nome_empresa">Operadora *</Label>
+                  <Label htmlFor="cod_operadora">Código da Operadora *</Label>
                   <Select 
-                    value={formData.nome_empresa} 
-                    onValueChange={handleCompanyChange}
+                    value={formData.cod_operadora || 'placeholder-codigo'} 
+                    onValueChange={(value) => {
+                      if (value !== 'placeholder-codigo') {
+                        handleOperadoraChange(value);
+                      }
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma operadora" />
+                      <SelectValue placeholder="Selecione o código" />
                     </SelectTrigger>
                     <SelectContent>
-                      {companies.map(company => (
-                        <SelectItem key={company.id} value={company.name}>
-                          {company.name}
+                      <SelectItem value="placeholder-codigo" disabled>Selecione o código</SelectItem>
+                      {Object.entries(operadoraMapping).map(([codigo, nome]) => (
+                        <SelectItem key={codigo} value={codigo}>
+                          {codigo} - {nome}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="cod_operadora">Código da Operadora *</Label>
+                  <Label htmlFor="nome_empresa">Operadora *</Label>
                   <Input
-                    id="cod_operadora"
-                    value={formData.cod_operadora}
+                    id="nome_empresa"
+                    value={formData.nome_empresa}
                     readOnly
                     className="bg-gray-100"
-                    placeholder="Código automático"
+                    placeholder="Operadora automática"
                   />
                 </div>
                 <div>
@@ -410,6 +428,7 @@ const FleetManagement: React.FC = () => {
                   <th className="text-left p-3">BUSZOOM</th>
                   <th className="text-left p-3">Telemetria</th>
                   <th className="text-left p-3">Total</th>
+                  <th className="text-left p-3">Responsável</th>
                   <th className="text-left p-3">Ações</th>
                 </tr>
               </thead>
@@ -426,6 +445,7 @@ const FleetManagement: React.FC = () => {
                     <td className="p-3">{fleet.buszoom}</td>
                     <td className="p-3">{fleet.nuvem}</td>
                     <td className="p-3 font-bold">{fleet.total}</td>
+                    <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
                     <td className="p-3">
                       <div className="flex gap-2">
                         <Button
