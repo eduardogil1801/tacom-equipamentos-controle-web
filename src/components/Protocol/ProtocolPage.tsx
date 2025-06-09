@@ -253,7 +253,7 @@ const ProtocolPage: React.FC = () => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.text('Atenciosamente,', 20, yPosition);
-      doc.text(`${user?.nome} ${user?.sobrenome}`, 20, yPosition + 10);
+      doc.text(`${user?.name} ${user?.surname}`, 20, yPosition + 10);
       doc.text('Filial: Porto Alegre', 20, yPosition + 20);
       doc.text('Tacom Projetos de Bilhetagem Inteligente Ltda.', 20, yPosition + 30);
       
@@ -474,7 +474,7 @@ const ProtocolPage: React.FC = () => {
               <User className="h-4 w-4" />
               Responsável pela Emissão
             </Label>
-            <p className="text-lg font-medium">{user?.nome} {user?.sobrenome}</p>
+            <p className="text-lg font-medium">{user?.name} {user?.surname}</p>
             <p className="text-sm text-gray-600">Filial: Porto Alegre</p>
             <p className="text-sm text-gray-600">Tacom Projetos de Bilhetagem Inteligente Ltda.</p>
           </div>
