@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings, FileText, Package, Truck, Menu, X } from 'lucide-react';
+import { LogOut, User, Settings, FileText, Package, Truck, Menu, X, Building, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
@@ -28,9 +28,9 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Package, permission: 'dashboard' },
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, permission: 'dashboard' },
     { id: 'equipment', label: 'Equipamentos', icon: Package, permission: 'equipment' },
-    { id: 'fleet', label: 'Frota', icon: Truck, permission: 'fleet' },
+    { id: 'fleet', label: 'Empresas', icon: Building, permission: 'fleet' },
     { id: 'reports', label: 'Relatórios', icon: FileText, permission: 'reports' },
     { id: 'settings', label: 'Configurações', icon: Settings, permission: 'settings' }
   ];
@@ -50,7 +50,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
             onClick={() => handlePageChange(item.id)}
             className={`flex items-center w-full px-4 py-3 rounded-lg text-left transition-colors ${
               currentPage === item.id
-                ? 'bg-red-100 text-red-700 border border-red-200'
+                ? 'bg-red-500 text-white'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -87,26 +87,24 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="tacom-gradient text-white px-3 py-2 rounded-lg font-bold text-lg sm:text-xl">
+            <div className="bg-red-500 text-white px-3 py-2 rounded-lg font-bold text-lg sm:text-xl flex items-center">
+              <Package className="h-5 w-5 mr-2" />
               TACOM
             </div>
-            <span className="ml-3 text-gray-600 text-xs sm:text-sm hidden sm:block">
-              Controle de Equipamentos - Filial POA
-            </span>
           </div>
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <nav className="hidden md:flex space-x-8">
+            <nav className="hidden md:flex space-x-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
                     key={item.id}
                     onClick={() => handlePageChange(item.id)}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       currentPage === item.id
-                        ? 'bg-red-100 text-red-700'
+                        ? 'bg-red-500 text-white'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
@@ -160,7 +158,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
               </SheetTrigger>
               <SheetContent side="right" className="w-80">
                 <div className="flex items-center justify-between mb-6">
-                  <div className="tacom-gradient text-white px-3 py-2 rounded-lg font-bold text-lg">
+                  <div className="bg-red-500 text-white px-3 py-2 rounded-lg font-bold text-lg flex items-center">
+                    <Package className="h-5 w-5 mr-2" />
                     TACOM
                   </div>
                 </div>

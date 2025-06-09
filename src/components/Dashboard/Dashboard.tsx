@@ -159,7 +159,7 @@ const Dashboard: React.FC = () => {
     if (existing) {
       existing.value += 1;
     } else {
-      acc.push({ name: tipo, value: 1 });
+      acc.push({ name: tipo, value: 1, color: `hsl(${acc.length * 45}, 70%, 50%)` });
     }
     return acc;
   }, []).sort((a, b) => b.value - a.value);
@@ -247,37 +247,8 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Charts - Side by side layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Maintenance Types Chart */}
-        {maintenanceTypesData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Tipos de Manutenção</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={maintenanceTypesData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                  >
-                    {maintenanceTypesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Stock Status Pie Chart */}
         <Card>
           <CardHeader>
@@ -302,6 +273,42 @@ const Dashboard: React.FC = () => {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Maintenance Types Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Equipamentos por Tipo de Manutenção</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {maintenanceTypesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={maintenanceTypesData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {maintenanceTypesData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                <div className="text-center">
+                  <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Nenhum dado de manutenção encontrado</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
