@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Building, Database, TrendingUp, Package, Wrench, AlertTriangle } from 'lucide-react';
+import { Building, Database, TrendingUp, Package, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Equipment {
@@ -50,6 +50,7 @@ const Dashboard: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading dashboard data...');
       
       // Load companies
       const { data: companiesData, error: companiesError } = await supabase
@@ -57,7 +58,11 @@ const Dashboard: React.FC = () => {
         .select('*')
         .order('name');
 
-      if (companiesError) throw companiesError;
+      if (companiesError) {
+        console.error('Error loading companies:', companiesError);
+        throw companiesError;
+      }
+      console.log('Companies loaded:', companiesData?.length);
       setCompanies(companiesData || []);
 
       // Load equipments with company data
@@ -72,7 +77,11 @@ const Dashboard: React.FC = () => {
         `)
         .order('data_entrada', { ascending: false });
 
-      if (equipmentsError) throw equipmentsError;
+      if (equipmentsError) {
+        console.error('Error loading equipments:', equipmentsError);
+        throw equipmentsError;
+      }
+      console.log('Equipments loaded:', equipmentsData?.length);
       setEquipments(equipmentsData || []);
 
       // Load maintenance movements
@@ -87,7 +96,11 @@ const Dashboard: React.FC = () => {
         `)
         .eq('tipo_movimento', 'manutencao');
 
-      if (maintenanceError) throw maintenanceError;
+      if (maintenanceError) {
+        console.error('Error loading maintenance movements:', maintenanceError);
+        throw maintenanceError;
+      }
+      console.log('Maintenance movements loaded:', maintenanceData?.length);
       setMaintenanceMovements(maintenanceData || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -102,6 +115,8 @@ const Dashboard: React.FC = () => {
   const outEquipments = equipments.filter(eq => eq.data_saida).length;
   const totalCompanies = companies.length;
   const equipmentsInMaintenance = equipments.filter(eq => eq.em_manutencao === true).length;
+
+  console.log('Equipment stats:', { totalEquipments, inStockEquipments, outEquipments, equipmentsInMaintenance });
 
   // Data for equipment by state
   const stateData = equipments.reduce((acc: any[], equipment) => {
@@ -139,15 +154,17 @@ const Dashboard: React.FC = () => {
 
   // Maintenance types data
   const maintenanceTypesData = maintenanceMovements.reduce((acc: any[], movement) => {
-    const tipo = movement.tipos_manutencao?.descricao || 'Não especificado';
-    const existing = acc.find(item => item.type === tipo);
+    const tipo = movement.tipos_manutencao?.descricao || movement.detalhes_manutencao || 'Não especificado';
+    const existing = acc.find(item => item.name === tipo);
     if (existing) {
-      existing.count += 1;
+      existing.value += 1;
     } else {
-      acc.push({ type: tipo, count: 1 });
+      acc.push({ name: tipo, value: 1 });
     }
     return acc;
-  }, []).sort((a, b) => b.count - a.count);
+  }, []).sort((a, b) => b.value - a.value);
+
+  console.log('Maintenance types data:', maintenanceTypesData);
 
   // Equipment types data
   const typeData = equipments.reduce((acc: any[], equipment) => {
@@ -169,7 +186,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
       {/* Statistics Cards */}
@@ -247,8 +264,8 @@ const Dashboard: React.FC = () => {
                     cy="50%"
                     outerRadius={80}
                     fill="#8884d8"
-                    dataKey="count"
-                    label={({ type, count }) => `${type}: ${count}`}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
                   >
                     {maintenanceTypesData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
