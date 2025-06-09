@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -282,7 +283,7 @@ const FleetManagement: React.FC = () => {
                 <div>
                   <Label htmlFor="cod_operadora">Código da Operadora *</Label>
                   <Select 
-                    value={formData.cod_operadora || ''} 
+                    value={formData.cod_operadora || undefined} 
                     onValueChange={(value) => {
                       handleOperadoraChange(value);
                     }}
