@@ -58,7 +58,14 @@ const FleetReport: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFleetData(data || []);
+      
+      // Ensure telemetria field exists with default value
+      const formattedData = (data || []).map(item => ({
+        ...item,
+        telemetria: item.telemetria || 0
+      }));
+      
+      setFleetData(formattedData);
     } catch (error) {
       console.error('Erro ao carregar dados da frota:', error);
       toast({

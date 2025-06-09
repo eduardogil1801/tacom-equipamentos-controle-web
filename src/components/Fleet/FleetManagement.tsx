@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,7 +112,14 @@ const FleetManagement: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFleetData(data || []);
+      
+      // Ensure telemetria field exists with default value
+      const formattedData = (data || []).map(item => ({
+        ...item,
+        telemetria: item.telemetria || 0
+      }));
+      
+      setFleetData(formattedData);
     } catch (error) {
       console.error('Erro ao carregar dados da frota:', error);
       toast({
@@ -330,7 +338,7 @@ const FleetManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 <div>
                   <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
                   <Input

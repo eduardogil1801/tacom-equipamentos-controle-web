@@ -257,6 +257,7 @@ export type Database = {
           secao: number | null
           simples_com_imagem: number | null
           simples_sem_imagem: number | null
+          telemetria: number | null
           total: number | null
           updated_at: string
           usuario_responsavel: string | null
@@ -273,6 +274,7 @@ export type Database = {
           secao?: number | null
           simples_com_imagem?: number | null
           simples_sem_imagem?: number | null
+          telemetria?: number | null
           total?: number | null
           updated_at?: string
           usuario_responsavel?: string | null
@@ -289,6 +291,7 @@ export type Database = {
           secao?: number | null
           simples_com_imagem?: number | null
           simples_sem_imagem?: number | null
+          telemetria?: number | null
           total?: number | null
           updated_at?: string
           usuario_responsavel?: string | null
