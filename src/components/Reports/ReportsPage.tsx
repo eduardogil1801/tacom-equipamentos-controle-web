@@ -22,71 +22,71 @@ const ReportsPage: React.FC = () => {
   const reports = [
     {
       id: 'companies-report',
-      title: 'Relatório de Empresas',
-      description: 'Visualize informações detalhadas sobre as empresas cadastradas',
+      title: 'Empresas',
+      description: 'Informações das empresas cadastradas',
       icon: Building,
       component: CompaniesReport
     },
     {
       id: 'equipment-distribution-report',
       title: 'Distribuição de Equipamentos',
-      description: 'Análise da distribuição de equipamentos por empresa',
+      description: 'Distribuição por empresa',
       icon: Package,
       component: EquipmentDistributionReport
     },
     {
       id: 'equipment-history-report',
       title: 'Histórico de Equipamentos',
-      description: 'Histórico completo de movimentações dos equipamentos',
+      description: 'Movimentações dos equipamentos',
       icon: FileText,
       component: EquipmentHistoryReport
     },
     {
       id: 'equipment-status-report',
       title: 'Status dos Equipamentos',
-      description: 'Relatório sobre o status atual dos equipamentos',
+      description: 'Status atual dos equipamentos',
       icon: BarChart3,
       component: EquipmentStatusReport
     },
     {
       id: 'fleet-report',
-      title: 'Relatório de Frota',
-      description: 'Informações detalhadas sobre a frota de equipamentos',
+      title: 'Frota',
+      description: 'Informações da frota',
       icon: Truck,
       component: FleetReport
     },
     {
       id: 'inventory-report',
-      title: 'Relatório de Inventário',
-      description: 'Controle de inventário e equipamentos disponíveis',
+      title: 'Inventário',
+      description: 'Controle de inventário',
       icon: Package,
       component: InventoryReport
     },
     {
       id: 'inventory-stock-report',
-      title: 'Estoque de Equipamentos',
-      description: 'Controle de estoque e disponibilidade',
+      title: 'Estoque',
+      description: 'Controle de estoque',
       icon: TrendingUp,
       component: InventoryStockReport
     },
     {
       id: 'maintenance-report',
-      title: 'Relatório de Manutenção',
-      description: 'Acompanhamento de manutenções realizadas',
+      title: 'Manutenção',
+      description: 'Acompanhamento de manutenções',
       icon: Wrench,
       component: MaintenanceReport
     },
     {
       id: 'monthly-report',
-      title: 'Relatório Mensal',
-      description: 'Resumo mensal das atividades e estatísticas',
+      title: 'Mensal',
+      description: 'Resumo mensal das atividades',
       icon: Calendar,
       component: MonthlyReport
     },
     {
       id: 'movements-report',
-      title: 'Relatório de Movimentações',
-      description: 'Histórico de todas as movimentações de equipamentos',
+      title: 'Movimentações',
+      description: 'Histórico de movimentações',
       icon: FileText,
       component: MovementsReport
     }
@@ -157,18 +157,18 @@ const ReportsPage: React.FC = () => {
           {availableReports.map((report) => {
             const Icon = report.icon;
             return (
-              <Card key={report.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Icon className="h-5 w-5 text-red-500" />
-                    <span>{report.title}</span>
+              <Card key={report.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center space-x-3">
+                    <Icon className="h-6 w-6 text-red-500" />
+                    <span className="text-lg">{report.title}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-gray-600 text-sm">{report.description}</p>
                   <Button
                     onClick={() => setActiveReport(report.id)}
-                    className="w-full flex items-center space-x-2"
+                    className="w-full flex items-center justify-center space-x-2 group-hover:bg-red-600 transition-colors"
                   >
                     <Download className="h-4 w-4" />
                     <span>Gerar Relatório</span>

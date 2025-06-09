@@ -64,7 +64,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   });
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [showEquipmentList, setShowEquipmentList] = useState(false);
-  const [multipleEquipments, setMultipleEquipments] = useState(false);
+  const [multipleSelection, setMultipleSelection] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -73,17 +73,17 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   }, []);
 
   useEffect(() => {
-    if (formData.numero_serie.length > 0) {
+    if (formData.numero_serie.length >= 3) {
       const filtered = equipments.filter(eq => 
         eq.numero_serie.toLowerCase().includes(formData.numero_serie.toLowerCase())
       );
       setFilteredEquipments(filtered);
-      setShowEquipmentList(filtered.length > 0 && multipleEquipments);
+      setShowEquipmentList(filtered.length > 0);
     } else {
       setFilteredEquipments([]);
       setShowEquipmentList(false);
     }
-  }, [formData.numero_serie, equipments, multipleEquipments]);
+  }, [formData.numero_serie, equipments]);
 
   useEffect(() => {
     if (formData.id_empresa) {
@@ -151,23 +151,24 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
-  const handleEquipmentToggle = (equipmentId: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedEquipments: checked 
-        ? [...prev.selectedEquipments, equipmentId]
-        : prev.selectedEquipments.filter(id => id !== equipmentId)
-    }));
-  };
-
   const handleEquipmentSelect = (equipment: Equipment) => {
-    setFormData(prev => ({
-      ...prev,
-      numero_serie: equipment.numero_serie,
-      tipo_equipamento: equipment.tipo,
-      modelo: equipment.modelo || ''
-    }));
-    setShowEquipmentList(false);
+    if (multipleSelection) {
+      const isSelected = formData.selectedEquipments.includes(equipment.id);
+      setFormData(prev => ({
+        ...prev,
+        selectedEquipments: isSelected 
+          ? prev.selectedEquipments.filter(id => id !== equipment.id)
+          : [...prev.selectedEquipments, equipment.id]
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        numero_serie: equipment.numero_serie,
+        tipo_equipamento: equipment.tipo,
+        modelo: equipment.modelo || ''
+      }));
+      setShowEquipmentList(false);
+    }
   };
 
   const handleApplyMovement = async () => {
@@ -180,7 +181,11 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       return;
     }
 
-    if (multipleEquipments && formData.selectedEquipments.length === 0) {
+    const equipmentIds = multipleSelection 
+      ? formData.selectedEquipments 
+      : [filteredEquipments.find(eq => eq.numero_serie === formData.numero_serie)?.id].filter(Boolean);
+
+    if (equipmentIds.length === 0) {
       toast({
         title: "Erro",
         description: "Por favor, selecione pelo menos um equipamento.",
@@ -192,14 +197,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     setLoading(true);
 
     try {
-      const equipmentIds = multipleEquipments 
-        ? formData.selectedEquipments 
-        : [filteredEquipments.find(eq => eq.numero_serie === formData.numero_serie)?.id].filter(Boolean);
-
-      if (equipmentIds.length === 0) {
-        throw new Error('Nenhum equipamento encontrado para movimentação');
-      }
-
       // Registrar movimentações
       const movimentacoes = equipmentIds.map(equipmentId => ({
         id_equipamento: equipmentId,
@@ -310,14 +307,14 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       <Card>
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Ativação de múltiplos equipamentos */}
+            {/* Ativar seleção múltipla */}
             <div className="flex items-center space-x-2">
               <Checkbox 
-                id="multipleEquipments"
-                checked={multipleEquipments}
-                onCheckedChange={(checked) => setMultipleEquipments(checked === true)}
+                id="multipleSelection"
+                checked={multipleSelection}
+                onCheckedChange={(checked) => setMultipleSelection(checked === true)}
               />
-              <Label htmlFor="multipleEquipments">Ativar busca para múltiplos equipamentos</Label>
+              <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
             </div>
 
             {/* Número de Série */}
@@ -327,30 +324,37 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="numero_serie"
-                  placeholder="Ex: ABC123456"
+                  placeholder="Digite pelo menos 3 caracteres..."
                   value={formData.numero_serie}
                   onChange={(e) => handleChange('numero_serie', e.target.value)}
                   className="pl-10"
-                  required
+                  required={!multipleSelection}
                 />
               </div>
             </div>
 
             {/* Lista de equipamentos para seleção */}
-            {showEquipmentList && multipleEquipments && (
+            {showEquipmentList && (
               <Card className="max-h-60 overflow-y-auto">
                 <CardContent className="p-4">
                   <Label className="text-sm font-medium mb-3 block">
-                    Selecione os equipamentos:
+                    {multipleSelection ? 'Selecione os equipamentos:' : 'Escolha um equipamento:'}
                   </Label>
                   <div className="space-y-2">
                     {filteredEquipments.map(equipment => (
-                      <div key={equipment.id} className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50">
-                        <Checkbox
-                          id={equipment.id}
-                          checked={formData.selectedEquipments.includes(equipment.id)}
-                          onCheckedChange={(checked) => handleEquipmentToggle(equipment.id, checked === true)}
-                        />
+                      <div 
+                        key={equipment.id} 
+                        className={`flex items-center space-x-3 p-3 border rounded cursor-pointer hover:bg-gray-50 ${
+                          multipleSelection && formData.selectedEquipments.includes(equipment.id) ? 'bg-blue-50 border-blue-300' : ''
+                        }`}
+                        onClick={() => handleEquipmentSelect(equipment)}
+                      >
+                        {multipleSelection && (
+                          <Checkbox
+                            checked={formData.selectedEquipments.includes(equipment.id)}
+                            onChange={() => {}}
+                          />
+                        )}
                         <div className="flex-1">
                           <p className="font-medium">{equipment.numero_serie}</p>
                           <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
@@ -503,18 +507,50 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               </div>
             )}
 
+            {/* Campos de manutenção - aparecem quando tipo é manutenção */}
+            {formData.tipo_movimento === 'manutencao' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="tipo_manutencao">Tipo de Manutenção</Label>
+                  <Select value={formData.tipo_manutencao_id || ''} onValueChange={(value) => handleChange('tipo_manutencao_id', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de manutenção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {maintenanceTypes.map(type => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.codigo} - {type.descricao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="detalhes_manutencao">Detalhes da Manutenção</Label>
+                  <Textarea
+                    id="detalhes_manutencao"
+                    placeholder="Descreva os detalhes da manutenção..."
+                    value={formData.detalhes_manutencao}
+                    onChange={(e) => handleChange('detalhes_manutencao', e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="flex gap-4 pt-4">
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
                 {loading ? 'Salvando...' : 'Salvar Equipamento'}
               </Button>
               
               {/* Botão para aplicar movimentação */}
-              {formData.tipo_movimento && (multipleEquipments ? formData.selectedEquipments.length > 0 : formData.numero_serie) && (
+              {formData.tipo_movimento && (
                 <Button 
                   type="button" 
                   variant="secondary" 
                   onClick={handleApplyMovement}
-                  disabled={loading}
+                  disabled={loading || (multipleSelection ? formData.selectedEquipments.length === 0 : !formData.numero_serie)}
                   className="flex items-center gap-2"
                 >
                   <Check className="h-4 w-4" />

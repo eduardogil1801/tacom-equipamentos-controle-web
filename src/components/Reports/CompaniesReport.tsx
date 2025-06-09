@@ -4,94 +4,55 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, FileSpreadsheet, Building2, Package, Phone } from 'lucide-react';
+import { FileDown, Building } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-interface CompanyData {
+interface Company {
   id: string;
   name: string;
-  cnpj: string;
-  contact: string;
-  estado: string;
+  estado?: string;
+  cnpj?: string;
+  telefone?: string;
+  contact?: string;
   created_at: string;
-  equipmentCount: number;
-  inStockCount: number;
-  outOfStockCount: number;
 }
 
 const CompaniesReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [companies, setCompanies] = useState<CompanyData[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [filters, setFilters] = useState({
-    search: '',
+    name: '',
     estado: ''
   });
 
   useEffect(() => {
-    loadCompanies();
-  }, [filters]);
+    loadData();
+  }, []);
 
-  const loadCompanies = async () => {
+  useEffect(() => {
+    filterData();
+  }, [companies, filters]);
+
+  const loadData = async () => {
     try {
       setLoading(true);
-
-      // Buscar empresas
-      let query = supabase
+      const { data, error } = await supabase
         .from('empresas')
         .select('*')
         .order('name');
 
-      if (filters.search) {
-        query = query.or(`name.ilike.%${filters.search}%,cnpj.ilike.%${filters.search}%`);
-      }
-      if (filters.estado) {
-        query = query.eq('estado', filters.estado);
-      }
-
-      const { data: companiesData, error: companiesError } = await query;
-      if (companiesError) throw companiesError;
-
-      // Para cada empresa, buscar quantidade de equipamentos
-      const companiesWithEquipments = await Promise.all(
-        (companiesData || []).map(async (company) => {
-          const { data: equipments, error: equipError } = await supabase
-            .from('equipamentos')
-            .select('data_saida')
-            .eq('id_empresa', company.id);
-
-          if (equipError) {
-            console.error(`Erro ao buscar equipamentos da empresa ${company.name}:`, equipError);
-            return {
-              ...company,
-              equipmentCount: 0,
-              inStockCount: 0,
-              outOfStockCount: 0
-            };
-          }
-
-          const equipmentCount = equipments?.length || 0;
-          const inStockCount = equipments?.filter(eq => !eq.data_saida).length || 0;
-          const outOfStockCount = equipments?.filter(eq => eq.data_saida).length || 0;
-
-          return {
-            ...company,
-            equipmentCount,
-            inStockCount,
-            outOfStockCount
-          };
-        })
-      );
-
-      setCompanies(companiesWithEquipments);
+      if (error) throw error;
+      setCompanies(data || []);
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar relatório de empresas",
+        description: "Erro ao carregar dados das empresas",
         variant: "destructive",
       });
     } finally {
@@ -99,19 +60,45 @@ const CompaniesReport: React.FC = () => {
     }
   };
 
-  const exportToXLSX = () => {
-    const data = companies.map(company => ({
-      'Nome': company.name,
-      'CNPJ': company.cnpj || '',
-      'Contato': company.contact || '',
-      'Estado': company.estado || '',
-      'Total Equipamentos': company.equipmentCount,
-      'Em Estoque': company.inStockCount,
-      'Retirados': company.outOfStockCount,
-      'Data Cadastro': new Date(company.created_at).toLocaleDateString('pt-BR')
-    }));
+  const filterData = () => {
+    let filtered = companies;
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    if (filters.name) {
+      filtered = filtered.filter(company => 
+        company.name.toLowerCase().includes(filters.name.toLowerCase())
+      );
+    }
+
+    if (filters.estado) {
+      filtered = filtered.filter(company => 
+        company.estado?.toLowerCase().includes(filters.estado.toLowerCase())
+      );
+    }
+
+    setFilteredCompanies(filtered);
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const exportToXLSX = () => {
+    const worksheetData = [
+      ['Nome', 'Estado', 'CNPJ', 'Telefone', 'Contato', 'Data de Criação'],
+      ...filteredCompanies.map(company => [
+        company.name,
+        company.estado || '',
+        company.cnpj || '',
+        company.telefone || '',
+        company.contact || '',
+        new Date(company.created_at).toLocaleDateString('pt-BR')
+      ])
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
     
@@ -126,43 +113,44 @@ const CompaniesReport: React.FC = () => {
   const exportToPDF = () => {
     const doc = new jsPDF();
     
-    doc.setFontSize(20);
-    doc.text('Relatório de Empresas', 14, 22);
+    doc.setFontSize(18);
+    doc.text('Relatório de Empresas', 20, 20);
     
-    const tableColumn = ["Nome", "CNPJ", "Estado", "Total Eq.", "Em Estoque", "Retirados"];
-    const tableRows: any[] = [];
+    doc.setFontSize(12);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 30);
+    doc.text(`Total de empresas: ${filteredCompanies.length}`, 20, 40);
 
-    companies.forEach(company => {
-      const companyData = [
-        company.name,
-        company.cnpj || '',
-        company.estado || '',
-        company.equipmentCount,
-        company.inStockCount,
-        company.outOfStockCount
-      ];
-      tableRows.push(companyData);
-    });
+    const tableData = filteredCompanies.map(company => [
+      company.name,
+      company.estado || '',
+      company.cnpj || '',
+      company.telefone || '',
+      company.contact || '',
+      new Date(company.created_at).toLocaleDateString('pt-BR')
+    ]);
 
     (doc as any).autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
+      head: [['Nome', 'Estado', 'CNPJ', 'Telefone', 'Contato', 'Data Criação']],
+      body: tableData,
+      startY: 50,
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [220, 38, 38] }
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 25 }
+      }
     });
 
     doc.save(`relatorio_empresas_${new Date().toISOString().split('T')[0]}.pdf`);
-    
+
     toast({
       title: "Sucesso",
       description: "Relatório PDF exportado com sucesso!",
     });
   };
-
-  const totalEquipments = companies.reduce((sum, company) => sum + company.equipmentCount, 0);
-  const totalInStock = companies.reduce((sum, company) => sum + company.inStockCount, 0);
-  const totalOutOfStock = companies.reduce((sum, company) => sum + company.outOfStockCount, 0);
 
   if (loading) {
     return (
@@ -178,7 +166,7 @@ const CompaniesReport: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">Relatório de Empresas</h1>
         <div className="flex gap-2">
           <Button onClick={exportToXLSX} variant="outline" className="flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
+            <FileDown className="h-4 w-4" />
             Exportar XLSX
           </Button>
           <Button onClick={exportToPDF} variant="outline" className="flex items-center gap-2">
@@ -196,119 +184,104 @@ const CompaniesReport: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="search">Buscar (Nome ou CNPJ)</Label>
+              <Label htmlFor="nameFilter">Nome da Empresa</Label>
               <Input
-                id="search"
-                placeholder="Digite o nome da empresa ou CNPJ..."
-                value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
+                id="nameFilter"
+                placeholder="Filtrar por nome..."
+                value={filters.name}
+                onChange={(e) => handleFilterChange('name', e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="estado">Estado</Label>
+              <Label htmlFor="estadoFilter">Estado</Label>
               <Input
-                id="estado"
-                placeholder="Ex: RS, SP, RJ..."
+                id="estadoFilter"
+                placeholder="Filtrar por estado..."
                 value={filters.estado}
-                onChange={(e) => setFilters({...filters, estado: e.target.value})}
+                onChange={(e) => handleFilterChange('estado', e.target.value)}
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Building className="h-8 w-8 text-primary mr-3" />
               <div>
                 <p className="text-sm font-medium text-gray-600">Total de Empresas</p>
-                <p className="text-2xl font-bold">{companies.length}</p>
+                <p className="text-2xl font-bold">{filteredCompanies.length}</p>
               </div>
-              <Building2 className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Building className="h-8 w-8 text-green-500 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Equipamentos</p>
-                <p className="text-2xl font-bold">{totalEquipments}</p>
+                <p className="text-sm font-medium text-gray-600">Com CNPJ</p>
+                <p className="text-2xl font-bold">
+                  {filteredCompanies.filter(c => c.cnpj).length}
+                </p>
               </div>
-              <Package className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Building className="h-8 w-8 text-blue-500 mr-3" />
               <div>
-                <p className="text-sm font-medium text-gray-600">Em Estoque</p>
-                <p className="text-2xl font-bold text-green-600">{totalInStock}</p>
+                <p className="text-sm font-medium text-gray-600">Com Telefone</p>
+                <p className="text-2xl font-bold">
+                  {filteredCompanies.filter(c => c.telefone).length}
+                </p>
               </div>
-              <Package className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Retirados</p>
-                <p className="text-2xl font-bold text-red-600">{totalOutOfStock}</p>
-              </div>
-              <Package className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Lista de Empresas */}
+      {/* Tabela de Dados */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Empresas</CardTitle>
+          <CardTitle>Empresas Cadastradas ({filteredCompanies.length} registros)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {companies.map(company => (
-              <div key={company.id} className="p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{company.name}</h3>
-                    <div className="text-sm text-gray-600 mt-1 space-y-1">
-                      {company.cnpj && <p><strong>CNPJ:</strong> {company.cnpj}</p>}
-                      {company.contact && <p><strong>Contato:</strong> {company.contact}</p>}
-                      {company.estado && <p><strong>Estado:</strong> {company.estado}</p>}
-                      <p><strong>Cadastrado em:</strong> {new Date(company.created_at).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="flex space-x-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold">{company.equipmentCount}</p>
-                        <p className="text-xs text-gray-600">Total</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{company.inStockCount}</p>
-                        <p className="text-xs text-gray-600">Em Estoque</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-red-600">{company.outOfStockCount}</p>
-                        <p className="text-xs text-gray-600">Retirados</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {companies.length === 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Nome</th>
+                  <th className="text-left p-3">Estado</th>
+                  <th className="text-left p-3">CNPJ</th>
+                  <th className="text-left p-3">Telefone</th>
+                  <th className="text-left p-3">Contato</th>
+                  <th className="text-left p-3">Data Criação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCompanies.map(company => (
+                  <tr key={company.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-medium">{company.name}</td>
+                    <td className="p-3">{company.estado || '-'}</td>
+                    <td className="p-3 font-mono">{company.cnpj || '-'}</td>
+                    <td className="p-3">{company.telefone || '-'}</td>
+                    <td className="p-3">{company.contact || '-'}</td>
+                    <td className="p-3">{new Date(company.created_at).toLocaleDateString('pt-BR')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredCompanies.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                Nenhuma empresa encontrada com os filtros selecionados
+                Nenhuma empresa encontrada
               </div>
             )}
           </div>

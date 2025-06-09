@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AuthPage from '@/components/Auth/AuthPage';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
@@ -17,12 +17,29 @@ const Index = () => {
   const { user, isAuthenticated } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
 
+  // Prevenir mudanças de página não intencionais
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Não mostrar aviso se estiver navegando normalmente
+      return;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   if (!isAuthenticated) {
     return <AuthPage />;
   }
 
   const handlePageChange = (page: string) => {
-    setCurrentPage(page);
+    // Prevenir mudanças de página desnecessárias
+    if (page !== currentPage) {
+      setCurrentPage(page);
+    }
   };
 
   const renderPage = () => {

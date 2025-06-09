@@ -59,7 +59,13 @@ const FleetReport: React.FC = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      setFleetData(data || []);
+      // Adicionar a coluna nuvem automaticamente igual ao total
+      const dataWithNuvem = (data || []).map(item => ({
+        ...item,
+        nuvem: item.total || 0
+      }));
+
+      setFleetData(dataWithNuvem);
     } catch (error) {
       console.error('Erro ao carregar dados da frota:', error);
       toast({
