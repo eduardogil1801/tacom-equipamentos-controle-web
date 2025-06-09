@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Building, Database, TrendingUp, Package, MapPin } from 'lucide-react';
+import { Building, Database, TrendingUp, Package, Activity, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Equipment {
@@ -13,6 +13,7 @@ interface Equipment {
   data_saida?: string;
   id_empresa: string;
   estado?: string;
+  status?: string;
   empresas?: {
     name: string;
     estado?: string;
@@ -74,6 +75,36 @@ const Dashboard: React.FC = () => {
   const outEquipments = equipments.filter(eq => eq.data_saida).length;
   const totalCompanies = companies.length;
 
+  // Calculate equipment performance data
+  const equipmentsInUse = equipments.filter(eq => eq.status === 'em_uso').length;
+  const equipmentsAvailable = equipments.filter(eq => eq.status === 'disponivel').length;
+
+  // Calculate average usage time
+  const calculateAverageUsageTime = () => {
+    const usedEquipments = equipments.filter(eq => eq.data_saida);
+    if (usedEquipments.length === 0) return { daily: 0, weekly: 0, monthly: 0 };
+
+    const totalDays = usedEquipments.reduce((acc, eq) => {
+      if (eq.data_entrada && eq.data_saida) {
+        const start = new Date(eq.data_entrada);
+        const end = new Date(eq.data_saida);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return acc + diffDays;
+      }
+      return acc;
+    }, 0);
+
+    const averageDays = totalDays / usedEquipments.length;
+    return {
+      daily: Math.round(averageDays * 10) / 10,
+      weekly: Math.round((averageDays / 7) * 10) / 10,
+      monthly: Math.round((averageDays / 30) * 10) / 10
+    };
+  };
+
+  const averageUsage = calculateAverageUsageTime();
+
   // Data for equipment by state
   const stateData = equipments.reduce((acc: any[], equipment) => {
     const estado = equipment.estado || equipment.empresas?.estado || 'Não informado';
@@ -108,6 +139,12 @@ const Dashboard: React.FC = () => {
     { name: 'Retirados', value: outEquipments, color: '#DC2626' }
   ];
 
+  // Performance pie chart data
+  const performanceData = [
+    { name: 'Em Uso', value: equipmentsInUse, color: '#2563EB' },
+    { name: 'Disponível', value: equipmentsAvailable, color: '#16A34A' }
+  ];
+
   // Equipment types data
   const typeData = equipments.reduce((acc: any[], equipment) => {
     const existing = acc.find(item => item.type === equipment.tipo);
@@ -118,9 +155,6 @@ const Dashboard: React.FC = () => {
     }
     return acc;
   }, []).sort((a, b) => b.count - a.count);
-
-  // Get unique states for stats
-  const uniqueStates = [...new Set(equipments.map(eq => eq.estado || eq.empresas?.estado).filter(Boolean))];
 
   if (loading) {
     return (
@@ -135,7 +169,7 @@ const Dashboard: React.FC = () => {
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Equipamentos</CardTitle>
@@ -182,53 +216,39 @@ const Dashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estados</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Desempenho dos Equipamentos</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{uniqueStates.length}</div>
-            <p className="text-xs text-muted-foreground">Estados com equipamentos</p>
+            <div className="text-2xl font-bold text-blue-600">{equipmentsInUse}</div>
+            <p className="text-xs text-muted-foreground">Em uso / {equipmentsAvailable} disponíveis</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tempo Médio de Uso</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{averageUsage.daily}</div>
+            <p className="text-xs text-muted-foreground">dias de uso médio</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Equipment by State */}
+        {/* Equipment Performance Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Equipamentos por Estado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stateData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="estado" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  fontSize={12}
-                />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="total" fill="#DC2626" name="Total" />
-                <Bar dataKey="emEstoque" fill="#16A34A" name="Em Estoque" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Stock Status Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Status do Estoque</CardTitle>
+            <CardTitle>Desempenho dos Equipamentos</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={pieData}
+                  data={performanceData}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
@@ -236,7 +256,7 @@ const Dashboard: React.FC = () => {
                   dataKey="value"
                   label={({ name, value }) => `${name}: ${value}`}
                 >
-                  {pieData.map((entry, index) => (
+                  {performanceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -245,7 +265,57 @@ const Dashboard: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        {/* Usage Time Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tempo Médio de Uso dos Equipamentos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Diário</span>
+                <span className="text-lg font-bold text-blue-600">{averageUsage.daily} dias</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Semanal</span>
+                <span className="text-lg font-bold text-green-600">{averageUsage.weekly} semanas</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Mensal</span>
+                <span className="text-lg font-bold text-orange-600">{averageUsage.monthly} meses</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Stock Status Pie Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Status do Estoque</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={pieData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, value }) => `${name}: ${value}`}
+              >
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Equipment by Company */}
       {companyData.length > 0 && (

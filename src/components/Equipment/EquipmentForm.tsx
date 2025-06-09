@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import StateManager from './StateManager';
@@ -53,7 +53,10 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   });
   const [isInStock, setIsInStock] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [estados, setEstados] = useState(['Rio Grande do Sul', 'Santa Catarina', 'Minas Gerais']);
+  const [duplicateAlert, setDuplicateAlert] = useState<string | null>(null);
+  
+  // Estados limitados conforme solicitado
+  const [estados] = useState(['Rio Grande do Sul', 'Santa Catarina']);
 
   const statusOptions = [
     'disponivel',
@@ -93,7 +96,19 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     }
   }, [equipment]);
 
+  // Verificar equipamentos duplicados
+  useEffect(() => {
+    if (formData.numero_serie) {
+      checkForDuplicateSerial(formData.numero_serie);
+    }
+  }, [formData.numero_serie]);
+
   const checkForDuplicateSerial = async (numeroSerie: string) => {
+    if (!numeroSerie) {
+      setDuplicateAlert(null);
+      return;
+    }
+
     try {
       const { data: existingEquipments, error } = await supabase
         .from('equipamentos')
@@ -113,18 +128,15 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         
         if (filtered.length > 0) {
           const companiesWithEquipment = filtered.map(eq => eq.empresas?.name).join(', ');
-          toast({
-            title: "Atenção",
-            description: `Este equipamento está cadastrado na(s) empresa(s): ${companiesWithEquipment}`,
-            variant: "destructive",
-          });
-          return false;
+          setDuplicateAlert(`Este equipamento está cadastrado para: ${companiesWithEquipment}`);
+        } else {
+          setDuplicateAlert(null);
         }
+      } else {
+        setDuplicateAlert(null);
       }
-      return true;
     } catch (error) {
       console.error('Error checking duplicate serial:', error);
-      return true;
     }
   };
 
@@ -138,12 +150,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         variant: "destructive",
       });
       return;
-    }
-
-    // Verificar duplicidade apenas para novos equipamentos ou se o número de série foi alterado
-    if (!equipment || equipment.numero_serie !== formData.numero_serie) {
-      const isValid = await checkForDuplicateSerial(formData.numero_serie);
-      if (!isValid) return;
     }
 
     if (!isInStock && formData.data_saida && new Date(formData.data_saida) < new Date(formData.data_entrada)) {
@@ -218,10 +224,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     }
   };
 
-  const handleAddState = (newState: string) => {
-    setEstados(prev => [...prev, newState]);
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -233,6 +235,16 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
           {equipment ? 'Editar Equipamento' : 'Cadastrar Novo Equipamento'}
         </h1>
       </div>
+
+      {duplicateAlert && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-yellow-600" />
+          <div>
+            <h3 className="font-medium text-yellow-800">Equipamento cadastrado em múltiplas empresas</h3>
+            <p className="text-yellow-700">{duplicateAlert}</p>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -300,22 +312,19 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado do Estoque *</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={formData.estado || 'placeholder'} onValueChange={(value) => handleChange('estado', value === 'placeholder' ? '' : value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="placeholder" disabled>Selecione um estado</SelectItem>
-                      {estados.map(estado => (
-                        <SelectItem key={estado} value={estado}>
-                          {estado}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <StateManager estados={estados} onAddState={handleAddState} />
-                </div>
+                <Select value={formData.estado || 'placeholder'} onValueChange={(value) => handleChange('estado', value === 'placeholder' ? '' : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="placeholder" disabled>Selecione um estado</SelectItem>
+                    {estados.map(estado => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

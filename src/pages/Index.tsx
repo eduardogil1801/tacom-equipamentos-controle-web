@@ -9,14 +9,10 @@ import EquipmentList from '@/components/Equipment/EquipmentList';
 import CompanyList from '@/components/Company/CompanyList';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
-import InventoryReport from '@/components/Reports/InventoryReport';
+import InventoryStockReport from '@/components/Reports/InventoryStockReport';
 import MovementsReport from '@/components/Reports/MovementsReport';
-import CompaniesReport from '@/components/Reports/CompaniesReport';
-import EquipmentStatusReport from '@/components/Reports/EquipmentStatusReport';
-import EquipmentDistributionReport from '@/components/Reports/EquipmentDistributionReport';
-import FleetReport from '@/components/Reports/FleetReport';
-import MonthlyReport from '@/components/Reports/MonthlyReport';
-import EquipmentHistoryReport from '@/components/Reports/EquipmentHistoryReport';
+import EquipmentHistoryDetailReport from '@/components/Reports/EquipmentHistoryDetailReport';
+import FleetManagement from '@/components/Fleet/FleetManagement';
 
 const Index = () => {
   const { user } = useAuth();
@@ -46,21 +42,13 @@ const Index = () => {
       case 'settings':
         return <SettingsPage />;
       case 'reports-inventory':
-        return <InventoryReport />;
+        return <InventoryStockReport />;
       case 'reports-movements':
         return <MovementsReport />;
-      case 'reports-companies':
-        return <CompaniesReport />;
-      case 'reports-equipment-status':
-        return <EquipmentStatusReport />;
-      case 'reports-equipment-distribution':
-        return <EquipmentDistributionReport />;
-      case 'reports-fleet':
-        return <FleetReport />;
-      case 'reports-monthly':
-        return <MonthlyReport />;
       case 'reports-equipment-history':
-        return <EquipmentHistoryReport />;
+        return <EquipmentHistoryDetailReport />;
+      case 'fleet-management':
+        return <FleetManagement />;
       case 'protocol':
         return <ProtocolPage />;
       default:
