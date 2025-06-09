@@ -236,7 +236,9 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo de Equipamento *</Label>
                 <Select value={formData.tipo || 'placeholder-tipo'} onValueChange={(value) => {
-                  handleChange('tipo', value === 'placeholder-tipo' ? '' : value);
+                  if (value !== 'placeholder-tipo') {
+                    handleChange('tipo', value);
+                  }
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -264,7 +266,11 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
-                <Select value={formData.id_empresa || 'placeholder-empresa'} onValueChange={(value) => handleChange('id_empresa', value === 'placeholder-empresa' ? '' : value)}>
+                <Select value={formData.id_empresa || 'placeholder-empresa'} onValueChange={(value) => {
+                  if (value !== 'placeholder-empresa') {
+                    handleChange('id_empresa', value);
+                  }
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
