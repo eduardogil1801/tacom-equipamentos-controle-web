@@ -78,12 +78,12 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         eq.numero_serie.toLowerCase().includes(formData.numero_serie.toLowerCase())
       );
       setFilteredEquipments(filtered);
-      setShowEquipmentList(filtered.length > 0 && multipleEquipments);
+      setShowEquipmentList(filtered.length > 0);
     } else {
       setFilteredEquipments([]);
       setShowEquipmentList(false);
     }
-  }, [formData.numero_serie, equipments, multipleEquipments]);
+  }, [formData.numero_serie, equipments]);
 
   useEffect(() => {
     if (formData.id_empresa) {
@@ -160,6 +160,16 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }));
   };
 
+  const handleEquipmentSelect = (equipment: Equipment) => {
+    setFormData(prev => ({
+      ...prev,
+      numero_serie: equipment.numero_serie,
+      tipo_equipamento: equipment.tipo,
+      modelo: equipment.modelo || ''
+    }));
+    setShowEquipmentList(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -229,7 +239,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Informações do Equipamento</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Movimentação de Equipamento</h1>
       </div>
 
       <Card>
@@ -240,7 +250,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               <Checkbox 
                 id="multipleEquipments"
                 checked={multipleEquipments}
-                onCheckedChange={setMultipleEquipments}
+                onCheckedChange={(checked) => setMultipleEquipments(checked === true)}
               />
               <Label htmlFor="multipleEquipments">Ativar busca para múltiplos equipamentos</Label>
             </div>
@@ -261,24 +271,39 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               </div>
             </div>
 
-            {/* Lista de equipamentos para seleção múltipla */}
+            {/* Lista de equipamentos para seleção */}
             {showEquipmentList && (
               <Card className="max-h-60 overflow-y-auto">
                 <CardContent className="p-4">
-                  <Label className="text-sm font-medium mb-3 block">Selecione os equipamentos:</Label>
+                  <Label className="text-sm font-medium mb-3 block">
+                    {multipleEquipments ? 'Selecione os equipamentos:' : 'Selecione um equipamento:'}
+                  </Label>
                   <div className="space-y-2">
                     {filteredEquipments.map(equipment => (
-                      <div key={equipment.id} className="flex items-center space-x-3 p-3 border rounded">
-                        <Checkbox
-                          id={equipment.id}
-                          checked={formData.selectedEquipments.includes(equipment.id)}
-                          onCheckedChange={(checked) => handleEquipmentToggle(equipment.id, checked as boolean)}
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium">{equipment.numero_serie}</p>
-                          <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
-                          <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
-                        </div>
+                      <div key={equipment.id} className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
+                        {multipleEquipments ? (
+                          <Checkbox
+                            id={equipment.id}
+                            checked={formData.selectedEquipments.includes(equipment.id)}
+                            onCheckedChange={(checked) => handleEquipmentToggle(equipment.id, checked === true)}
+                          />
+                        ) : (
+                          <div 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => handleEquipmentSelect(equipment)}
+                          >
+                            <p className="font-medium">{equipment.numero_serie}</p>
+                            <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
+                            <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
+                          </div>
+                        )}
+                        {multipleEquipments && (
+                          <div className="flex-1">
+                            <p className="font-medium">{equipment.numero_serie}</p>
+                            <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
+                            <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -377,7 +402,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               <Checkbox 
                 id="fora_estoque"
                 checked={formData.fora_estoque}
-                onCheckedChange={(checked) => handleChange('fora_estoque', checked)}
+                onCheckedChange={(checked) => handleChange('fora_estoque', checked === true)}
               />
               <Label htmlFor="fora_estoque">Fora de Estoque</Label>
             </div>
