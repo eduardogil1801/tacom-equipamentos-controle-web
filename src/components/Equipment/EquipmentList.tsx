@@ -41,6 +41,11 @@ const EquipmentList: React.FC = () => {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Estados para as opções dos filtros
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  
   const [filters, setFilters] = useState({
     numero_serie: '',
     company: '',
@@ -55,6 +60,15 @@ const EquipmentList: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Extrair tipos e modelos únicos dos equipamentos
+    const types = [...new Set(equipments.map(eq => eq.tipo).filter(Boolean))].sort();
+    const models = [...new Set(equipments.map(eq => eq.modelo).filter(Boolean))].sort();
+    
+    setAvailableTypes(types);
+    setAvailableModels(models);
+  }, [equipments]);
 
   const loadData = async () => {
     try {
@@ -153,8 +167,8 @@ const EquipmentList: React.FC = () => {
       (equipment.data_entrada.includes(filters.data_entrada) || !filters.data_entrada) &&
       (equipment.data_saida?.includes(filters.data_saida) || !filters.data_saida) &&
       (equipment.estado?.toLowerCase().includes(filters.estado.toLowerCase()) || !filters.estado) &&
-      (equipment.tipo?.toLowerCase().includes(filters.tipo.toLowerCase()) || !filters.tipo) &&
-      (equipment.modelo?.toLowerCase().includes(filters.modelo.toLowerCase()) || !filters.modelo) &&
+      (equipment.tipo === filters.tipo || !filters.tipo) &&
+      (equipment.modelo === filters.modelo || !filters.modelo) &&
       (equipment.status?.toLowerCase().includes(filters.status.toLowerCase()) || !filters.status)
     );
   });
@@ -248,19 +262,31 @@ const EquipmentList: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="tipoFilter">Tipo</Label>
-              <Input
-                id="tipoFilter"
-                placeholder="Filtrar por tipo..."
-                onChange={(e) => handleFilterChange('tipo', e.target.value)}
-              />
+              <Select value={filters.tipo || 'all'} onValueChange={(value) => setFilters({...filters, tipo: value === 'all' ? '' : value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {availableTypes.map(tipo => (
+                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="modeloFilter">Modelo</Label>
-              <Input
-                id="modeloFilter"
-                placeholder="Filtrar por modelo..."
-                onChange={(e) => handleFilterChange('modelo', e.target.value)}
-              />
+              <Select value={filters.modelo || 'all'} onValueChange={(value) => setFilters({...filters, modelo: value === 'all' ? '' : value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os modelos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os modelos</SelectItem>
+                  {availableModels.map(modelo => (
+                    <SelectItem key={modelo} value={modelo}>{modelo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="statusFilter">Status</Label>
