@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -259,8 +258,9 @@ const ProtocolPage: React.FC = () => {
               <Input
                 id="responsible"
                 value={protocolData.responsible}
-                onChange={(e) => setProtocolData(prev => ({ ...prev, responsible: e.target.value }))}
-                placeholder="Nome do responsável"
+                readOnly
+                className="bg-gray-100"
+                placeholder="Usuário logado automaticamente"
               />
             </div>
 

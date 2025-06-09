@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,7 @@ interface FleetData {
   citgis: number;
   buszoom: number;
   nuvem: number;
+  telemetria: number;
   total: number;
   usuario_responsavel?: string;
 }
@@ -75,6 +75,7 @@ const FleetManagement: React.FC = () => {
     citgis: 0,
     buszoom: 0,
     nuvem: 0,
+    telemetria: 0,
     total: 0
   });
 
@@ -85,7 +86,7 @@ const FleetManagement: React.FC = () => {
 
   useEffect(() => {
     calculateTotal();
-  }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao, formData.citgis, formData.buszoom, formData.nuvem]);
+  }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao, formData.citgis, formData.buszoom, formData.nuvem, formData.telemetria]);
 
   const loadCompanies = async () => {
     try {
@@ -130,7 +131,8 @@ const FleetManagement: React.FC = () => {
       formData.secao +
       formData.citgis +
       formData.buszoom +
-      formData.nuvem;
+      formData.nuvem +
+      formData.telemetria;
     
     setFormData(prev => ({ ...prev, total }));
   };
@@ -250,6 +252,7 @@ const FleetManagement: React.FC = () => {
       citgis: 0,
       buszoom: 0,
       nuvem: 0,
+      telemetria: 0,
       total: 0
     });
     setEditingFleet(null);
@@ -327,7 +330,7 @@ const FleetManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
                 <div>
                   <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
                   <Input
@@ -388,6 +391,16 @@ const FleetManagement: React.FC = () => {
                     onChange={(e) => handleInputChange('nuvem', e.target.value)}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="telemetria">Telemetria</Label>
+                  <Input
+                    id="telemetria"
+                    type="number"
+                    min="0"
+                    value={formData.telemetria}
+                    onChange={(e) => handleInputChange('telemetria', e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -429,6 +442,7 @@ const FleetManagement: React.FC = () => {
                   <th className="text-left p-3">CITGIS</th>
                   <th className="text-left p-3">BUSZOOM</th>
                   <th className="text-left p-3">Nuvem</th>
+                  <th className="text-left p-3">Telemetria</th>
                   <th className="text-left p-3">Total</th>
                   <th className="text-left p-3">Responsável</th>
                   <th className="text-left p-3">Ações</th>
@@ -446,6 +460,7 @@ const FleetManagement: React.FC = () => {
                     <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.telemetria || 0)}</td>
                     <td className="p-3 font-bold">{formatNumber(fleet.total || 0)}</td>
                     <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
                     <td className="p-3">

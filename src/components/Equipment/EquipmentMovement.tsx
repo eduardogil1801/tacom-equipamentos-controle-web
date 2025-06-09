@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,9 +69,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [responsibleUserSearch, setResponsibleUserSearch] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [showUserList, setShowUserList] = useState(false);
 
   const [formData, setFormData] = useState<MovementData>({
     tipo_movimento: '',
@@ -90,11 +86,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   useEffect(() => {
     loadData();
-    // Definir automaticamente o usuário logado como responsável
-    if (user) {
-      setResponsibleUserSearch(user.name || user.username || '');
-    }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (searchTerm.length >= 3) {
@@ -109,20 +101,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       setShowEquipmentList(false);
     }
   }, [searchTerm, equipment]);
-
-  useEffect(() => {
-    if (responsibleUserSearch) {
-      const filtered = users.filter(user => 
-        user.nome.toLowerCase().includes(responsibleUserSearch.toLowerCase()) ||
-        user.username.toLowerCase().includes(responsibleUserSearch.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-      setShowUserList(true);
-    } else {
-      setFilteredUsers([]);
-      setShowUserList(false);
-    }
-  }, [responsibleUserSearch, users]);
 
   const loadData = async () => {
     try {
@@ -142,12 +120,12 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       if (equipmentError) throw equipmentError;
       setEquipment(equipmentData || []);
 
-      // Carregar tipos de manutenção
+      // Carregar tipos de manutenção (ordenados de baixo para cima)
       const { data: maintenanceData, error: maintenanceError } = await supabase
         .from('tipos_manutencao')
         .select('*')
         .eq('ativo', true)
-        .order('descricao');
+        .order('descricao', { ascending: false });
 
       if (maintenanceError) throw maintenanceError;
       setMaintenanceTypes(maintenanceData || []);
@@ -280,7 +258,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         observacoes: formData.observacoes,
         detalhes_manutencao: formData.detalhes_manutencao || null,
         tipo_manutencao_id: formData.tipo_manutencao_id || null,
-        usuario_responsavel: responsibleUserSearch || user?.name || user?.username
+        usuario_responsavel: user?.name || user?.username
       }));
 
       const { error: movementError } = await supabase
@@ -339,9 +317,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       });
       setSearchTerm('');
       setSelectedEquipments([]);
-      if (user) {
-        setResponsibleUserSearch(user.name || user.username || '');
-      }
       
       onSuccess();
     } catch (error) {
@@ -374,11 +349,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       empresa_id: checked ? '' : ''
     }));
   }, []);
-
-  const handleUserSelect = (user: User) => {
-    setResponsibleUserSearch(user.nome);
-    setShowUserList(false);
-  };
 
   if (loadingData) {
     return (
@@ -503,7 +473,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                   <SelectItem value="entrada">Entrada</SelectItem>
                   <SelectItem value="saida">Saída</SelectItem>
                   <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="transferencia">Transferência</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -540,34 +509,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               </Select>
             </div>
           )}
-
-          <div className="relative">
-            <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
-            <div className="relative">
-              <Input
-                id="usuario_responsavel"
-                value={responsibleUserSearch}
-                onChange={(e) => setResponsibleUserSearch(e.target.value)}
-                placeholder="Digite para buscar usuário..."
-              />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-            
-            {showUserList && filteredUsers.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                {filteredUsers.map(user => (
-                  <div 
-                    key={user.id} 
-                    className="p-3 hover:bg-gray-50 cursor-pointer border-b"
-                    onClick={() => handleUserSelect(user)}
-                  >
-                    <div className="font-medium">{user.nome}</div>
-                    <div className="text-sm text-gray-500">@{user.username}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           {formData.tipo_movimento === 'saida' && (
             <>

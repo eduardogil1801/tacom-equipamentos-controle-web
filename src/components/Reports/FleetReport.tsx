@@ -21,6 +21,7 @@ interface FleetData {
   citgis: number;
   buszoom: number;
   nuvem: number;
+  telemetria: number;
   total: number;
   usuario_responsavel?: string;
 }
@@ -120,11 +121,12 @@ const FleetReport: React.FC = () => {
       formatNumber(item.citgis || 0),
       formatNumber(item.buszoom || 0),
       formatNumber(item.nuvem || 0),
+      formatNumber(item.telemetria || 0),
       formatNumber(item.total || 0)
     ]);
 
     (doc as any).autoTable({
-      head: [['Código', 'Operadora', 'Mês', 'Simples C/Img', 'Simples S/Img', 'Seção', 'CITGIS', 'BUSZOOM', 'Telemetria', 'Total']],
+      head: [['Código', 'Operadora', 'Mês', 'Simples C/Img', 'Simples S/Img', 'Seção', 'CITGIS', 'BUSZOOM', 'Nuvem', 'Telemetria', 'Total']],
       body: tableData,
       startY: 40,
       styles: { fontSize: 8 },
@@ -221,6 +223,7 @@ const FleetReport: React.FC = () => {
                   <th className="text-left p-3">Seção</th>
                   <th className="text-left p-3">CITGIS</th>
                   <th className="text-left p-3">BUSZOOM</th>
+                  <th className="text-left p-3">Nuvem</th>
                   <th className="text-left p-3">Telemetria</th>
                   <th className="text-left p-3">Total</th>
                   <th className="text-left p-3">Responsável</th>
@@ -238,6 +241,7 @@ const FleetReport: React.FC = () => {
                     <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.telemetria || 0)}</td>
                     <td className="p-3 font-bold">{formatNumber(fleet.total || 0)}</td>
                     <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
                   </tr>
