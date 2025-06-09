@@ -3,31 +3,23 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Search, Check } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Equipment {
   id: string;
   numero_serie: string;
   tipo: string;
-  modelo?: string;
+  status: string;
   empresas?: {
     name: string;
-    estado?: string;
   };
-  status?: string;
-}
-
-interface Company {
-  id: string;
-  name: string;
-  estado?: string;
 }
 
 interface MaintenanceType {
@@ -36,109 +28,121 @@ interface MaintenanceType {
   descricao: string;
 }
 
-interface EquipmentMovementProps {
-  onCancel: () => void;
-  onSuccess: () => void;
+interface User {
+  id: string;
+  nome: string;
+  username: string;
 }
 
-const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
+interface MovementData {
+  tipo_movimento: string;
+  data_movimento: string;
+  observacoes: string;
+  detalhes_manutencao: string;
+  tipo_manutencao_id: string;
+  fora_estoque: boolean;
+  selectedEquipments: string[];
+  equipmentId: string;
+  numero_serie: string;
+}
+
+const EquipmentMovement: React.FC = () => {
   const { user } = useAuth();
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
-  const [formData, setFormData] = useState({
-    numero_serie: '',
-    selectedEquipments: [] as string[],
-    tipo_equipamento: '',
-    modelo: '',
-    id_empresa: '',
-    estado: '',
-    status: 'disponivel',
-    data_entrada: new Date().toISOString().split('T')[0],
-    data_saida: '',
-    fora_estoque: false,
-    tipo_movimento: '',
-    observacoes: '',
-    tipo_manutencao_id: '',
-    detalhes_manutencao: ''
-  });
-  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [showEquipmentList, setShowEquipmentList] = useState(false);
   const [multipleSelection, setMultipleSelection] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [responsibleUserSearch, setResponsibleUserSearch] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [showUserList, setShowUserList] = useState(false);
+
+  const [formData, setFormData] = useState<MovementData>({
+    tipo_movimento: '',
+    data_movimento: new Date().toISOString().split('T')[0],
+    observacoes: '',
+    detalhes_manutencao: '',
+    tipo_manutencao_id: '',
+    fora_estoque: false,
+    selectedEquipments: [],
+    equipmentId: '',
+    numero_serie: ''
+  });
 
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    if (formData.numero_serie.length >= 3) {
-      const filtered = equipments.filter(eq => 
-        eq.numero_serie.toLowerCase().includes(formData.numero_serie.toLowerCase())
+    if (searchTerm.length >= 3) {
+      const filtered = equipment.filter(eq => 
+        eq.numero_serie.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        eq.tipo.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredEquipments(filtered);
-      setShowEquipmentList(filtered.length > 0);
+      setFilteredEquipment(filtered);
+      setShowEquipmentList(true);
     } else {
-      setFilteredEquipments([]);
+      setFilteredEquipment([]);
       setShowEquipmentList(false);
     }
-  }, [formData.numero_serie, equipments]);
+  }, [searchTerm, equipment]);
 
   useEffect(() => {
-    if (formData.id_empresa) {
-      const company = companies.find(c => c.id === formData.id_empresa);
-      if (company) {
-        setFormData(prev => ({ 
-          ...prev, 
-          estado: company.estado || '',
-          status: company.name.toLowerCase().includes('tacom') ? 'disponivel' : 'em_uso'
-        }));
-      }
+    if (responsibleUserSearch) {
+      const filtered = users.filter(user => 
+        user.nome.toLowerCase().includes(responsibleUserSearch.toLowerCase()) ||
+        user.username.toLowerCase().includes(responsibleUserSearch.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+      setShowUserList(true);
+    } else {
+      setFilteredUsers([]);
+      setShowUserList(false);
     }
-  }, [formData.id_empresa, companies]);
+  }, [responsibleUserSearch, users]);
 
   const loadData = async () => {
     try {
       setLoadingData(true);
       
       // Carregar equipamentos
-      const { data: equipmentsData, error: equipmentsError } = await supabase
+      const { data: equipmentData, error: equipmentError } = await supabase
         .from('equipamentos')
         .select(`
-          id,
-          numero_serie,
-          tipo,
-          modelo,
-          status,
+          *,
           empresas (
-            name,
-            estado
+            name
           )
         `)
         .order('numero_serie');
 
-      if (equipmentsError) throw equipmentsError;
-      setEquipments(equipmentsData || []);
-
-      // Carregar empresas
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('empresas')
-        .select('*')
-        .order('name');
-
-      if (companiesError) throw companiesError;
-      setCompanies(companiesData || []);
+      if (equipmentError) throw equipmentError;
+      setEquipment(equipmentData || []);
 
       // Carregar tipos de manutenção
       const { data: maintenanceData, error: maintenanceError } = await supabase
         .from('tipos_manutencao')
         .select('*')
         .eq('ativo', true)
-        .order('codigo');
+        .order('descricao');
 
       if (maintenanceError) throw maintenanceError;
       setMaintenanceTypes(maintenanceData || []);
+
+      // Carregar usuários
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .select('id, nome, username')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (userError) throw userError;
+      setUsers(userData || []);
+
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({
@@ -153,75 +157,135 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   const handleEquipmentSelect = useCallback((equipment: Equipment) => {
     if (multipleSelection) {
-      setFormData(prev => {
-        const isSelected = prev.selectedEquipments.includes(equipment.id);
-        return {
-          ...prev,
-          selectedEquipments: isSelected 
-            ? prev.selectedEquipments.filter(id => id !== equipment.id)
-            : [...prev.selectedEquipments, equipment.id]
-        };
-      });
+      const isSelected = selectedEquipments.some(eq => eq.id === equipment.id);
+      if (isSelected) {
+        setSelectedEquipments(prev => prev.filter(eq => eq.id !== equipment.id));
+      } else {
+        setSelectedEquipments(prev => [...prev, equipment]);
+      }
     } else {
       setFormData(prev => ({
         ...prev,
-        numero_serie: equipment.numero_serie,
-        tipo_equipamento: equipment.tipo,
-        modelo: equipment.modelo || ''
+        equipmentId: equipment.id,
+        numero_serie: equipment.numero_serie
       }));
+      setSearchTerm(equipment.numero_serie);
       setShowEquipmentList(false);
     }
-  }, [multipleSelection]);
+  }, [multipleSelection, selectedEquipments]);
+
+  const removeSelectedEquipment = (equipmentId: string) => {
+    setSelectedEquipments(prev => prev.filter(eq => eq.id !== equipmentId));
+  };
+
+  const addSelectedEquipments = () => {
+    if (selectedEquipments.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Selecione pelo menos um equipamento",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      selectedEquipments: selectedEquipments.map(eq => eq.id)
+    }));
+    
+    setShowEquipmentList(false);
+    
+    toast({
+      title: "Sucesso",
+      description: `${selectedEquipments.length} equipamento(s) adicionado(s)`,
+    });
+  };
 
   const handleApplyMovement = async () => {
     if (!formData.tipo_movimento) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione o tipo de movimento.",
+        description: "Selecione o tipo de movimentação",
         variant: "destructive",
       });
       return;
     }
 
-    const equipmentIds = multipleSelection 
+    const equipmentsToMove = multipleSelection && formData.selectedEquipments.length > 0 
       ? formData.selectedEquipments 
-      : [filteredEquipments.find(eq => eq.numero_serie === formData.numero_serie)?.id].filter(Boolean);
+      : formData.equipmentId ? [formData.equipmentId] : [];
 
-    if (equipmentIds.length === 0) {
+    if (equipmentsToMove.length === 0) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione pelo menos um equipamento.",
+        description: "Selecione pelo menos um equipamento",
         variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
-
     try {
-      // Registrar movimentações
-      const movimentacoes = equipmentIds.map(equipmentId => ({
+      const movements = equipmentsToMove.map(equipmentId => ({
         id_equipamento: equipmentId,
         tipo_movimento: formData.tipo_movimento,
-        data_movimento: new Date().toISOString().split('T')[0],
-        observacoes: formData.observacoes || null,
-        usuario_responsavel: `${user?.name} ${user?.surname}`,
+        data_movimento: formData.data_movimento,
+        observacoes: formData.observacoes,
+        detalhes_manutencao: formData.detalhes_manutencao || null,
         tipo_manutencao_id: formData.tipo_manutencao_id || null,
-        detalhes_manutencao: formData.detalhes_manutencao || null
+        usuario_responsavel: responsibleUserSearch || user?.username || user?.name
       }));
 
       const { error: movementError } = await supabase
         .from('movimentacoes')
-        .insert(movimentacoes);
+        .insert(movements);
 
       if (movementError) throw movementError;
 
+      // Atualizar status dos equipamentos se necessário
+      if (formData.tipo_movimento === 'saida') {
+        const { error: updateError } = await supabase
+          .from('equipamentos')
+          .update({ 
+            status: formData.fora_estoque ? 'fora_estoque' : 'em_uso',
+            data_saida: formData.data_movimento
+          })
+          .in('id', equipmentsToMove);
+
+        if (updateError) throw updateError;
+      } else if (formData.tipo_movimento === 'entrada') {
+        const { error: updateError } = await supabase
+          .from('equipamentos')
+          .update({ 
+            status: 'disponivel',
+            data_saida: null
+          })
+          .in('id', equipmentsToMove);
+
+        if (updateError) throw updateError;
+      }
+
       toast({
         title: "Sucesso",
-        description: `Movimentação registrada para ${equipmentIds.length} equipamento(s)!`,
+        description: `Movimentação registrada para ${equipmentsToMove.length} equipamento(s)!`,
       });
 
-      onSuccess();
+      // Reset form
+      setFormData({
+        tipo_movimento: '',
+        data_movimento: new Date().toISOString().split('T')[0],
+        observacoes: '',
+        detalhes_manutencao: '',
+        tipo_manutencao_id: '',
+        fora_estoque: false,
+        selectedEquipments: [],
+        equipmentId: '',
+        numero_serie: ''
+      });
+      setSearchTerm('');
+      setSelectedEquipments([]);
+      setResponsibleUserSearch('');
+      
+      loadData();
     } catch (error) {
       console.error('Erro ao registrar movimentação:', error);
       toast({
@@ -229,58 +293,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         description: "Erro ao registrar movimentação",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.numero_serie || !formData.tipo_equipamento || !formData.id_empresa) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const equipmentData = {
-        numero_serie: formData.numero_serie,
-        tipo: formData.tipo_equipamento,
-        modelo: formData.modelo || null,
-        id_empresa: formData.id_empresa,
-        estado: formData.estado,
-        status: formData.status,
-        data_entrada: formData.data_entrada,
-        data_saida: formData.fora_estoque ? formData.data_saida : null
-      };
-
-      const { error: equipmentError } = await supabase
-        .from('equipamentos')
-        .insert([equipmentData]);
-
-      if (equipmentError) throw equipmentError;
-
-      toast({
-        title: "Sucesso",
-        description: "Equipamento registrado com sucesso!",
-      });
-
-      onSuccess();
-    } catch (error) {
-      console.error('Erro ao registrar equipamento:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao registrar equipamento",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -291,6 +303,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const handleMultipleSelectionChange = useCallback((checked: boolean) => {
     setMultipleSelection(checked);
     if (!checked) {
+      setSelectedEquipments([]);
       setFormData(prev => ({ ...prev, selectedEquipments: [] }));
     }
   }, []);
@@ -298,6 +311,11 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const handleForaEstoqueChange = useCallback((checked: boolean) => {
     setFormData(prev => ({ ...prev, fora_estoque: checked }));
   }, []);
+
+  const handleUserSelect = (user: User) => {
+    setResponsibleUserSearch(user.nome);
+    setShowUserList(false);
+  };
 
   if (loadingData) {
     return (
@@ -309,164 +327,176 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onCancel}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Movimentação de Equipamento</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900">Movimentação de Equipamentos</h1>
 
       <Card>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Ativar seleção múltipla */}
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="multipleSelection"
-                checked={multipleSelection}
-                onCheckedChange={handleMultipleSelectionChange}
+        <CardHeader>
+          <CardTitle>Registrar Movimentação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="multipleSelection"
+              checked={multipleSelection}
+              onCheckedChange={handleMultipleSelectionChange}
+            />
+            <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
+          </div>
+
+          <div className="relative">
+            <Label htmlFor="numero_serie">Número de Série</Label>
+            <div className="relative">
+              <Input
+                id="numero_serie"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Digite pelo menos 3 caracteres para buscar..."
               />
-              <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             </div>
-
-            {/* Número de Série */}
-            <div className="space-y-2">
-              <Label htmlFor="numero_serie">Número de Série *</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="numero_serie"
-                  placeholder="Digite pelo menos 3 caracteres..."
-                  value={formData.numero_serie}
-                  onChange={(e) => handleChange('numero_serie', e.target.value)}
-                  className="pl-10"
-                  required={!multipleSelection}
-                />
-              </div>
-            </div>
-
-            {/* Lista de equipamentos para seleção */}
-            {showEquipmentList && (
-              <Card className="max-h-60 overflow-y-auto">
-                <CardContent className="p-4">
-                  <Label className="text-sm font-medium mb-3 block">
-                    {multipleSelection ? 'Selecione os equipamentos:' : 'Escolha um equipamento:'}
-                  </Label>
-                  <div className="space-y-2">
-                    {filteredEquipments.map(equipment => (
-                      <div 
-                        key={equipment.id} 
-                        className={`flex items-center space-x-3 p-3 border rounded cursor-pointer hover:bg-gray-50 ${
-                          multipleSelection && formData.selectedEquipments.includes(equipment.id) ? 'bg-blue-50 border-blue-300' : ''
-                        }`}
-                        onClick={() => handleEquipmentSelect(equipment)}
-                      >
-                        {multipleSelection && (
-                          <Checkbox
-                            checked={formData.selectedEquipments.includes(equipment.id)}
-                            onCheckedChange={() => handleEquipmentSelect(equipment)}
-                          />
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium">{equipment.numero_serie}</p>
-                          <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
-                          <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
-                        </div>
-                      </div>
-                    ))}
+            
+            {showEquipmentList && filteredEquipment.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                {multipleSelection && (
+                  <div className="p-2 border-b bg-gray-50">
+                    <Button 
+                      onClick={addSelectedEquipments}
+                      size="sm"
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Selecionados ({selectedEquipments.length})
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                )}
+                {filteredEquipment.map(equipment => (
+                  <div 
+                    key={equipment.id} 
+                    className="p-3 hover:bg-gray-50 cursor-pointer border-b flex items-center gap-3"
+                    onClick={() => handleEquipmentSelect(equipment)}
+                  >
+                    {multipleSelection && (
+                      <Checkbox
+                        checked={selectedEquipments.some(eq => eq.id === equipment.id)}
+                        onCheckedChange={() => handleEquipmentSelect(equipment)}
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="font-medium">{equipment.numero_serie}</div>
+                      <div className="text-sm text-gray-500">
+                        {equipment.tipo} - {equipment.status}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {equipment.empresas?.name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Tipo de Equipamento */}
-              <div className="space-y-2">
-                <Label htmlFor="tipo_equipamento">Tipo de Equipamento *</Label>
-                <Select value={formData.tipo_equipamento || ''} onValueChange={(value) => handleChange('tipo_equipamento', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CCIT 5.0">CCIT 5.0</SelectItem>
-                    <SelectItem value="CONNECTIONS">CONNECTIONS</SelectItem>
-                    <SelectItem value="Terminal">Terminal</SelectItem>
-                    <SelectItem value="Validador">Validador</SelectItem>
-                    <SelectItem value="Outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Modelo */}
-              <div className="space-y-2">
-                <Label htmlFor="modelo">Modelo</Label>
-                <Input
-                  id="modelo"
-                  placeholder="Ex: H2, DMX200, V2000..."
-                  value={formData.modelo}
-                  onChange={(e) => handleChange('modelo', e.target.value)}
-                />
-              </div>
-
-              {/* Empresa */}
-              <div className="space-y-2">
-                <Label htmlFor="empresa">Empresa *</Label>
-                <Select value={formData.id_empresa || ''} onValueChange={(value) => handleChange('id_empresa', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Estado */}
-              <div className="space-y-2">
-                <Label htmlFor="estado">Estado do Estoque</Label>
-                <Input
-                  id="estado"
-                  value={formData.estado}
-                  onChange={(e) => handleChange('estado', e.target.value)}
-                  placeholder="Preenchido automaticamente"
-                  disabled
-                />
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select value={formData.status || ''} onValueChange={(value) => handleChange('status', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="disponivel">Disponível</SelectItem>
-                    <SelectItem value="em_uso">Em Uso</SelectItem>
-                    <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Data de Entrada */}
-              <div className="space-y-2">
-                <Label htmlFor="data_entrada">Data de Entrada *</Label>
-                <Input
-                  id="data_entrada"
-                  type="date"
-                  value={formData.data_entrada}
-                  onChange={(e) => handleChange('data_entrada', e.target.value)}
-                  required
-                />
+          {multipleSelection && selectedEquipments.length > 0 && (
+            <div className="space-y-2">
+              <Label>Equipamentos Selecionados:</Label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {selectedEquipments.map(equipment => (
+                  <div key={equipment.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <span className="text-sm">{equipment.numero_serie} - {equipment.tipo}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removeSelectedEquipment(equipment.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Fora de Estoque */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
+              <Select 
+                value={formData.tipo_movimento} 
+                onValueChange={(value) => handleChange('tipo_movimento', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entrada">Entrada</SelectItem>
+                  <SelectItem value="saida">Saída</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="data_movimento">Data da Movimentação *</Label>
+              <Input
+                id="data_movimento"
+                type="date"
+                value={formData.data_movimento}
+                onChange={(e) => handleChange('data_movimento', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          {formData.tipo_movimento === 'manutencao' && (
+            <div>
+              <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
+              <Select 
+                value={formData.tipo_manutencao_id} 
+                onValueChange={(value) => handleChange('tipo_manutencao_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de manutenção" />
+                </SelectTrigger>
+                <SelectContent>
+                  {maintenanceTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.codigo} - {type.descricao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="relative">
+            <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
+            <div className="relative">
+              <Input
+                id="usuario_responsavel"
+                value={responsibleUserSearch}
+                onChange={(e) => setResponsibleUserSearch(e.target.value)}
+                placeholder="Digite para buscar usuário..."
+              />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+            
+            {showUserList && filteredUsers.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                {filteredUsers.map(user => (
+                  <div 
+                    key={user.id} 
+                    className="p-3 hover:bg-gray-50 cursor-pointer border-b"
+                    onClick={() => handleUserSelect(user)}
+                  >
+                    <div className="font-medium">{user.nome}</div>
+                    <div className="text-sm text-gray-500">@{user.username}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {formData.tipo_movimento === 'saida' && (
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="fora_estoque"
@@ -475,107 +505,35 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               />
               <Label htmlFor="fora_estoque">Fora de Estoque</Label>
             </div>
+          )}
 
-            {/* Data de Saída - só aparece se "Fora de Estoque" estiver marcado */}
-            {formData.fora_estoque && (
-              <div className="space-y-2">
-                <Label htmlFor="data_saida">Data de Saída *</Label>
-                <Input
-                  id="data_saida"
-                  type="date"
-                  value={formData.data_saida}
-                  onChange={(e) => handleChange('data_saida', e.target.value)}
-                  required
-                />
-              </div>
-            )}
+          <div>
+            <Label htmlFor="observacoes">Observações</Label>
+            <Textarea
+              id="observacoes"
+              value={formData.observacoes}
+              onChange={(e) => handleChange('observacoes', e.target.value)}
+              placeholder="Observações sobre a movimentação"
+              rows={3}
+            />
+          </div>
 
-            {/* Tipo de Movimento */}
-            <div className="space-y-2">
-              <Label htmlFor="tipo_movimento">Tipo de Movimento</Label>
-              <Select value={formData.tipo_movimento || ''} onValueChange={(value) => handleChange('tipo_movimento', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entrada">Entrada</SelectItem>
-                  <SelectItem value="saida">Saída</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="retorno_manutencao">Retorno Manutenção</SelectItem>
-                </SelectContent>
-              </Select>
+          {formData.tipo_movimento === 'manutencao' && (
+            <div>
+              <Label htmlFor="detalhes_manutencao">Detalhes da Manutenção</Label>
+              <Textarea
+                id="detalhes_manutencao"
+                value={formData.detalhes_manutencao}
+                onChange={(e) => handleChange('detalhes_manutencao', e.target.value)}
+                placeholder="Detalhes específicos da manutenção"
+                rows={3}
+              />
             </div>
+          )}
 
-            {/* Campo de Observação - aparece quando seleciona tipo de movimento */}
-            {formData.tipo_movimento && (
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  placeholder="Digite as observações sobre a movimentação..."
-                  value={formData.observacoes}
-                  onChange={(e) => handleChange('observacoes', e.target.value)}
-                  rows={3}
-                />
-              </div>
-            )}
-
-            {/* Campos de manutenção - aparecem quando tipo é manutenção */}
-            {formData.tipo_movimento === 'manutencao' && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="tipo_manutencao">Tipo de Manutenção</Label>
-                  <Select value={formData.tipo_manutencao_id || ''} onValueChange={(value) => handleChange('tipo_manutencao_id', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de manutenção" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {maintenanceTypes.map(type => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.codigo} - {type.descricao}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="detalhes_manutencao">Detalhes da Manutenção</Label>
-                  <Textarea
-                    id="detalhes_manutencao"
-                    placeholder="Descreva os detalhes da manutenção..."
-                    value={formData.detalhes_manutencao}
-                    onChange={(e) => handleChange('detalhes_manutencao', e.target.value)}
-                    rows={3}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
-                {loading ? 'Salvando...' : 'Salvar Equipamento'}
-              </Button>
-              
-              {/* Botão para aplicar movimentação */}
-              {formData.tipo_movimento && (
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  onClick={handleApplyMovement}
-                  disabled={loading || (multipleSelection ? formData.selectedEquipments.length === 0 : !formData.numero_serie)}
-                  className="flex items-center gap-2"
-                >
-                  <Check className="h-4 w-4" />
-                  {loading ? 'Aplicando...' : 'Aplicar Movimentação'}
-                </Button>
-              )}
-              
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
+          <Button onClick={handleApplyMovement} className="w-full">
+            Registrar Movimentação
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -4,46 +4,51 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, Building } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 interface Company {
   id: string;
   name: string;
-  estado?: string;
   cnpj?: string;
   telefone?: string;
-  contact?: string;
-  created_at: string;
+  estado?: string;
+  estados?: {
+    nome: string;
+  };
 }
 
 const CompaniesReport: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     name: '',
     estado: ''
   });
 
   useEffect(() => {
-    loadData();
+    loadCompanies();
   }, []);
 
   useEffect(() => {
-    filterData();
+    applyFilters();
   }, [companies, filters]);
 
-  const loadData = async () => {
+  const loadCompanies = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('empresas')
-        .select('*')
+        .select(`
+          *,
+          estados (
+            nome
+          )
+        `)
         .order('name');
 
       if (error) throw error;
@@ -52,7 +57,7 @@ const CompaniesReport: React.FC = () => {
       console.error('Erro ao carregar empresas:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados das empresas",
+        description: "Erro ao carregar empresas",
         variant: "destructive",
       });
     } finally {
@@ -60,8 +65,8 @@ const CompaniesReport: React.FC = () => {
     }
   };
 
-  const filterData = () => {
-    let filtered = companies;
+  const applyFilters = () => {
+    let filtered = [...companies];
 
     if (filters.name) {
       filtered = filtered.filter(company => 
@@ -71,6 +76,7 @@ const CompaniesReport: React.FC = () => {
 
     if (filters.estado) {
       filtered = filtered.filter(company => 
+        company.estados?.nome.toLowerCase().includes(filters.estado.toLowerCase()) ||
         company.estado?.toLowerCase().includes(filters.estado.toLowerCase())
       );
     }
@@ -78,84 +84,52 @@ const CompaniesReport: React.FC = () => {
     setFilteredCompanies(filtered);
   };
 
-  const handleFilterChange = (field: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const exportToXLSX = () => {
-    const worksheetData = [
-      ['Nome', 'Estado', 'CNPJ', 'Telefone', 'Contato', 'Data de Criação'],
-      ...filteredCompanies.map(company => [
-        company.name,
-        company.estado || '',
-        company.cnpj || '',
-        company.telefone || '',
-        company.contact || '',
-        new Date(company.created_at).toLocaleDateString('pt-BR')
-      ])
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
-    
-    XLSX.writeFile(wb, `relatorio_empresas_${new Date().toISOString().split('T')[0]}.xlsx`);
-
-    toast({
-      title: "Sucesso",
-      description: "Relatório XLSX exportado com sucesso!",
-    });
-  };
-
-  const exportToPDF = () => {
+  const generatePDF = () => {
     const doc = new jsPDF();
     
     doc.setFontSize(18);
-    doc.text('Relatório de Empresas', 20, 20);
+    doc.text('Relatório de Empresas', 14, 22);
     
     doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 30);
-    doc.text(`Total de empresas: ${filteredCompanies.length}`, 20, 40);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
+    
+    if (filteredCompanies.length === 0) {
+      doc.text('Nenhuma empresa encontrada com os filtros aplicados.', 14, 50);
+      doc.save('relatorio-empresas.pdf');
+      return;
+    }
 
     const tableData = filteredCompanies.map(company => [
       company.name,
-      company.estado || '',
-      company.cnpj || '',
-      company.telefone || '',
-      company.contact || '',
-      new Date(company.created_at).toLocaleDateString('pt-BR')
+      company.cnpj || '-',
+      company.telefone || '-',
+      company.estados?.nome || company.estado || '-'
     ]);
 
     (doc as any).autoTable({
-      head: [['Nome', 'Estado', 'CNPJ', 'Telefone', 'Contato', 'Data Criação']],
+      head: [['Nome', 'CNPJ', 'Telefone', 'Estado']],
       body: tableData,
-      startY: 50,
-      styles: { fontSize: 8 },
-      columnStyles: {
-        0: { cellWidth: 40 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 30 },
-        5: { cellWidth: 25 }
-      }
+      startY: 40,
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [66, 139, 202] }
     });
 
-    doc.save(`relatorio_empresas_${new Date().toISOString().split('T')[0]}.pdf`);
-
+    doc.save('relatorio-empresas.pdf');
+    
     toast({
       title: "Sucesso",
-      description: "Relatório PDF exportado com sucesso!",
+      description: "Relatório PDF gerado com sucesso!",
     });
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando relatório de empresas...</div>
+        <div className="text-lg">Carregando relatório...</div>
       </div>
     );
   }
@@ -164,19 +138,12 @@ const CompaniesReport: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Relatório de Empresas</h1>
-        <div className="flex gap-2">
-          <Button onClick={exportToXLSX} variant="outline" className="flex items-center gap-2">
-            <FileDown className="h-4 w-4" />
-            Exportar XLSX
-          </Button>
-          <Button onClick={exportToPDF} variant="outline" className="flex items-center gap-2">
-            <FileDown className="h-4 w-4" />
-            Exportar PDF
-          </Button>
-        </div>
+        <Button onClick={generatePDF} className="flex items-center gap-2">
+          <Download className="h-4 w-4" />
+          Gerar PDF
+        </Button>
       </div>
 
-      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
@@ -184,104 +151,56 @@ const CompaniesReport: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="nameFilter">Nome da Empresa</Label>
+              <Label htmlFor="name">Nome da Empresa</Label>
               <Input
-                id="nameFilter"
-                placeholder="Filtrar por nome..."
+                id="name"
                 value={filters.name}
                 onChange={(e) => handleFilterChange('name', e.target.value)}
+                placeholder="Digite o nome da empresa"
               />
             </div>
             <div>
-              <Label htmlFor="estadoFilter">Estado</Label>
+              <Label htmlFor="estado">Estado</Label>
               <Input
-                id="estadoFilter"
-                placeholder="Filtrar por estado..."
+                id="estado"
                 value={filters.estado}
                 onChange={(e) => handleFilterChange('estado', e.target.value)}
+                placeholder="Digite o estado"
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Building className="h-8 w-8 text-primary mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total de Empresas</p>
-                <p className="text-2xl font-bold">{filteredCompanies.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Building className="h-8 w-8 text-green-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Com CNPJ</p>
-                <p className="text-2xl font-bold">
-                  {filteredCompanies.filter(c => c.cnpj).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <Building className="h-8 w-8 text-blue-500 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-600">Com Telefone</p>
-                <p className="text-2xl font-bold">
-                  {filteredCompanies.filter(c => c.telefone).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabela de Dados */}
       <Card>
         <CardHeader>
-          <CardTitle>Empresas Cadastradas ({filteredCompanies.length} registros)</CardTitle>
+          <CardTitle>Empresas Cadastradas ({filteredCompanies.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-3">Nome</th>
-                  <th className="text-left p-3">Estado</th>
                   <th className="text-left p-3">CNPJ</th>
                   <th className="text-left p-3">Telefone</th>
-                  <th className="text-left p-3">Contato</th>
-                  <th className="text-left p-3">Data Criação</th>
+                  <th className="text-left p-3">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredCompanies.map(company => (
                   <tr key={company.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium">{company.name}</td>
-                    <td className="p-3">{company.estado || '-'}</td>
-                    <td className="p-3 font-mono">{company.cnpj || '-'}</td>
+                    <td className="p-3">{company.name}</td>
+                    <td className="p-3">{company.cnpj || '-'}</td>
                     <td className="p-3">{company.telefone || '-'}</td>
-                    <td className="p-3">{company.contact || '-'}</td>
-                    <td className="p-3">{new Date(company.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3">{company.estados?.nome || company.estado || '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             {filteredCompanies.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                Nenhuma empresa encontrada
+                Nenhuma empresa encontrada com os filtros aplicados
               </div>
             )}
           </div>
