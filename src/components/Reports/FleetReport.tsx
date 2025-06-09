@@ -27,7 +27,6 @@ const FleetReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingFleet, setEditingFleet] = useState<FleetData | null>(null);
   const [filters, setFilters] = useState({
     nome_empresa: '',
     mes_referencia: '',
@@ -76,7 +75,6 @@ const FleetReport: React.FC = () => {
   const handleSaveFleet = () => {
     loadData();
     setShowForm(false);
-    setEditingFleet(null);
   };
 
   const handleDeleteFleet = async (id: string) => {
@@ -161,16 +159,7 @@ const FleetReport: React.FC = () => {
   });
 
   if (showForm) {
-    return (
-      <FleetForm
-        fleet={editingFleet}
-        onSave={handleSaveFleet}
-        onCancel={() => {
-          setShowForm(false);
-          setEditingFleet(null);
-        }}
-      />
-    );
+    return <FleetForm />;
   }
 
   if (loading) {
@@ -333,16 +322,6 @@ const FleetReport: React.FC = () => {
                     <td className="p-2">{new Date(item.mes_referencia).toLocaleDateString('pt-BR')}</td>
                     <td className="p-2">
                       <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingFleet(item);
-                            setShowForm(true);
-                          }}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
                         <Button
                           size="sm"
                           variant="outline"

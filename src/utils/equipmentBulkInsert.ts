@@ -66,6 +66,19 @@ export const insertCcit5ForTacomRS = async () => {
   return await insertCcit5UsedEquipments(tacomCompany.id, 'Rio Grande do Sul');
 };
 
+// Generic function for bulk inserting any equipment data
+export const bulkInsertEquipments = async (equipments: any[]) => {
+  const { data, error } = await supabase
+    .from('equipamentos')
+    .insert(equipments);
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
 export const getCcit5UsedEquipmentsList = () => {
   return ccit5UsedEquipments;
 };
