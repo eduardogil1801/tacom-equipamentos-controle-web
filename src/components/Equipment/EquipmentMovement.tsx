@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,8 +19,15 @@ interface Equipment {
   modelo?: string;
   empresas?: {
     name: string;
+    estado?: string;
   };
   status?: string;
+}
+
+interface Company {
+  id: string;
+  name: string;
+  estado?: string;
 }
 
 interface MaintenanceType {
@@ -35,21 +44,59 @@ interface EquipmentMovementProps {
 const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
   const { user } = useAuth();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [formData, setFormData] = useState({
-    id_equipamento: '',
+    numero_serie: '',
+    selectedEquipments: [] as string[],
+    tipo_equipamento: '',
+    modelo: '',
+    id_empresa: '',
+    estado: '',
+    status: 'disponivel',
+    data_entrada: new Date().toISOString().split('T')[0],
+    data_saida: '',
+    fora_estoque: false,
     tipo_movimento: '',
-    data_movimento: new Date().toISOString().split('T')[0],
     observacoes: '',
     tipo_manutencao_id: '',
     detalhes_manutencao: ''
   });
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [showEquipmentList, setShowEquipmentList] = useState(false);
+  const [multipleEquipments, setMultipleEquipments] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (formData.numero_serie.length > 0) {
+      const filtered = equipments.filter(eq => 
+        eq.numero_serie.toLowerCase().includes(formData.numero_serie.toLowerCase())
+      );
+      setFilteredEquipments(filtered);
+      setShowEquipmentList(filtered.length > 0 && multipleEquipments);
+    } else {
+      setFilteredEquipments([]);
+      setShowEquipmentList(false);
+    }
+  }, [formData.numero_serie, equipments, multipleEquipments]);
+
+  useEffect(() => {
+    if (formData.id_empresa) {
+      const company = companies.find(c => c.id === formData.id_empresa);
+      if (company) {
+        setFormData(prev => ({ 
+          ...prev, 
+          estado: company.estado || '',
+          status: company.name.toLowerCase().includes('tacom') ? 'disponivel' : 'em_uso'
+        }));
+      }
+    }
+  }, [formData.id_empresa, companies]);
 
   const loadData = async () => {
     try {
@@ -65,13 +112,23 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           modelo,
           status,
           empresas (
-            name
+            name,
+            estado
           )
         `)
         .order('numero_serie');
 
       if (equipmentsError) throw equipmentsError;
       setEquipments(equipmentsData || []);
+
+      // Carregar empresas
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('empresas')
+        .select('*')
+        .order('name');
+
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
 
       // Carregar tipos de manutenção
       const { data: maintenanceData, error: maintenanceError } = await supabase
@@ -94,10 +151,19 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
+  const handleEquipmentToggle = (equipmentId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedEquipments: checked 
+        ? [...prev.selectedEquipments, equipmentId]
+        : prev.selectedEquipments.filter(id => id !== equipmentId)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.id_equipamento || !formData.tipo_movimento || !formData.data_movimento) {
+    if (!formData.numero_serie || !formData.tipo_equipamento || !formData.id_empresa) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -106,80 +172,37 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       return;
     }
 
-    if (formData.tipo_movimento === 'manutencao' && !formData.tipo_manutencao_id) {
-      toast({
-        title: "Erro",
-        description: "Para movimentações de manutenção, selecione o tipo de manutenção.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Registrar movimentação com usuário responsável
-      const movementData = {
-        id_equipamento: formData.id_equipamento,
-        tipo_movimento: formData.tipo_movimento,
-        data_movimento: formData.data_movimento,
-        observacoes: formData.observacoes || null,
-        tipo_manutencao_id: formData.tipo_manutencao_id || null,
-        detalhes_manutencao: formData.detalhes_manutencao || null,
-        usuario_responsavel: user?.username || user?.name
+      const equipmentData = {
+        numero_serie: formData.numero_serie,
+        tipo: formData.tipo_equipamento,
+        modelo: formData.modelo || null,
+        id_empresa: formData.id_empresa,
+        estado: formData.estado,
+        status: formData.status,
+        data_entrada: formData.data_entrada,
+        data_saida: formData.fora_estoque ? formData.data_saida : null
       };
 
-      const { error: movementError } = await supabase
-        .from('movimentacoes')
-        .insert([movementData]);
+      const { error: equipmentError } = await supabase
+        .from('equipamentos')
+        .insert([equipmentData]);
 
-      if (movementError) throw movementError;
-
-      // Atualizar status do equipamento baseado no tipo de movimento
-      let newStatus = '';
-      let updateData: any = {};
-
-      switch (formData.tipo_movimento) {
-        case 'entrada':
-          newStatus = 'disponivel';
-          updateData = { status: newStatus, data_entrada: formData.data_movimento };
-          break;
-        case 'saida':
-          newStatus = 'em_uso';
-          updateData = { status: newStatus, data_saida: formData.data_movimento };
-          break;
-        case 'manutencao':
-          newStatus = 'aguardando_manutencao';
-          updateData = { status: newStatus, em_manutencao: true };
-          break;
-        case 'retorno_manutencao':
-          newStatus = 'disponivel';
-          updateData = { status: newStatus, em_manutencao: false };
-          break;
-        default:
-          break;
-      }
-
-      if (Object.keys(updateData).length > 0) {
-        const { error: updateError } = await supabase
-          .from('equipamentos')
-          .update(updateData)
-          .eq('id', formData.id_equipamento);
-
-        if (updateError) throw updateError;
-      }
+      if (equipmentError) throw equipmentError;
 
       toast({
         title: "Sucesso",
-        description: "Movimentação registrada com sucesso!",
+        description: "Equipamento registrado com sucesso!",
       });
 
       onSuccess();
     } catch (error) {
-      console.error('Erro ao registrar movimentação:', error);
+      console.error('Erro ao registrar equipamento:', error);
       toast({
         title: "Erro",
-        description: "Erro ao registrar movimentação",
+        description: "Erro ao registrar equipamento",
         variant: "destructive",
       });
     } finally {
@@ -187,7 +210,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -206,108 +229,192 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Registrar Movimentação</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Informações do Equipamento</h1>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Dados da Movimentação</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Ativação de múltiplos equipamentos */}
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="multipleEquipments"
+                checked={multipleEquipments}
+                onCheckedChange={setMultipleEquipments}
+              />
+              <Label htmlFor="multipleEquipments">Ativar busca para múltiplos equipamentos</Label>
+            </div>
+
+            {/* Número de Série */}
+            <div className="space-y-2">
+              <Label htmlFor="numero_serie">Número de Série *</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="numero_serie"
+                  placeholder="Ex: ABC123456"
+                  value={formData.numero_serie}
+                  onChange={(e) => handleChange('numero_serie', e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Lista de equipamentos para seleção múltipla */}
+            {showEquipmentList && (
+              <Card className="max-h-60 overflow-y-auto">
+                <CardContent className="p-4">
+                  <Label className="text-sm font-medium mb-3 block">Selecione os equipamentos:</Label>
+                  <div className="space-y-2">
+                    {filteredEquipments.map(equipment => (
+                      <div key={equipment.id} className="flex items-center space-x-3 p-3 border rounded">
+                        <Checkbox
+                          id={equipment.id}
+                          checked={formData.selectedEquipments.includes(equipment.id)}
+                          onCheckedChange={(checked) => handleEquipmentToggle(equipment.id, checked as boolean)}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium">{equipment.numero_serie}</p>
+                          <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
+                          <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tipo de Equipamento */}
               <div className="space-y-2">
-                <Label htmlFor="equipamento">Equipamento *</Label>
-                <Select value={formData.id_equipamento || ''} onValueChange={(value) => {
-                  handleChange('id_equipamento', value);
-                }}>
+                <Label htmlFor="tipo_equipamento">Tipo de Equipamento *</Label>
+                <Select value={formData.tipo_equipamento || ''} onValueChange={(value) => handleChange('tipo_equipamento', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione um equipamento" />
+                    <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {equipments.map(equipment => (
-                      <SelectItem key={equipment.id} value={equipment.id}>
-                        {equipment.numero_serie} - {equipment.tipo} ({equipment.empresas?.name})
+                    <SelectItem value="CCIT 5.0">CCIT 5.0</SelectItem>
+                    <SelectItem value="CONNECTIONS">CONNECTIONS</SelectItem>
+                    <SelectItem value="Terminal">Terminal</SelectItem>
+                    <SelectItem value="Validador">Validador</SelectItem>
+                    <SelectItem value="Outros">Outros</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Modelo */}
+              <div className="space-y-2">
+                <Label htmlFor="modelo">Modelo</Label>
+                <Input
+                  id="modelo"
+                  placeholder="Ex: H2, DMX200, V2000..."
+                  value={formData.modelo}
+                  onChange={(e) => handleChange('modelo', e.target.value)}
+                />
+              </div>
+
+              {/* Empresa */}
+              <div className="space-y-2">
+                <Label htmlFor="empresa">Empresa *</Label>
+                <Select value={formData.id_empresa || ''} onValueChange={(value) => handleChange('id_empresa', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map(company => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Estado */}
               <div className="space-y-2">
-                <Label htmlFor="tipo_movimento">Tipo de Movimento *</Label>
-                <Select value={formData.tipo_movimento || ''} onValueChange={(value) => {
-                  handleChange('tipo_movimento', value);
-                }}>
+                <Label htmlFor="estado">Estado do Estoque</Label>
+                <Input
+                  id="estado"
+                  value={formData.estado}
+                  onChange={(e) => handleChange('estado', e.target.value)}
+                  placeholder="Preenchido automaticamente"
+                  disabled
+                />
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select value={formData.status || ''} onValueChange={(value) => handleChange('status', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
+                    <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="entrada">Entrada</SelectItem>
-                    <SelectItem value="saida">Saída</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
-                    <SelectItem value="retorno_manutencao">Retorno Manutenção</SelectItem>
+                    <SelectItem value="disponivel">Disponível</SelectItem>
+                    <SelectItem value="em_uso">Em Uso</SelectItem>
+                    <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Data de Entrada */}
               <div className="space-y-2">
-                <Label htmlFor="data_movimento">Data do Movimento *</Label>
+                <Label htmlFor="data_entrada">Data de Entrada *</Label>
                 <Input
-                  id="data_movimento"
+                  id="data_entrada"
                   type="date"
-                  value={formData.data_movimento}
-                  onChange={(e) => handleChange('data_movimento', e.target.value)}
+                  value={formData.data_entrada}
+                  onChange={(e) => handleChange('data_entrada', e.target.value)}
                   required
                 />
               </div>
-
-              {(formData.tipo_movimento === 'manutencao' || formData.tipo_movimento === 'retorno_manutencao') && (
-                <div className="space-y-2">
-                  <Label htmlFor="tipo_manutencao">Tipo de Manutenção *</Label>
-                  <Select value={formData.tipo_manutencao_id || ''} onValueChange={(value) => {
-                    handleChange('tipo_manutencao_id', value);
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {maintenanceTypes.map(type => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.codigo} - {type.descricao}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
 
-            {(formData.tipo_movimento === 'manutencao' || formData.tipo_movimento === 'retorno_manutencao') && (
+            {/* Fora de Estoque */}
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="fora_estoque"
+                checked={formData.fora_estoque}
+                onCheckedChange={(checked) => handleChange('fora_estoque', checked)}
+              />
+              <Label htmlFor="fora_estoque">Fora de Estoque</Label>
+            </div>
+
+            {/* Data de Saída - só aparece se "Fora de Estoque" estiver marcado */}
+            {formData.fora_estoque && (
               <div className="space-y-2">
-                <Label htmlFor="detalhes_manutencao">Detalhes da Manutenção</Label>
-                <Textarea
-                  id="detalhes_manutencao"
-                  placeholder="Descreva os detalhes da manutenção..."
-                  value={formData.detalhes_manutencao}
-                  onChange={(e) => handleChange('detalhes_manutencao', e.target.value)}
+                <Label htmlFor="data_saida">Data de Saída *</Label>
+                <Input
+                  id="data_saida"
+                  type="date"
+                  value={formData.data_saida}
+                  onChange={(e) => handleChange('data_saida', e.target.value)}
+                  required
                 />
               </div>
             )}
 
+            {/* Tipo de Movimento */}
             <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <Textarea
-                id="observacoes"
-                placeholder="Observações sobre a movimentação..."
-                value={formData.observacoes}
-                onChange={(e) => handleChange('observacoes', e.target.value)}
-              />
+              <Label htmlFor="tipo_movimento">Tipo de Movimento</Label>
+              <Select value={formData.tipo_movimento || ''} onValueChange={(value) => handleChange('tipo_movimento', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entrada">Entrada</SelectItem>
+                  <SelectItem value="saida">Saída</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="retorno_manutencao">Retorno Manutenção</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-4 pt-4">
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
-                {loading ? 'Registrando...' : 'Registrar Movimentação'}
+                {loading ? 'Salvando...' : 'Salvar Equipamento'}
               </Button>
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancelar

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Download, Calendar, Building, Plus, X, User, ClipboardCheck } from 'lucide-react';
+import { FileText, Download, Calendar, Building, User, ClipboardCheck, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,9 +37,9 @@ interface SelectedEquipment {
   id: string;
   equipment_id: string;
   equipment?: Equipment;
-  quantity: number;
-  unit: string;
-  reference: string;
+  quantidade: number;
+  unidade: string;
+  referencia: string;
 }
 
 const ProtocolPage: React.FC = () => {
@@ -49,11 +49,13 @@ const ProtocolPage: React.FC = () => {
   const [originCompany, setOriginCompany] = useState('');
   const [destinationCompany, setDestinationCompany] = useState('');
   const [selectedEquipments, setSelectedEquipments] = useState<SelectedEquipment[]>([
-    { id: '1', equipment_id: '', quantity: 1, unit: 'UND', reference: '' }
+    { id: '1', equipment_id: '', quantidade: 1, unidade: 'PC', referencia: '' }
   ]);
   const [protocolDate, setProtocolDate] = useState('');
   const [receivingDate, setReceivingDate] = useState('');
-  const [clientSignature, setClientSignature] = useState('');
+  const [serialSearch, setSerialSearch] = useState('');
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [showEquipmentList, setShowEquipmentList] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +63,19 @@ const ProtocolPage: React.FC = () => {
     const today = new Date().toISOString().split('T')[0];
     setProtocolDate(today);
   }, []);
+
+  useEffect(() => {
+    if (serialSearch.length > 0) {
+      const filtered = equipments.filter(eq => 
+        eq.numero_serie.toLowerCase().includes(serialSearch.toLowerCase())
+      );
+      setFilteredEquipments(filtered);
+      setShowEquipmentList(filtered.length > 0);
+    } else {
+      setFilteredEquipments([]);
+      setShowEquipmentList(false);
+    }
+  }, [serialSearch, equipments]);
 
   const loadData = async () => {
     try {
@@ -100,43 +115,33 @@ const ProtocolPage: React.FC = () => {
     }
   };
 
-  const addEquipmentSlot = () => {
-    const newId = (selectedEquipments.length + 1).toString();
-    setSelectedEquipments([
-      ...selectedEquipments, 
-      { id: newId, equipment_id: '', quantity: 1, unit: 'UND', reference: '' }
-    ]);
+  const addEquipmentToList = (equipment: Equipment) => {
+    const newItem: SelectedEquipment = {
+      id: Date.now().toString(),
+      equipment_id: equipment.id,
+      equipment: equipment,
+      quantidade: 1,
+      unidade: 'PC',
+      referencia: equipment.numero_serie
+    };
+
+    setSelectedEquipments(prev => [...prev, newItem]);
+    setSerialSearch('');
+    setShowEquipmentList(false);
   };
 
-  const removeEquipmentSlot = (id: string) => {
+  const removeEquipment = (id: string) => {
     if (selectedEquipments.length > 1) {
-      setSelectedEquipments(selectedEquipments.filter(item => item.id !== id));
+      setSelectedEquipments(prev => prev.filter(item => item.id !== id));
     }
   };
 
   const updateSelectedEquipment = (id: string, field: string, value: any) => {
     setSelectedEquipments(prev => 
-      prev.map(item => {
-        if (item.id === id) {
-          const updated = { ...item, [field]: value };
-          
-          if (field === 'equipment_id') {
-            const equipment = equipments.find(e => e.id === value);
-            if (equipment) {
-              updated.equipment = equipment;
-              updated.reference = equipment.numero_serie;
-            }
-          }
-          
-          return updated;
-        }
-        return item;
-      })
+      prev.map(item => 
+        item.id === id ? { ...item, [field]: value } : item
+      )
     );
-  };
-
-  const getEquipmentsBySerial = (serial: string) => {
-    return equipments.filter(eq => eq.numero_serie.toLowerCase().includes(serial.toLowerCase()));
   };
 
   const generateTermoPDF = () => {
@@ -220,8 +225,8 @@ const ProtocolPage: React.FC = () => {
         
         doc.text(String(index + 1).padStart(2, '0'), 25, yPosition);
         doc.text(item.equipment?.tipo || '', 50, yPosition);
-        doc.text(item.unit, 125, yPosition);
-        doc.text(item.reference, 145, yPosition);
+        doc.text(item.unidade, 125, yPosition);
+        doc.text(item.referencia, 145, yPosition);
         
         // Adicionar número de série na linha seguinte
         yPosition += 8;
@@ -380,91 +385,111 @@ const ProtocolPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Equipamentos */}
+          {/* Busca de equipamentos */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Equipamentos *</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addEquipmentSlot}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar Equipamento
-              </Button>
+            <Label>Buscar Equipamento por Número de Série</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Digite o número de série..."
+                value={serialSearch}
+                onChange={(e) => setSerialSearch(e.target.value)}
+                className="pl-10"
+              />
             </div>
 
-            {selectedEquipments.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end p-4 border rounded-lg">
-                <div>
-                  <Label>Equipamento {selectedEquipments.length > 1 ? index + 1 : ''}</Label>
-                  <Select 
-                    value={item.equipment_id} 
-                    onValueChange={(value) => updateSelectedEquipment(item.id, 'equipment_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o equipamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipments.map(equipment => (
-                        <SelectItem key={equipment.id} value={equipment.id}>
-                          {equipment.tipo} - {equipment.numero_serie}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {/* Lista de equipamentos filtrados */}
+            {showEquipmentList && (
+              <Card className="max-h-60 overflow-y-auto">
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    {filteredEquipments.map(equipment => (
+                      <div
+                        key={equipment.id}
+                        className="flex items-center justify-between p-3 border rounded cursor-pointer hover:bg-gray-50"
+                        onClick={() => addEquipmentToList(equipment)}
+                      >
+                        <div>
+                          <p className="font-medium">{equipment.numero_serie}</p>
+                          <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
+                          <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          Adicionar
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Lista de equipamentos selecionados */}
+          <div className="space-y-4">
+            <Label>Equipamentos Selecionados</Label>
+            
+            {selectedEquipments.filter(item => item.equipment_id).map((item, index) => (
+              <Card key={item.id} className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                  <div>
+                    <Label>ITEM {index + 1}</Label>
+                    <p className="text-sm font-medium">{item.equipment?.tipo}</p>
+                    <p className="text-xs text-gray-600">S/N: {item.equipment?.numero_serie}</p>
+                  </div>
+                  
+                  <div>
+                    <Label>Quantidade</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={item.quantidade}
+                      onChange={(e) => updateSelectedEquipment(item.id, 'quantidade', parseInt(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Unidade</Label>
+                    <Select 
+                      value={item.unidade} 
+                      onValueChange={(value) => updateSelectedEquipment(item.id, 'unidade', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PC">PC</SelectItem>
+                        <SelectItem value="UND">UND</SelectItem>
+                        <SelectItem value="PCT">PCT</SelectItem>
+                        <SelectItem value="CX">CX</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label>Referência</Label>
+                    <Input
+                      value={item.referencia}
+                      onChange={(e) => updateSelectedEquipment(item.id, 'referencia', e.target.value)}
+                      placeholder="Referência do item"
+                    />
+                  </div>
                 </div>
                 
-                <div>
-                  <Label>Quantidade</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => updateSelectedEquipment(item.id, 'quantity', parseInt(e.target.value))}
-                  />
-                </div>
-                
-                <div>
-                  <Label>Unidade</Label>
-                  <Select 
-                    value={item.unit} 
-                    onValueChange={(value) => updateSelectedEquipment(item.id, 'unit', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UND">UND</SelectItem>
-                      <SelectItem value="PCT">PCT</SelectItem>
-                      <SelectItem value="CX">CX</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label>Referência</Label>
-                  <Input
-                    value={item.reference}
-                    onChange={(e) => updateSelectedEquipment(item.id, 'reference', e.target.value)}
-                    placeholder="Referência do item"
-                  />
-                </div>
-                
-                {selectedEquipments.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeEquipmentSlot(item.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                {selectedEquipments.filter(eq => eq.equipment_id).length > 1 && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeEquipment(item.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Remover
+                    </Button>
+                  </div>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
 
@@ -483,7 +508,7 @@ const ProtocolPage: React.FC = () => {
             <Button 
               onClick={generateTermoPDF}
               className="flex items-center gap-2"
-              disabled={!originCompany || !destinationCompany || selectedEquipments.some(item => !item.equipment_id) || !protocolDate}
+              disabled={!originCompany || !destinationCompany || selectedEquipments.filter(item => item.equipment_id).length === 0 || !protocolDate}
             >
               <Download className="h-4 w-4" />
               Gerar Termo de Recebimento PDF
