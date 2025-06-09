@@ -57,8 +57,12 @@ const LoginForm: React.FC = () => {
 
       <div className="max-w-md w-full space-y-8 relative z-10">
         <div className="text-center">
-          <div className="mx-auto h-24 w-24 bg-gradient-to-r from-red-500 to-red-700 rounded-full flex items-center justify-center mb-6 shadow-2xl border-4 border-white/30">
-            <div className="text-white text-2xl font-bold">LOGO</div>
+          <div className="mx-auto h-24 w-auto bg-white rounded-2xl flex items-center justify-center mb-6 shadow-2xl border-4 border-white/30 p-4">
+            <img 
+              src="/lovable-uploads/209ea11b-64cd-4e06-badc-c3738dd09eb5.png" 
+              alt="TACOM Logo" 
+              className="h-full w-auto object-contain"
+            />
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900 drop-shadow-sm">
             Sistema de Controle
