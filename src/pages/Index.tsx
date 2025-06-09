@@ -6,7 +6,8 @@ import EquipmentList from '@/components/Equipment/EquipmentList';
 import FleetManagement from '@/components/Fleet/FleetManagement';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
-import Header from '@/components/Layout/Header';
+import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
+import ChatFloat from '@/components/Chat/ChatFloat';
 import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
@@ -37,11 +38,14 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header currentPage={currentPage} onPageChange={handlePageChange} />
-      <main className="flex-1">
-        {renderPage()}
+    <div className="min-h-screen bg-gray-50 w-full">
+      <ResponsiveHeader currentPage={currentPage} onPageChange={handlePageChange} />
+      <main className="flex-1 w-full">
+        <div className="w-full overflow-x-auto">
+          {renderPage()}
+        </div>
       </main>
+      <ChatFloat />
     </div>
   );
 };
