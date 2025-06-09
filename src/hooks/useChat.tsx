@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -40,6 +40,7 @@ export const useChat = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     if (user) {
@@ -47,7 +48,15 @@ export const useChat = () => {
       loadConversations();
       subscribeToMessages();
     }
-  }, [user]);
+
+    // Cleanup function
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [user?.id]); // Only depend on user.id to prevent unnecessary re-runs
 
   const loadUsers = async () => {
     try {
@@ -253,9 +262,9 @@ export const useChat = () => {
   };
 
   const subscribeToMessages = () => {
-    if (!user?.id) return;
+    if (!user?.id || channelRef.current) return;
     
-    const channel = supabase
+    channelRef.current = supabase
       .channel('chat-messages')
       .on(
         'postgres_changes',
@@ -309,10 +318,6 @@ export const useChat = () => {
         }
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const startConversation = (targetUser: ChatUser) => {
