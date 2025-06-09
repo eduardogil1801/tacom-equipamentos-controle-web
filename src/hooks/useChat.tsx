@@ -65,14 +65,16 @@ export const useChat = () => {
   };
 
   const loadConversations = async () => {
+    if (!user?.id) return;
+    
     try {
       setLoading(true);
       
-      // Buscar conversas
+      // Buscar conversas onde o usuário atual participa
       const { data: conversationsData, error: convError } = await supabase
         .from('chat_conversations')
         .select('*')
-        .or(`user1_id.eq.${user?.id},user2_id.eq.${user?.id}`)
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .order('last_message_at', { ascending: false });
 
       if (convError) throw convError;
@@ -80,7 +82,7 @@ export const useChat = () => {
       // Para cada conversa, buscar o outro usuário e a última mensagem
       const conversationsWithDetails = await Promise.all(
         (conversationsData || []).map(async (conv) => {
-          const otherUserId = conv.user1_id === user?.id ? conv.user2_id : conv.user1_id;
+          const otherUserId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
           
           // Buscar dados do outro usuário
           const { data: userData, error: userError } = await supabase
@@ -89,23 +91,26 @@ export const useChat = () => {
             .eq('id', otherUserId)
             .single();
 
-          if (userError) throw userError;
+          if (userError) {
+            console.error('Error loading user data:', userError);
+            return null;
+          }
 
           // Buscar última mensagem
-          const { data: lastMessage, error: msgError } = await supabase
+          const { data: lastMessage } = await supabase
             .from('chat_messages')
             .select('*')
-            .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user?.id})`)
+            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           // Contar mensagens não lidas
           const { count: unreadCount } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact', head: true })
             .eq('sender_id', otherUserId)
-            .eq('receiver_id', user?.id)
+            .eq('receiver_id', user.id)
             .eq('is_read', false);
 
           return {
@@ -117,10 +122,11 @@ export const useChat = () => {
         })
       );
 
-      setConversations(conversationsWithDetails);
+      const validConversations = conversationsWithDetails.filter(conv => conv !== null) as Conversation[];
+      setConversations(validConversations);
       
       // Calcular total de mensagens não lidas
-      const totalUnread = conversationsWithDetails.reduce((sum, conv) => sum + conv.unread_count, 0);
+      const totalUnread = validConversations.reduce((sum, conv) => sum + conv.unread_count, 0);
       setUnreadCount(totalUnread);
       
     } catch (error) {
@@ -131,11 +137,13 @@ export const useChat = () => {
   };
 
   const loadMessages = async (otherUserId: string) => {
+    if (!user?.id) return;
+    
     try {
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
-        .or(`and(sender_id.eq.${user?.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user?.id})`)
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -150,16 +158,34 @@ export const useChat = () => {
   };
 
   const sendMessage = async (receiverId: string, content: string) => {
+    if (!user?.id) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      console.log('Sending message:', { sender_id: user.id, receiver_id: receiverId, content });
+      
+      const { data, error } = await supabase
         .from('chat_messages')
         .insert({
-          sender_id: user?.id,
+          sender_id: user.id,
           receiver_id: receiverId,
           content: content.trim()
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting message:', error);
+        throw error;
+      }
+
+      console.log('Message sent successfully:', data);
       
       // Recarregar conversas para atualizar a lista
       loadConversations();
@@ -175,12 +201,14 @@ export const useChat = () => {
   };
 
   const markMessagesAsRead = async (senderId: string) => {
+    if (!user?.id) return;
+    
     try {
       const { error } = await supabase
         .from('chat_messages')
         .update({ is_read: true })
         .eq('sender_id', senderId)
-        .eq('receiver_id', user?.id)
+        .eq('receiver_id', user.id)
         .eq('is_read', false);
 
       if (error) throw error;
@@ -194,6 +222,8 @@ export const useChat = () => {
   };
 
   const subscribeToMessages = () => {
+    if (!user?.id) return;
+    
     const channel = supabase
       .channel('chat-messages')
       .on(
@@ -202,7 +232,7 @@ export const useChat = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'chat_messages',
-          filter: `receiver_id=eq.${user?.id}`
+          filter: `receiver_id=eq.${user.id}`
         },
         (payload) => {
           console.log('New message received:', payload);
@@ -229,7 +259,7 @@ export const useChat = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'chat_messages',
-          filter: `sender_id=eq.${user?.id}`
+          filter: `sender_id=eq.${user.id}`
         },
         (payload) => {
           console.log('Message sent:', payload);
