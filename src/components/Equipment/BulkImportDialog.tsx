@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Upload, Download, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { insertCcit5UsedEquipments, insertCcit5ForTacomRS, getCcit5UsedEquipmentsList } from '@/utils/equipmentBulkInsert';
-import { Upload, Zap } from 'lucide-react';
+import { bulkInsertEquipments } from '@/utils/equipmentBulkInsert';
 
 interface Company {
   id: string;
@@ -19,175 +19,251 @@ interface BulkImportDialogProps {
 }
 
 const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImportComplete }) => {
-  const [selectedCompany, setSelectedCompany] = useState('');
-  const [selectedState, setSelectedState] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
 
-  const estados = [
-    'Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia', 'Ceará', 'Distrito Federal',
-    'Espírito Santo', 'Goiás', 'Maranhão', 'Mato Grosso', 'Mato Grosso do Sul',
-    'Minas Gerais', 'Pará', 'Paraíba', 'Paraná', 'Pernambuco', 'Piauí',
-    'Rio de Janeiro', 'Rio Grande do Norte', 'Rio Grande do Sul', 'Rondônia',
-    'Roraima', 'Santa Catarina', 'São Paulo', 'Sergipe', 'Tocantins'
-  ];
+  const generateCSVTemplate = () => {
+    const headers = ['Tipo', 'Modelo', 'Série', 'Empresa', 'Estado', 'Status', 'Entrada', 'Saída'];
+    const sampleData = [
+      'CCIT 5.0,H2,ABC123456,Nome da Empresa,Rio Grande do Sul,disponivel,2024-01-15,',
+      'PM (Painel de Motorista),V2000,DEF789012,Nome da Empresa,Santa Catarina,em_uso,2024-01-16,',
+      'UPEX,,GHI345678,Nome da Empresa,Rio Grande do Sul,aguardando_manutencao,2024-01-17,'
+    ];
+
+    const csvContent = [headers.join(','), ...sampleData].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'modelo_importacao_equipamentos.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    toast({
+      title: "Sucesso",
+      description: "Modelo CSV baixado com sucesso!",
+    });
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
+        toast({
+          title: "Erro",
+          description: "Por favor, selecione um arquivo CSV válido.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setFile(selectedFile);
+    }
+  };
+
+  const parseCSV = (text: string): any[] => {
+    const lines = text.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    const data = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line) {
+        const values = line.split(',').map(v => v.trim());
+        const item: any = {};
+        headers.forEach((header, index) => {
+          item[header] = values[index] || '';
+        });
+        data.push(item);
+      }
+    }
+
+    return data;
+  };
+
+  const validateData = (data: any[]): string[] => {
+    const errors: string[] = [];
+    const requiredFields = ['Tipo', 'Série', 'Empresa', 'Estado', 'Entrada'];
+
+    data.forEach((item, index) => {
+      const row = index + 2; // +2 because index starts at 0 and we skip header
+
+      requiredFields.forEach(field => {
+        if (!item[field]) {
+          errors.push(`Linha ${row}: Campo '${field}' é obrigatório`);
+        }
+      });
+
+      // Validar se a empresa existe
+      if (item.Empresa) {
+        const companyExists = companies.some(c => c.name === item.Empresa);
+        if (!companyExists) {
+          errors.push(`Linha ${row}: Empresa '${item.Empresa}' não encontrada`);
+        }
+      }
+
+      // Validar data de entrada
+      if (item.Entrada && !Date.parse(item.Entrada)) {
+        errors.push(`Linha ${row}: Data de entrada inválida`);
+      }
+
+      // Validar data de saída se fornecida
+      if (item.Saída && item.Saída !== '' && !Date.parse(item.Saída)) {
+        errors.push(`Linha ${row}: Data de saída inválida`);
+      }
+
+      // Validar se data de saída é posterior à data de entrada
+      if (item.Entrada && item.Saída && item.Saída !== '') {
+        const entryDate = new Date(item.Entrada);
+        const exitDate = new Date(item.Saída);
+        if (exitDate < entryDate) {
+          errors.push(`Linha ${row}: Data de saída não pode ser anterior à data de entrada`);
+        }
+      }
+    });
+
+    return errors;
+  };
+
+  const transformData = (data: any[]) => {
+    return data.map(item => {
+      const company = companies.find(c => c.name === item.Empresa);
+      
+      return {
+        tipo: item.Tipo,
+        modelo: item.Modelo || null,
+        numero_serie: item.Série,
+        data_entrada: item.Entrada,
+        data_saida: item.Saída && item.Saída !== '' ? item.Saída : null,
+        id_empresa: company?.id || '',
+        estado: item.Estado,
+        status: item.Status || 'disponivel'
+      };
+    });
+  };
 
   const handleImport = async () => {
-    if (!selectedCompany || !selectedState) {
+    if (!file) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione uma empresa e um estado.",
+        description: "Por favor, selecione um arquivo CSV.",
         variant: "destructive",
       });
       return;
     }
 
     setLoading(true);
+
     try {
-      await insertCcit5UsedEquipments(selectedCompany, selectedState);
-      
+      const text = await file.text();
+      const rawData = parseCSV(text);
+
+      if (rawData.length === 0) {
+        throw new Error('Arquivo CSV vazio ou formato inválido');
+      }
+
+      // Validar dados
+      const errors = validateData(rawData);
+      if (errors.length > 0) {
+        throw new Error(`Erros de validação:\n${errors.slice(0, 10).join('\n')}${errors.length > 10 ? '\n...' : ''}`);
+      }
+
+      // Transformar dados para o formato correto
+      const transformedData = transformData(rawData);
+
+      // Importar dados
+      await bulkInsertEquipments(transformedData);
+
       toast({
         title: "Sucesso",
-        description: `${getCcit5UsedEquipmentsList().length} equipamentos CCIT 5.0 importados com sucesso!`,
+        description: `${transformedData.length} equipamentos importados com sucesso!`,
       });
-      
+
+      setFile(null);
+      setIsOpen(false);
       onImportComplete();
-      setOpen(false);
-      setSelectedCompany('');
-      setSelectedState('');
-    } catch (error) {
-      console.error('Erro ao importar equipamentos:', error);
+
+    } catch (error: any) {
+      console.error('Error importing data:', error);
       toast({
         title: "Erro",
-        description: "Erro ao importar equipamentos. Verifique se os números de série não existem já no sistema.",
+        description: error.message || "Erro ao importar dados",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-
-  const handleQuickImportTacom = async () => {
-    setLoading(true);
-    try {
-      await insertCcit5ForTacomRS();
-      
-      toast({
-        title: "Sucesso",
-        description: `${getCcit5UsedEquipmentsList().length} equipamentos CCIT 5.0 importados para FILIAL - TACOM (RS) com sucesso!`,
-      });
-      
-      onImportComplete();
-      setOpen(false);
-    } catch (error) {
-      console.error('Erro ao importar equipamentos para TACOM:', error);
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao importar equipamentos para TACOM-RS.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const equipmentsList = getCcit5UsedEquipmentsList();
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
           <Upload className="h-4 w-4" />
-          Importar CCIT 5.0 Usados
+          Importar Dados
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Importar Equipamentos CCIT 5.0 Usados</DialogTitle>
+          <DialogTitle>Importar Dados de Equipamentos</DialogTitle>
         </DialogHeader>
-        
         <div className="space-y-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Equipamentos a serem importados:</h3>
-            <p className="text-sm text-blue-700 mb-2">
-              {equipmentsList.length} equipamentos CCIT 5.0 usados serão adicionados ao estoque.
+          <div className="text-sm text-gray-600">
+            <p>Faça o upload de um arquivo CSV com os dados dos equipamentos.</p>
+            <p className="mt-2">
+              <strong>Campos obrigatórios:</strong> Tipo, Série, Empresa, Estado, Entrada
             </p>
-            <div className="text-xs text-blue-600 max-h-32 overflow-y-auto">
-              {equipmentsList.join(', ')}
-            </div>
           </div>
 
-          {/* Importação rápida para TACOM-RS */}
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <h3 className="font-medium text-green-900 mb-2 flex items-center gap-2">
-              <Zap className="h-4 w-4" />
-              Importação Rápida - FILIAL TACOM (RS)
-            </h3>
-            <p className="text-sm text-green-700 mb-3">
-              Importe diretamente para a FILIAL - TACOM do Rio Grande do Sul.
-            </p>
-            <Button 
-              onClick={handleQuickImportTacom} 
-              disabled={loading}
-              className="w-full bg-green-600 hover:bg-green-700"
+          <div className="space-y-3">
+            <Button
+              onClick={generateCSVTemplate}
+              variant="outline"
+              className="w-full flex items-center gap-2"
             >
-              {loading ? 'Importando...' : `Importar para TACOM-RS (${equipmentsList.length} equipamentos)`}
+              <Download className="h-4 w-4" />
+              Baixar Modelo CSV
             </Button>
+
+            <div className="space-y-2">
+              <Label htmlFor="csvFile">Arquivo CSV</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="csvFile"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="flex-1"
+                />
+                {file && (
+                  <div className="flex items-center gap-1 text-sm text-green-600">
+                    <FileText className="h-4 w-4" />
+                    {file.name}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Importação personalizada */}
-          <div className="border-t pt-4">
-            <h3 className="font-medium text-gray-900 mb-3">Ou selecione empresa e estado manualmente:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="company">Empresa *</Label>
-                <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">Estado *</Label>
-                <Select value={selectedState} onValueChange={setSelectedState}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {estados.map(estado => (
-                      <SelectItem key={estado} value={estado}>
-                        {estado}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button 
-                onClick={handleImport} 
-                disabled={loading || !selectedCompany || !selectedState}
-                className="flex-1"
-              >
-                {loading ? 'Importando...' : `Importar ${equipmentsList.length} Equipamentos`}
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setOpen(false)}
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-            </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={!file || loading}
+            >
+              {loading ? 'Importando...' : 'Importar'}
+            </Button>
           </div>
         </div>
       </DialogContent>

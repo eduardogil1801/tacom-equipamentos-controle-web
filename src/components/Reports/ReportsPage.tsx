@@ -1,332 +1,271 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, FileSpreadsheet, Calendar } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { 
+  FileText, 
+  TrendingUp, 
+  Package, 
+  Users, 
+  BarChart3, 
+  Activity,
+  Settings,
+  Truck,
+  ArrowUpDown,
+  Wrench
+} from 'lucide-react';
+import InventoryReport from './InventoryReport';
+import InventoryStockReport from './InventoryStockReport';
+import EquipmentStatusReport from './EquipmentStatusReport';
+import EquipmentDistributionReport from './EquipmentDistributionReport';
+import EquipmentHistoryReport from './EquipmentHistoryReport';
+import EquipmentHistoryDetailReport from './EquipmentHistoryDetailReport';
+import CompaniesReport from './CompaniesReport';
+import FleetReport from './FleetReport';
+import MonthlyReport from './MonthlyReport';
+import MaintenanceReport from './MaintenanceReport';
+import MovementsReport from './MovementsReport';
+import FleetForm from './FleetForm';
+import MaintenanceTypeManager from '../Maintenance/MaintenanceTypeManager';
 
-interface Equipment {
-  id: string;
-  tipo: string;
-  numero_serie: string;
-  data_entrada: string;
-  data_saida?: string;
-  id_empresa: string;
-  empresas?: {
-    name: string;
-  };
-}
+type ReportType = 
+  | 'menu' 
+  | 'inventory' 
+  | 'stock' 
+  | 'status' 
+  | 'distribution' 
+  | 'history' 
+  | 'history-detail' 
+  | 'companies'
+  | 'fleet'
+  | 'monthly'
+  | 'maintenance'
+  | 'movements'
+  | 'fleet-form'
+  | 'maintenance-types';
 
-interface Company {
-  id: string;
-  name: string;
-}
+const ReportsPage = () => {
+  const [currentView, setCurrentView] = useState<ReportType>('menu');
 
-const ReportsPage: React.FC = () => {
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    companyId: '',
-    startDate: '',
-    endDate: '',
-    status: 'all'
-  });
+  const renderContent = () => {
+    switch (currentView) {
+      case 'inventory':
+        return <InventoryReport />;
+      case 'stock':
+        return <InventoryStockReport />;
+      case 'status':
+        return <EquipmentStatusReport />;
+      case 'distribution':
+        return <EquipmentDistributionReport />;
+      case 'history':
+        return <EquipmentHistoryReport />;
+      case 'history-detail':
+        return <EquipmentHistoryDetailReport />;
+      case 'companies':
+        return <CompaniesReport />;
+      case 'fleet':
+        return <FleetReport />;
+      case 'monthly':
+        return <MonthlyReport />;
+      case 'maintenance':
+        return <MaintenanceReport />;
+      case 'movements':
+        return <MovementsReport />;
+      case 'fleet-form':
+        return <FleetForm />;
+      case 'maintenance-types':
+        return <MaintenanceTypeManager />;
+      default:
+        return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Relatórios e Cadastros</h1>
+              <p className="text-gray-600">Selecione um relatório ou cadastro para visualizar</p>
+            </div>
 
-  useEffect(() => {
-    loadData();
-  }, []);
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Relatórios de Equipamentos */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('inventory')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <Package className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-lg">Relatório de Inventário</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Visualize o inventário completo de equipamentos com filtros avançados</p>
+                </CardContent>
+              </Card>
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load companies
-      const { data: companiesData, error: companiesError } = await supabase
-        .from('empresas')
-        .select('*')
-        .order('name');
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('stock')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </div>
+                  <CardTitle className="text-lg">Estoque de Equipamentos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Relatório detalhado do estoque atual por empresa e status</p>
+                </CardContent>
+              </Card>
 
-      if (companiesError) throw companiesError;
-      setCompanies(companiesData || []);
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('status')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                    <Activity className="h-4 w-4 text-yellow-600" />
+                  </div>
+                  <CardTitle className="text-lg">Status dos Equipamentos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Acompanhe o status atual de todos os equipamentos</p>
+                </CardContent>
+              </Card>
 
-      // Load equipments with company names
-      const { data: equipmentsData, error: equipmentsError } = await supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (
-            name
-          )
-        `)
-        .order('data_entrada', { ascending: false });
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('distribution')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <CardTitle className="text-lg">Distribuição de Equipamentos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Análise da distribuição por empresa e tipo</p>
+                </CardContent>
+              </Card>
 
-      if (equipmentsError) throw equipmentsError;
-      setEquipments(equipmentsData || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('history')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                    <FileText className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <CardTitle className="text-lg">Histórico de Equipamentos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Histórico completo de movimentações</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('history-detail')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center mr-3">
+                    <FileText className="h-4 w-4 text-teal-600" />
+                  </div>
+                  <CardTitle className="text-lg">Histórico Detalhado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Histórico detalhado com análises avançadas</p>
+                </CardContent>
+              </Card>
+
+              {/* Relatórios de Manutenção */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('maintenance')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                    <Wrench className="h-4 w-4 text-red-600" />
+                  </div>
+                  <CardTitle className="text-lg">Relatório de Manutenção</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Equipamentos por tipo, empresa e status de manutenção</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('movements')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                    <ArrowUpDown className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <CardTitle className="text-lg">Movimentações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Todas as movimentações de equipamentos com filtros</p>
+                </CardContent>
+              </Card>
+
+              {/* Relatórios de Empresas */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('companies')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                    <Users className="h-4 w-4 text-gray-600" />
+                  </div>
+                  <CardTitle className="text-lg">Relatório de Empresas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Informações detalhadas sobre as empresas cadastradas</p>
+                </CardContent>
+              </Card>
+
+              {/* Relatórios de Frota */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('fleet')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
+                    <Truck className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <CardTitle className="text-lg">Relatório de Frota</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Análise da frota por empresa e sistema</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('monthly')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center mr-3">
+                    <BarChart3 className="h-4 w-4 text-cyan-600" />
+                  </div>
+                  <CardTitle className="text-lg">Relatório Mensal</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Relatórios mensais consolidados</p>
+                </CardContent>
+              </Card>
+
+              {/* Cadastros */}
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('fleet-form')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <Truck className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <CardTitle className="text-lg">Cadastro de Frota</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Adicionar informações de frota por empresa</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setCurrentView('maintenance-types')}>
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                    <Settings className="h-4 w-4 text-red-600" />
+                  </div>
+                  <CardTitle className="text-lg">Tipos de Manutenção</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600">Gerenciar tipos e códigos de manutenção</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        );
     }
   };
-
-  const getFilteredEquipments = () => {
-    return equipments.filter(equipment => {
-      const matchesCompany = !filters.companyId || filters.companyId === 'all' || equipment.id_empresa === filters.companyId;
-      const matchesStartDate = !filters.startDate || equipment.data_entrada >= filters.startDate;
-      const matchesEndDate = !filters.endDate || equipment.data_entrada <= filters.endDate;
-      const matchesStatus = filters.status === 'all' || 
-        (filters.status === 'in-stock' && !equipment.data_saida) ||
-        (filters.status === 'out-of-stock' && equipment.data_saida);
-
-      return matchesCompany && matchesStartDate && matchesEndDate && matchesStatus;
-    });
-  };
-
-  const exportToCSV = () => {
-    const filteredData = getFilteredEquipments();
-    if (filteredData.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Nenhum equipamento encontrado para exportar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const headers = ['Tipo', 'Número de Série', 'Empresa', 'Data de Entrada', 'Data de Saída', 'Status'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredData.map(equipment => {
-        return [
-          `"${equipment.tipo}"`,
-          `"${equipment.numero_serie}"`,
-          `"${equipment.empresas?.name || 'N/A'}"`,
-          new Date(equipment.data_entrada).toLocaleDateString('pt-BR'),
-          equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-',
-          equipment.data_saida ? 'Retirado' : 'Em Estoque'
-        ].join(',');
-      })
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio_equipamentos_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Sucesso",
-      description: "Relatório CSV gerado com sucesso!",
-    });
-  };
-
-  const exportToExcel = () => {
-    const filteredData = getFilteredEquipments();
-    if (filteredData.length === 0) {
-      toast({
-        title: "Aviso",
-        description: "Nenhum equipamento encontrado para exportar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const headers = ['Tipo\tNúmero de Série\tEmpresa\tData de Entrada\tData de Saída\tStatus'];
-    const excelContent = [
-      headers.join(''),
-      ...filteredData.map(equipment => {
-        return [
-          equipment.tipo,
-          equipment.numero_serie,
-          equipment.empresas?.name || 'N/A',
-          new Date(equipment.data_entrada).toLocaleDateString('pt-BR'),
-          equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-',
-          equipment.data_saida ? 'Retirado' : 'Em Estoque'
-        ].join('\t');
-      })
-    ].join('\n');
-
-    const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio_equipamentos_${new Date().toISOString().split('T')[0]}.xls`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Sucesso",
-      description: "Relatório Excel gerado com sucesso!",
-    });
-  };
-
-  const filteredEquipments = getFilteredEquipments();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando...</div>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-      
-      {/* Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Filtros do Relatório
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="companySelect">Empresa</Label>
-              <Select value={filters.companyId || 'all'} onValueChange={(value) => setFilters({...filters, companyId: value === 'all' ? '' : value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as empresas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as empresas</SelectItem>
-                  {companies.map(company => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="startDate">Data Inicial</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="endDate">Data Final</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="statusSelect">Status</Label>
-              <Select value={filters.status || 'all'} onValueChange={(value) => setFilters({...filters, status: value === 'all' ? 'all' : value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="in-stock">Em Estoque</SelectItem>
-                  <SelectItem value="out-of-stock">Retirados</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Export Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Exportar Relatório</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={exportToCSV} className="flex items-center gap-2">
-              <FileDown className="h-4 w-4" />
-              Exportar CSV ({filteredEquipments.length} itens)
-            </Button>
-            <Button onClick={exportToExcel} variant="outline" className="flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Exportar Excel ({filteredEquipments.length} itens)
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {currentView !== 'menu' && (
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentView('menu')}
+              className="mb-4"
+            >
+              ← Voltar ao Menu
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Prévia do Relatório ({filteredEquipments.length} equipamentos)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Tipo</th>
-                  <th className="text-left p-2">Série</th>
-                  <th className="text-left p-2">Empresa</th>
-                  <th className="text-left p-2">Entrada</th>
-                  <th className="text-left p-2">Saída</th>
-                  <th className="text-left p-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEquipments.slice(0, 10).map(equipment => (
-                  <tr key={equipment.id} className="border-b hover:bg-gray-50">
-                    <td className="p-2">{equipment.tipo}</td>
-                    <td className="p-2 font-mono">{equipment.numero_serie}</td>
-                    <td className="p-2">{equipment.empresas?.name || 'N/A'}</td>
-                    <td className="p-2">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
-                    <td className="p-2">
-                      {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
-                    </td>
-                    <td className="p-2">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        equipment.data_saida 
-                          ? 'bg-gray-100 text-gray-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {equipment.data_saida ? 'Retirado' : 'Em Estoque'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredEquipments.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Nenhum equipamento encontrado com os filtros selecionados
-              </div>
-            )}
-            {filteredEquipments.length > 10 && (
-              <div className="text-center py-4 text-gray-500 text-sm">
-                Mostrando primeiros 10 de {filteredEquipments.length} equipamentos. Use a exportação para ver todos.
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        )}
+        {renderContent()}
+      </div>
     </div>
   );
 };

@@ -4,79 +4,83 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Save, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface Company {
+  id: string;
+  name: string;
+}
 
 interface FleetData {
-  id: string;
-  cod_operadora: string;
   nome_empresa: string;
+  cod_operadora: string;
+  mes_referencia: string;
   simples_com_imagem: number;
   simples_sem_imagem: number;
   secao: number;
-  total: number;
-  nuvem: number;
   citgis: number;
   buszoom: number;
-  mes_referencia: string;
+  nuvem: number;
 }
 
-interface FleetFormProps {
-  fleet?: FleetData | null;
-  onSave: () => void;
-  onCancel: () => void;
-}
-
-const FleetForm: React.FC<FleetFormProps> = ({
-  fleet,
-  onSave,
-  onCancel
-}) => {
-  const [formData, setFormData] = useState({
-    cod_operadora: '',
+const FleetForm = () => {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [formData, setFormData] = useState<FleetData>({
     nome_empresa: '',
+    cod_operadora: '',
+    mes_referencia: new Date().toISOString().substring(0, 7), // YYYY-MM format
     simples_com_imagem: 0,
     simples_sem_imagem: 0,
     secao: 0,
-    total: 0,
-    nuvem: 0,
     citgis: 0,
     buszoom: 0,
-    mes_referencia: ''
+    nuvem: 0
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (fleet) {
-      setFormData({
-        cod_operadora: fleet.cod_operadora,
-        nome_empresa: fleet.nome_empresa,
-        simples_com_imagem: fleet.simples_com_imagem || 0,
-        simples_sem_imagem: fleet.simples_sem_imagem || 0,
-        secao: fleet.secao || 0,
-        total: fleet.total || 0,
-        nuvem: fleet.nuvem || 0,
-        citgis: fleet.citgis || 0,
-        buszoom: fleet.buszoom || 0,
-        mes_referencia: fleet.mes_referencia
-      });
-    } else {
-      const today = new Date().toISOString().split('T')[0];
-      setFormData(prev => ({ ...prev, mes_referencia: today }));
-    }
-  }, [fleet]);
+    loadCompanies();
+  }, []);
 
-  useEffect(() => {
-    // Calcular total automaticamente
-    const total = formData.simples_com_imagem + formData.simples_sem_imagem + formData.secao;
-    setFormData(prev => ({ ...prev, total }));
-  }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao]);
+  const loadCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar empresas",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInputChange = (field: keyof FleetData, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const calculateTotal = () => {
+    return formData.simples_com_imagem + 
+           formData.simples_sem_imagem + 
+           formData.secao + 
+           formData.citgis + 
+           formData.buszoom + 
+           formData.nuvem;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.cod_operadora || !formData.nome_empresa || !formData.mes_referencia) {
+
+    if (!formData.nome_empresa || !formData.cod_operadora || !formData.mes_referencia) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -88,50 +92,68 @@ const FleetForm: React.FC<FleetFormProps> = ({
     setLoading(true);
 
     try {
+      const total = calculateTotal();
+      
       const fleetData = {
-        cod_operadora: formData.cod_operadora,
-        nome_empresa: formData.nome_empresa,
-        simples_com_imagem: formData.simples_com_imagem,
-        simples_sem_imagem: formData.simples_sem_imagem,
-        secao: formData.secao,
-        total: formData.total,
-        nuvem: formData.nuvem,
-        citgis: formData.citgis,
-        buszoom: formData.buszoom,
-        mes_referencia: formData.mes_referencia
+        ...formData,
+        total,
+        mes_referencia: formData.mes_referencia + '-01' // Converter para formato DATE
       };
 
-      if (fleet) {
-        const { error } = await supabase
+      // Verificar se já existe registro para a empresa e mês
+      const { data: existing, error: checkError } = await supabase
+        .from('frota')
+        .select('id')
+        .eq('nome_empresa', formData.nome_empresa)
+        .eq('mes_referencia', fleetData.mes_referencia);
+
+      if (checkError) throw checkError;
+
+      if (existing && existing.length > 0) {
+        // Atualizar registro existente
+        const { error: updateError } = await supabase
           .from('frota')
           .update(fleetData)
-          .eq('id', fleet.id);
+          .eq('id', existing[0].id);
 
-        if (error) throw error;
+        if (updateError) throw updateError;
 
         toast({
           title: "Sucesso",
-          description: "Registro da frota atualizado com sucesso!",
+          description: "Dados da frota atualizados com sucesso!",
         });
       } else {
-        const { error } = await supabase
+        // Criar novo registro
+        const { error: insertError } = await supabase
           .from('frota')
           .insert([fleetData]);
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
         toast({
           title: "Sucesso",
-          description: "Registro da frota cadastrado com sucesso!",
+          description: "Dados da frota salvos com sucesso!",
         });
       }
 
-      onSave();
+      // Resetar formulário
+      setFormData({
+        nome_empresa: '',
+        cod_operadora: '',
+        mes_referencia: new Date().toISOString().substring(0, 7),
+        simples_com_imagem: 0,
+        simples_sem_imagem: 0,
+        secao: 0,
+        citgis: 0,
+        buszoom: 0,
+        nuvem: 0
+      });
+
     } catch (error) {
       console.error('Error saving fleet data:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar registro da frota",
+        description: "Erro ao salvar dados da frota",
         variant: "destructive",
       });
     } finally {
@@ -139,19 +161,11 @@ const FleetForm: React.FC<FleetFormProps> = ({
     }
   };
 
-  const handleChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onCancel}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
-        </Button>
         <h1 className="text-2xl font-bold text-gray-900">
-          {fleet ? 'Editar Registro da Frota' : 'Novo Registro da Frota'}
+          Cadastro de Frota
         </h1>
       </div>
 
@@ -161,26 +175,58 @@ const FleetForm: React.FC<FleetFormProps> = ({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="empresa">Empresa *</Label>
+                <Select 
+                  value={formData.nome_empresa} 
+                  onValueChange={(value) => handleInputChange('nome_empresa', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map(company => (
+                      <SelectItem key={company.id} value={company.name}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="cod_operadora">Código da Operadora *</Label>
                 <Input
                   id="cod_operadora"
-                  placeholder="Ex: 001"
+                  placeholder="Ex: OP001"
                   value={formData.cod_operadora}
-                  onChange={(e) => handleChange('cod_operadora', e.target.value)}
+                  onChange={(e) => handleInputChange('cod_operadora', e.target.value)}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="nome_empresa">Nome da Empresa *</Label>
+                <Label htmlFor="mes_referencia">Mês de Referência *</Label>
                 <Input
-                  id="nome_empresa"
-                  placeholder="Ex: Empresa ABC"
-                  value={formData.nome_empresa}
-                  onChange={(e) => handleChange('nome_empresa', e.target.value)}
+                  id="mes_referencia"
+                  type="month"
+                  value={formData.mes_referencia}
+                  onChange={(e) => handleInputChange('mes_referencia', e.target.value)}
                   required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
+                <Input
+                  id="simples_com_imagem"
+                  type="number"
+                  min="0"
+                  value={formData.simples_com_imagem}
+                  onChange={(e) => handleInputChange('simples_com_imagem', parseInt(e.target.value) || 0)}
                 />
               </div>
 
@@ -191,18 +237,7 @@ const FleetForm: React.FC<FleetFormProps> = ({
                   type="number"
                   min="0"
                   value={formData.simples_sem_imagem}
-                  onChange={(e) => handleChange('simples_sem_imagem', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
-                <Input
-                  id="simples_com_imagem"
-                  type="number"
-                  min="0"
-                  value={formData.simples_com_imagem}
-                  onChange={(e) => handleChange('simples_com_imagem', parseInt(e.target.value) || 0)}
+                  onChange={(e) => handleInputChange('simples_sem_imagem', parseInt(e.target.value) || 0)}
                 />
               </div>
 
@@ -213,72 +248,67 @@ const FleetForm: React.FC<FleetFormProps> = ({
                   type="number"
                   min="0"
                   value={formData.secao}
-                  onChange={(e) => handleChange('secao', parseInt(e.target.value) || 0)}
+                  onChange={(e) => handleInputChange('secao', parseInt(e.target.value) || 0)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="total">Total (Calculado)</Label>
-                <Input
-                  id="total"
-                  type="number"
-                  value={formData.total}
-                  disabled
-                  className="bg-gray-100"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nuvem">Nuvem</Label>
-                <Input
-                  id="nuvem"
-                  type="number"
-                  min="0"
-                  value={formData.nuvem}
-                  onChange={(e) => handleChange('nuvem', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="citgis">CitGis</Label>
+                <Label htmlFor="citgis">CITGIS</Label>
                 <Input
                   id="citgis"
                   type="number"
                   min="0"
                   value={formData.citgis}
-                  onChange={(e) => handleChange('citgis', parseInt(e.target.value) || 0)}
+                  onChange={(e) => handleInputChange('citgis', parseInt(e.target.value) || 0)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="buszoom">BusZoom</Label>
+                <Label htmlFor="buszoom">BUSZOOM</Label>
                 <Input
                   id="buszoom"
                   type="number"
                   min="0"
                   value={formData.buszoom}
-                  onChange={(e) => handleChange('buszoom', parseInt(e.target.value) || 0)}
+                  onChange={(e) => handleInputChange('buszoom', parseInt(e.target.value) || 0)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="mes_referencia">Mês de Referência *</Label>
+                <Label htmlFor="nuvem">Telemetria</Label>
                 <Input
-                  id="mes_referencia"
-                  type="date"
-                  value={formData.mes_referencia}
-                  onChange={(e) => handleChange('mes_referencia', e.target.value)}
-                  required
+                  id="nuvem"
+                  type="number"
+                  min="0"
+                  value={formData.nuvem}
+                  onChange={(e) => handleInputChange('nuvem', parseInt(e.target.value) || 0)}
                 />
               </div>
             </div>
 
+            <div className="bg-blue-50 p-4 rounded">
+              <div className="text-lg font-semibold text-blue-800">
+                Total da Frota: {calculateTotal()}
+              </div>
+              <div className="text-sm text-blue-600 mt-1">
+                Soma automática de todos os tipos de sistema
+              </div>
+            </div>
+
             <div className="flex gap-4 pt-4">
-              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
-                {loading ? 'Salvando...' : (fleet ? 'Atualizar' : 'Cadastrar')} Registro
-              </Button>
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancelar
+              <Button 
+                type="submit" 
+                className="bg-primary hover:bg-primary/90 flex items-center gap-2" 
+                disabled={loading}
+              >
+                {loading ? (
+                  'Salvando...'
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Salvar Frota
+                  </>
+                )}
               </Button>
             </div>
           </form>

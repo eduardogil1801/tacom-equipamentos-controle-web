@@ -6,173 +6,145 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Plus, Minus } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Plus, X, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Equipment {
   id: string;
-  tipo: string;
-  modelo?: string;
   numero_serie: string;
-  data_entrada: string;
-  data_saida?: string;
-  id_empresa: string;
-  estado?: string;
-  status?: string;
-  empresas?: {
+  tipo: string;
+  status: string;
+  empresas: {
     name: string;
-    estado?: string;
   };
 }
 
-interface Company {
+interface MaintenanceType {
   id: string;
-  name: string;
-  estado?: string;
+  codigo: string;
+  descricao: string;
 }
 
-interface MovementFormProps {
+interface EquipmentMovementProps {
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-const EquipmentMovement: React.FC<MovementFormProps> = ({ onCancel, onSuccess }) => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [serialNumbers, setSerialNumbers] = useState<string[]>(['']);
+const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
+  const [isMultiple, setIsMultiple] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
-  const [formData, setFormData] = useState({
-    id_empresa: '',
-    estado: '',
-    status: 'em_uso',
-    data_entrada: '',
-    data_saida: '',
-    tipo: ''
-  });
-  const [isInStock, setIsInStock] = useState(true);
+  const [searchSerial, setSearchSerial] = useState('');
+  const [searchResults, setSearchResults] = useState<Equipment[]>([]);
+  const [movementType, setMovementType] = useState('');
+  const [movementDate, setMovementDate] = useState(new Date().toISOString().split('T')[0]);
+  const [observations, setObservations] = useState('');
+  const [maintenanceTypeId, setMaintenanceTypeId] = useState('');
+  const [maintenanceDetails, setMaintenanceDetails] = useState('');
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [multipleSeries, setMultipleSeries] = useState(false);
-
-  const estados = ['Rio Grande do Sul', 'Santa Catarina', 'Minas Gerais'];
-  const statusOptions = [
-    'disponivel',
-    'recuperados',
-    'aguardando_despacho_contagem',
-    'enviados_manutencao_contagem',
-    'aguardando_manutencao',
-    'em_uso',
-    'danificado'
-  ];
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
-    loadCompanies();
-    const today = new Date().toISOString().split('T')[0];
-    setFormData(prev => ({ ...prev, data_entrada: today }));
+    loadMaintenanceTypes();
   }, []);
 
-  const loadCompanies = async () => {
+  useEffect(() => {
+    if (searchSerial.length >= 3) {
+      searchEquipments();
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchSerial]);
+
+  const loadMaintenanceTypes = async () => {
     try {
       const { data, error } = await supabase
-        .from('empresas')
+        .from('tipos_manutencao')
         .select('*')
-        .order('name');
+        .eq('ativo', true)
+        .order('codigo');
 
       if (error) throw error;
-      setCompanies(data || []);
+      setMaintenanceTypes(data || []);
     } catch (error) {
-      console.error('Error loading companies:', error);
+      console.error('Error loading maintenance types:', error);
+    }
+  };
+
+  const searchEquipments = async () => {
+    try {
+      setSearchLoading(true);
+      const { data, error } = await supabase
+        .from('equipamentos')
+        .select(`
+          id,
+          numero_serie,
+          tipo,
+          status,
+          empresas (
+            name
+          )
+        `)
+        .ilike('numero_serie', `%${searchSerial}%`)
+        .limit(10);
+
+      if (error) throw error;
+      
+      // Filtrar equipamentos já selecionados
+      const filtered = (data || []).filter(eq => 
+        !selectedEquipments.some(selected => selected.id === eq.id)
+      );
+      
+      setSearchResults(filtered);
+    } catch (error) {
+      console.error('Error searching equipments:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar empresas",
+        description: "Erro ao buscar equipamentos",
         variant: "destructive",
       });
+    } finally {
+      setSearchLoading(false);
     }
   };
 
-  const handleSerialNumberChange = async (index: number, value: string) => {
-    const newSerialNumbers = [...serialNumbers];
-    newSerialNumbers[index] = value;
-    setSerialNumbers(newSerialNumbers);
-
-    if (value.length > 0) {
-      try {
-        const { data: equipments, error } = await supabase
-          .from('equipamentos')
-          .select(`
-            *,
-            empresas (
-              name,
-              estado
-            )
-          `)
-          .eq('numero_serie', value);
-
-        if (error) throw error;
-
-        if (equipments && equipments.length > 0) {
-          setSelectedEquipments(equipments);
-          
-          // Se há mais de um equipamento com o mesmo número de série, não preenche automaticamente o tipo
-          if (equipments.length === 1) {
-            setFormData(prev => ({ ...prev, tipo: equipments[0].tipo }));
-          } else {
-            setFormData(prev => ({ ...prev, tipo: '' }));
-          }
-        } else {
-          setSelectedEquipments([]);
-          setFormData(prev => ({ ...prev, tipo: '' }));
-        }
-      } catch (error) {
-        console.error('Error searching equipment:', error);
-      }
-    }
+  const addEquipment = (equipment: Equipment) => {
+    setSelectedEquipments([...selectedEquipments, equipment]);
+    setSearchSerial('');
+    setSearchResults([]);
   };
 
-  const handleCompanyChange = (companyId: string) => {
-    const selectedCompany = companies.find(c => c.id === companyId);
-    setFormData(prev => ({
-      ...prev,
-      id_empresa: companyId,
-      estado: selectedCompany?.estado || '',
-      status: isCompanyTacom(selectedCompany?.name) ? prev.status : 'em_uso'
-    }));
-  };
-
-  const isCompanyTacom = (companyName?: string) => {
-    if (!companyName) return false;
-    return companyName.toLowerCase().includes('tacom projetos sc') || 
-           companyName.toLowerCase().includes('tacom sistemas poa');
-  };
-
-  const addSerialNumber = () => {
-    setSerialNumbers([...serialNumbers, '']);
-  };
-
-  const removeSerialNumber = (index: number) => {
-    if (serialNumbers.length > 1) {
-      const newSerialNumbers = serialNumbers.filter((_, i) => i !== index);
-      setSerialNumbers(newSerialNumbers);
-    }
+  const removeEquipment = (equipmentId: string) => {
+    setSelectedEquipments(selectedEquipments.filter(eq => eq.id !== equipmentId));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const validSerialNumbers = serialNumbers.filter(s => s.trim().length > 0);
-    
-    if (validSerialNumbers.length === 0 || !formData.id_empresa || !formData.estado || !formData.data_entrada) {
+
+    if (selectedEquipments.length === 0) {
       toast({
         title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
+        description: "Selecione pelo menos um equipamento",
         variant: "destructive",
       });
       return;
     }
 
-    if (!isInStock && formData.data_saida && new Date(formData.data_saida) < new Date(formData.data_entrada)) {
+    if (!movementType) {
       toast({
         title: "Erro",
-        description: "A data de saída não pode ser anterior à data de entrada.",
+        description: "Selecione o tipo de movimentação",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (movementType === 'manutencao' && !maintenanceTypeId) {
+      toast({
+        title: "Erro",
+        description: "Selecione o tipo de manutenção",
         variant: "destructive",
       });
       return;
@@ -181,77 +153,71 @@ const EquipmentMovement: React.FC<MovementFormProps> = ({ onCancel, onSuccess })
     setLoading(true);
 
     try {
-      for (const numeroSerie of validSerialNumbers) {
-        // Verificar se o equipamento existe
-        const { data: existingEquipment } = await supabase
+      // Criar movimentações para cada equipamento
+      const movements = selectedEquipments.map(equipment => ({
+        id_equipamento: equipment.id,
+        tipo_movimento: movementType,
+        data_movimento: movementDate,
+        observacoes: observations,
+        tipo_manutencao_id: movementType === 'manutencao' ? maintenanceTypeId : null,
+        detalhes_manutencao: movementType === 'manutencao' ? maintenanceDetails : null,
+        usuario_responsavel: 'Sistema' // Pode ser alterado quando houver autenticação
+      }));
+
+      const { error: movementError } = await supabase
+        .from('movimentacoes')
+        .insert(movements);
+
+      if (movementError) throw movementError;
+
+      // Atualizar status dos equipamentos se necessário
+      if (movementType === 'manutencao') {
+        const { error: updateError } = await supabase
           .from('equipamentos')
-          .select('*')
-          .eq('numero_serie', numeroSerie)
-          .single();
+          .update({ 
+            em_manutencao: true,
+            status: 'aguardando_manutencao'
+          })
+          .in('id', selectedEquipments.map(eq => eq.id));
 
-        if (existingEquipment) {
-          // Atualizar equipamento existente
-          const updateData = {
-            id_empresa: formData.id_empresa,
-            estado: formData.estado,
-            status: formData.status,
-            data_saida: isInStock ? null : formData.data_saida || null,
-          };
+        if (updateError) throw updateError;
+      } else if (movementType === 'retorno_manutencao') {
+        const { error: updateError } = await supabase
+          .from('equipamentos')
+          .update({ 
+            em_manutencao: false,
+            status: 'disponivel'
+          })
+          .in('id', selectedEquipments.map(eq => eq.id));
 
-          const { error } = await supabase
-            .from('equipamentos')
-            .update(updateData)
-            .eq('numero_serie', numeroSerie);
-
-          if (error) throw error;
-
-          // Registrar movimentação
-          await supabase
-            .from('movimentacoes')
-            .insert({
-              id_equipamento: existingEquipment.id,
-              tipo_movimento: isInStock ? 'entrada' : 'saida',
-              data_movimento: isInStock ? formData.data_entrada : formData.data_saida,
-              observacoes: `Movimentação - ${isInStock ? 'Entrada' : 'Saída'} de equipamento`
-            });
-        } else {
-          // Criar novo equipamento
-          const equipmentData = {
-            tipo: formData.tipo,
-            numero_serie: numeroSerie,
-            data_entrada: formData.data_entrada,
-            data_saida: isInStock ? null : formData.data_saida || null,
-            id_empresa: formData.id_empresa,
-            estado: formData.estado,
-            status: formData.status
-          };
-
-          const { error } = await supabase
-            .from('equipamentos')
-            .insert([equipmentData]);
-
-          if (error) throw error;
-        }
+        if (updateError) throw updateError;
       }
 
       toast({
         title: "Sucesso",
-        description: `${validSerialNumbers.length} equipamento(s) movimentado(s) com sucesso!`,
+        description: `Movimentação registrada para ${selectedEquipments.length} equipamento(s)!`,
       });
 
-      // Manter dados do formulário, exceto números de série
-      setSerialNumbers(['']);
-      setSelectedEquipments([]);
       onSuccess();
     } catch (error) {
-      console.error('Error moving equipment:', error);
+      console.error('Error saving movement:', error);
       toast({
         title: "Erro",
-        description: "Erro ao movimentar equipamento(s)",
+        description: "Erro ao registrar movimentação",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getMovementTypeLabel = (type: string) => {
+    switch (type) {
+      case 'entrada': return 'Entrada';
+      case 'saida': return 'Saída';
+      case 'manutencao': return 'Envio para Manutenção';
+      case 'retorno_manutencao': return 'Retorno da Manutenção';
+      default: return type;
     }
   };
 
@@ -262,200 +228,205 @@ const EquipmentMovement: React.FC<MovementFormProps> = ({ onCancel, onSuccess })
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Movimentação de Equipamentos</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Movimentação de Equipamentos
+        </h1>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Configurações da Movimentação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="multiple"
+              checked={isMultiple}
+              onCheckedChange={(checked) => setIsMultiple(checked as boolean)}
+            />
+            <Label htmlFor="multiple">Movimentar múltiplos equipamentos</Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Seleção de Equipamentos */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {isMultiple ? 'Buscar e Selecionar Equipamentos' : 'Selecionar Equipamento'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Busca por número de série */}
+          <div className="space-y-2">
+            <Label htmlFor="search">Buscar por Número de Série</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                id="search"
+                placeholder="Digite pelo menos 3 caracteres..."
+                value={searchSerial}
+                onChange={(e) => setSearchSerial(e.target.value)}
+                className="pl-10"
+              />
+              {searchLoading && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Resultados da busca */}
+          {searchResults.length > 0 && (
+            <div className="space-y-2">
+              <Label>Resultados da Busca</Label>
+              <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
+                {searchResults.map(equipment => (
+                  <div key={equipment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex-1">
+                      <div className="font-mono text-sm">{equipment.numero_serie}</div>
+                      <div className="text-xs text-gray-600">
+                        {equipment.tipo} - {equipment.empresas?.name}
+                      </div>
+                      <div className="text-xs">
+                        <span className={`px-2 py-1 rounded ${
+                          equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
+                          equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {equipment.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => addEquipment(equipment)}
+                      disabled={!isMultiple && selectedEquipments.length >= 1}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Equipamentos selecionados */}
+          {selectedEquipments.length > 0 && (
+            <div className="space-y-2">
+              <Label>Equipamentos Selecionados ({selectedEquipments.length})</Label>
+              <div className="space-y-2">
+                {selectedEquipments.map(equipment => (
+                  <div key={equipment.id} className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                    <div className="flex-1">
+                      <div className="font-mono text-sm">{equipment.numero_serie}</div>
+                      <div className="text-xs text-gray-600">
+                        {equipment.tipo} - {equipment.empresas?.name}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeEquipment(equipment.id)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dados da Movimentação */}
       <Card>
         <CardHeader>
           <CardTitle>Dados da Movimentação</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="multipleSeries"
-                  checked={multipleSeries}
-                  onCheckedChange={(checked) => {
-                    setMultipleSeries(checked as boolean);
-                    if (!checked) {
-                      setSerialNumbers(['']);
-                    }
-                  }}
-                />
-                <Label htmlFor="multipleSeries" className="text-sm font-normal">
-                  Movimentar múltiplos equipamentos
-                </Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="movementType">Tipo de Movimentação *</Label>
+                <Select value={movementType} onValueChange={setMovementType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entrada">Entrada</SelectItem>
+                    <SelectItem value="saida">Saída</SelectItem>
+                    <SelectItem value="manutencao">Envio para Manutenção</SelectItem>
+                    <SelectItem value="retorno_manutencao">Retorno da Manutenção</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>Números de Série *</Label>
-                {serialNumbers.map((serial, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Ex: ABC123456"
-                      value={serial}
-                      onChange={(e) => handleSerialNumberChange(index, e.target.value)}
-                      required
-                    />
-                    {multipleSeries && (
-                      <div className="flex gap-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm"
-                          onClick={addSerialNumber}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        {serialNumbers.length > 1 && (
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => removeSerialNumber(index)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {selectedEquipments.length > 1 && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <p className="text-sm text-yellow-800">
-                    Encontrados {selectedEquipments.length} equipamentos com este número de série em empresas diferentes:
-                  </p>
-                  <ul className="text-sm text-yellow-700 mt-1">
-                    {selectedEquipments.map((eq, idx) => (
-                      <li key={idx}>• {eq.empresas?.name} - {eq.tipo}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tipo">Tipo de Equipamento *</Label>
-                  <Input
-                    id="tipo"
-                    placeholder="Ex: CCIT 5.0"
-                    value={formData.tipo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa *</Label>
-                  <Select value={formData.id_empresa} onValueChange={handleCompanyChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma empresa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map(company => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado *</Label>
-                  <Select value={formData.estado} onValueChange={(value) => setFormData(prev => ({ ...prev, estado: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {estados.map(estado => (
-                        <SelectItem key={estado} value={estado}>
-                          {estado}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status *</Label>
-                  <Select 
-                    value={formData.status} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                    disabled={!isCompanyTacom(companies.find(c => c.id === formData.id_empresa)?.name)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map(status => (
-                        <SelectItem key={status} value={status}>
-                          {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="data_entrada">Data de Entrada *</Label>
-                  <Input
-                    id="data_entrada"
-                    type="date"
-                    value={formData.data_entrada}
-                    onChange={(e) => setFormData(prev => ({ ...prev, data_entrada: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="col-span-full space-y-3">
-                  <Label>Status do Equipamento *</Label>
-                  <div className="flex gap-6">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="inStock"
-                        checked={isInStock}
-                        onCheckedChange={(checked) => setIsInStock(checked as boolean)}
-                      />
-                      <Label htmlFor="inStock" className="text-sm font-normal">
-                        Em Estoque
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="outOfStock"
-                        checked={!isInStock}
-                        onCheckedChange={(checked) => setIsInStock(!(checked as boolean))}
-                      />
-                      <Label htmlFor="outOfStock" className="text-sm font-normal">
-                        Fora de Estoque
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                {!isInStock && (
-                  <div className="space-y-2">
-                    <Label htmlFor="data_saida">Data de Saída *</Label>
-                    <Input
-                      id="data_saida"
-                      type="date"
-                      value={formData.data_saida}
-                      onChange={(e) => setFormData(prev => ({ ...prev, data_saida: e.target.value }))}
-                      required={!isInStock}
-                    />
-                  </div>
-                )}
+                <Label htmlFor="movementDate">Data da Movimentação *</Label>
+                <Input
+                  id="movementDate"
+                  type="date"
+                  value={movementDate}
+                  onChange={(e) => setMovementDate(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
+            {/* Campos específicos para manutenção */}
+            {movementType === 'manutencao' && (
+              <div className="space-y-4 p-4 bg-yellow-50 rounded">
+                <h3 className="font-medium text-yellow-800">Informações de Manutenção</h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="maintenanceType">Tipo de Manutenção *</Label>
+                  <Select value={maintenanceTypeId} onValueChange={setMaintenanceTypeId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de manutenção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {maintenanceTypes.map(type => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.codigo} - {type.descricao}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="maintenanceDetails">Detalhes da Manutenção</Label>
+                  <Textarea
+                    id="maintenanceDetails"
+                    placeholder="Descreva detalhes adicionais sobre a manutenção..."
+                    value={maintenanceDetails}
+                    onChange={(e) => setMaintenanceDetails(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="observations">Observações</Label>
+              <Textarea
+                id="observations"
+                placeholder="Observações adicionais sobre a movimentação..."
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                rows={3}
+              />
+            </div>
+
             <div className="flex gap-4 pt-4">
-              <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
-                {loading ? 'Movimentando...' : 'Registrar Movimentação'}
+              <Button 
+                type="submit" 
+                className="bg-primary hover:bg-primary/90" 
+                disabled={loading || selectedEquipments.length === 0}
+              >
+                {loading ? 'Registrando...' : 'Registrar Movimentação'}
               </Button>
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancelar

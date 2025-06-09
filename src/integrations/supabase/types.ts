@@ -78,6 +78,7 @@ export type Database = {
           at_update: string
           data_entrada: string
           data_saida: string | null
+          em_manutencao: boolean | null
           estado: string | null
           id: string
           id_empresa: string
@@ -91,6 +92,7 @@ export type Database = {
           at_update?: string
           data_entrada: string
           data_saida?: string | null
+          em_manutencao?: boolean | null
           estado?: string | null
           id?: string
           id_empresa: string
@@ -104,6 +106,7 @@ export type Database = {
           at_update?: string
           data_entrada?: string
           data_saida?: string | null
+          em_manutencao?: boolean | null
           estado?: string | null
           id?: string
           id_empresa?: string
@@ -201,27 +204,33 @@ export type Database = {
         Row: {
           data_criacao: string | null
           data_movimento: string
+          detalhes_manutencao: string | null
           id: string
           id_equipamento: string | null
           observacoes: string | null
+          tipo_manutencao_id: string | null
           tipo_movimento: string
           usuario_responsavel: string | null
         }
         Insert: {
           data_criacao?: string | null
           data_movimento: string
+          detalhes_manutencao?: string | null
           id?: string
           id_equipamento?: string | null
           observacoes?: string | null
+          tipo_manutencao_id?: string | null
           tipo_movimento: string
           usuario_responsavel?: string | null
         }
         Update: {
           data_criacao?: string | null
           data_movimento?: string
+          detalhes_manutencao?: string | null
           id?: string
           id_equipamento?: string | null
           observacoes?: string | null
+          tipo_manutencao_id?: string | null
           tipo_movimento?: string
           usuario_responsavel?: string | null
         }
@@ -233,7 +242,38 @@ export type Database = {
             referencedRelation: "equipamentos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "movimentacoes_tipo_manutencao_id_fkey"
+            columns: ["tipo_manutencao_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_manutencao"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      tipos_manutencao: {
+        Row: {
+          ativo: boolean | null
+          codigo: string
+          created_at: string
+          descricao: string
+          id: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo: string
+          created_at?: string
+          descricao: string
+          id?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+        }
+        Relationships: []
       }
       usuarios: {
         Row: {
