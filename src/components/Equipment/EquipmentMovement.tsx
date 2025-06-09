@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,12 +78,12 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         eq.numero_serie.toLowerCase().includes(formData.numero_serie.toLowerCase())
       );
       setFilteredEquipments(filtered);
-      setShowEquipmentList(filtered.length > 0);
+      setShowEquipmentList(filtered.length > 0 && multipleEquipments);
     } else {
       setFilteredEquipments([]);
       setShowEquipmentList(false);
     }
-  }, [formData.numero_serie, equipments]);
+  }, [formData.numero_serie, equipments, multipleEquipments]);
 
   useEffect(() => {
     if (formData.id_empresa) {
@@ -168,6 +168,71 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       modelo: equipment.modelo || ''
     }));
     setShowEquipmentList(false);
+  };
+
+  const handleApplyMovement = async () => {
+    if (!formData.tipo_movimento) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione o tipo de movimento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (multipleEquipments && formData.selectedEquipments.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione pelo menos um equipamento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const equipmentIds = multipleEquipments 
+        ? formData.selectedEquipments 
+        : [filteredEquipments.find(eq => eq.numero_serie === formData.numero_serie)?.id].filter(Boolean);
+
+      if (equipmentIds.length === 0) {
+        throw new Error('Nenhum equipamento encontrado para movimentação');
+      }
+
+      // Registrar movimentações
+      const movimentacoes = equipmentIds.map(equipmentId => ({
+        id_equipamento: equipmentId,
+        tipo_movimento: formData.tipo_movimento,
+        data_movimento: new Date().toISOString().split('T')[0],
+        observacoes: formData.observacoes || null,
+        usuario_responsavel: `${user?.name} ${user?.surname}`,
+        tipo_manutencao_id: formData.tipo_manutencao_id || null,
+        detalhes_manutencao: formData.detalhes_manutencao || null
+      }));
+
+      const { error: movementError } = await supabase
+        .from('movimentacoes')
+        .insert(movimentacoes);
+
+      if (movementError) throw movementError;
+
+      toast({
+        title: "Sucesso",
+        description: `Movimentação registrada para ${equipmentIds.length} equipamento(s)!`,
+      });
+
+      onSuccess();
+    } catch (error) {
+      console.error('Erro ao registrar movimentação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao registrar movimentação",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -272,38 +337,25 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
             </div>
 
             {/* Lista de equipamentos para seleção */}
-            {showEquipmentList && (
+            {showEquipmentList && multipleEquipments && (
               <Card className="max-h-60 overflow-y-auto">
                 <CardContent className="p-4">
                   <Label className="text-sm font-medium mb-3 block">
-                    {multipleEquipments ? 'Selecione os equipamentos:' : 'Selecione um equipamento:'}
+                    Selecione os equipamentos:
                   </Label>
                   <div className="space-y-2">
                     {filteredEquipments.map(equipment => (
-                      <div key={equipment.id} className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
-                        {multipleEquipments ? (
-                          <Checkbox
-                            id={equipment.id}
-                            checked={formData.selectedEquipments.includes(equipment.id)}
-                            onCheckedChange={(checked) => handleEquipmentToggle(equipment.id, checked === true)}
-                          />
-                        ) : (
-                          <div 
-                            className="flex-1 cursor-pointer"
-                            onClick={() => handleEquipmentSelect(equipment)}
-                          >
-                            <p className="font-medium">{equipment.numero_serie}</p>
-                            <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
-                            <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
-                          </div>
-                        )}
-                        {multipleEquipments && (
-                          <div className="flex-1">
-                            <p className="font-medium">{equipment.numero_serie}</p>
-                            <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
-                            <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
-                          </div>
-                        )}
+                      <div key={equipment.id} className="flex items-center space-x-3 p-3 border rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={equipment.id}
+                          checked={formData.selectedEquipments.includes(equipment.id)}
+                          onCheckedChange={(checked) => handleEquipmentToggle(equipment.id, checked === true)}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium">{equipment.numero_serie}</p>
+                          <p className="text-sm text-gray-600">{equipment.tipo} - {equipment.modelo}</p>
+                          <p className="text-xs text-gray-500">{equipment.empresas?.name}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -437,10 +489,39 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               </Select>
             </div>
 
+            {/* Campo de Observação - aparece quando seleciona tipo de movimento */}
+            {formData.tipo_movimento && (
+              <div className="space-y-2">
+                <Label htmlFor="observacoes">Observações</Label>
+                <Textarea
+                  id="observacoes"
+                  placeholder="Digite as observações sobre a movimentação..."
+                  value={formData.observacoes}
+                  onChange={(e) => handleChange('observacoes', e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
+
             <div className="flex gap-4 pt-4">
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading}>
                 {loading ? 'Salvando...' : 'Salvar Equipamento'}
               </Button>
+              
+              {/* Botão para aplicar movimentação */}
+              {formData.tipo_movimento && (multipleEquipments ? formData.selectedEquipments.length > 0 : formData.numero_serie) && (
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={handleApplyMovement}
+                  disabled={loading}
+                  className="flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  {loading ? 'Aplicando...' : 'Aplicar Movimentação'}
+                </Button>
+              )}
+              
               <Button type="button" variant="outline" onClick={onCancel}>
                 Cancelar
               </Button>

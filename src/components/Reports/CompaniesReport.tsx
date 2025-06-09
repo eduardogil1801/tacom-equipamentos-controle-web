@@ -4,9 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileDown, Building2, Package, Phone } from 'lucide-react';
+import { FileDown, FileSpreadsheet, Building2, Package, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface CompanyData {
   id: string;
@@ -96,35 +99,64 @@ const CompaniesReport: React.FC = () => {
     }
   };
 
-  const exportToCSV = () => {
-    const headers = ['Nome', 'CNPJ', 'Contato', 'Estado', 'Total Equipamentos', 'Em Estoque', 'Retirados', 'Data Cadastro'];
-    const csvContent = [
-      headers.join(','),
-      ...companies.map(company => [
-        `"${company.name}"`,
-        company.cnpj || '',
-        company.contact || '',
-        company.estado || '',
-        company.equipmentCount,
-        company.inStockCount,
-        company.outOfStockCount,
-        new Date(company.created_at).toLocaleDateString('pt-BR')
-      ].join(','))
-    ].join('\n');
+  const exportToXLSX = () => {
+    const data = companies.map(company => ({
+      'Nome': company.name,
+      'CNPJ': company.cnpj || '',
+      'Contato': company.contact || '',
+      'Estado': company.estado || '',
+      'Total Equipamentos': company.equipmentCount,
+      'Em Estoque': company.inStockCount,
+      'Retirados': company.outOfStockCount,
+      'Data Cadastro': new Date(company.created_at).toLocaleDateString('pt-BR')
+    }));
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio_empresas_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
+    
+    XLSX.writeFile(wb, `relatorio_empresas_${new Date().toISOString().split('T')[0]}.xlsx`);
 
     toast({
       title: "Sucesso",
-      description: "Relatório de empresas exportado com sucesso!",
+      description: "Relatório XLSX exportado com sucesso!",
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Relatório de Empresas', 14, 22);
+    
+    const tableColumn = ["Nome", "CNPJ", "Estado", "Total Eq.", "Em Estoque", "Retirados"];
+    const tableRows: any[] = [];
+
+    companies.forEach(company => {
+      const companyData = [
+        company.name,
+        company.cnpj || '',
+        company.estado || '',
+        company.equipmentCount,
+        company.inStockCount,
+        company.outOfStockCount
+      ];
+      tableRows.push(companyData);
+    });
+
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [220, 38, 38] }
+    });
+
+    doc.save(`relatorio_empresas_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: "Sucesso",
+      description: "Relatório PDF exportado com sucesso!",
     });
   };
 
@@ -144,10 +176,16 @@ const CompaniesReport: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Relatório de Empresas</h1>
-        <Button onClick={exportToCSV} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Exportar CSV ({companies.length} empresas)
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToXLSX} variant="outline" className="flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Exportar XLSX
+          </Button>
+          <Button onClick={exportToPDF} variant="outline" className="flex items-center gap-2">
+            <FileDown className="h-4 w-4" />
+            Exportar PDF
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}

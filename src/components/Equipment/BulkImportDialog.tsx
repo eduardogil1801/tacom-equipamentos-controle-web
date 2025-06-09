@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, Download, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { bulkInsertEquipments } from '@/utils/equipmentBulkInsert';
+import { supabase } from '@/integrations/supabase/client';
+import * as XLSX from 'xlsx';
 
 interface Company {
   id: string;
@@ -23,41 +24,32 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const generateCSVTemplate = () => {
-    const headers = ['Tipo', 'Modelo', 'Série', 'Empresa', 'Estado', 'Status', 'Entrada', 'Saída'];
-    const sampleData = [
-      'CCIT 5.0,H2,ABC123456,Nome da Empresa,Rio Grande do Sul,disponivel,2024-01-15,',
-      'PM (Painel de Motorista),V2000,DEF789012,Nome da Empresa,Santa Catarina,em_uso,2024-01-16,',
-      'UPEX,,GHI345678,Nome da Empresa,Rio Grande do Sul,aguardando_manutencao,2024-01-17,'
+  const generateXLSXTemplate = () => {
+    const data = [
+      { 'Número de Série': 'ABC123456', 'Tipo de Equipamento': 'CCIT 5.0' },
+      { 'Número de Série': 'DEF789012', 'Tipo de Equipamento': 'Terminal' },
+      { 'Número de Série': 'GHI345678', 'Tipo de Equipamento': 'Validador' }
     ];
 
-    const csvContent = [headers.join(','), ...sampleData].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Equipamentos');
     
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'modelo_importacao_equipamentos.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    XLSX.writeFile(wb, 'modelo_importacao_equipamentos.xlsx');
 
     toast({
       title: "Sucesso",
-      description: "Modelo CSV baixado com sucesso!",
+      description: "Modelo XLSX baixado com sucesso!",
     });
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
+      if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
         toast({
           title: "Erro",
-          description: "Por favor, selecione um arquivo CSV válido.",
+          description: "Por favor, selecione um arquivo Excel válido (.xlsx ou .xls).",
           variant: "destructive",
         });
         return;
@@ -66,29 +58,29 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
     }
   };
 
-  const parseCSV = (text: string): any[] => {
-    const lines = text.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
-    const data = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line) {
-        const values = line.split(',').map(v => v.trim());
-        const item: any = {};
-        headers.forEach((header, index) => {
-          item[header] = values[index] || '';
-        });
-        data.push(item);
-      }
-    }
-
-    return data;
+  const parseXLSX = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   const validateData = (data: any[]): string[] => {
     const errors: string[] = [];
-    const requiredFields = ['Tipo', 'Série', 'Empresa', 'Estado', 'Entrada'];
+    const requiredFields = ['Número de Série', 'Tipo de Equipamento'];
 
     data.forEach((item, index) => {
       const row = index + 2; // +2 because index starts at 0 and we skip header
@@ -99,59 +91,54 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
         }
       });
 
-      // Validar se a empresa existe
-      if (item.Empresa) {
-        const companyExists = companies.some(c => c.name === item.Empresa);
-        if (!companyExists) {
-          errors.push(`Linha ${row}: Empresa '${item.Empresa}' não encontrada`);
-        }
-      }
-
-      // Validar data de entrada
-      if (item.Entrada && !Date.parse(item.Entrada)) {
-        errors.push(`Linha ${row}: Data de entrada inválida`);
-      }
-
-      // Validar data de saída se fornecida
-      if (item.Saída && item.Saída !== '' && !Date.parse(item.Saída)) {
-        errors.push(`Linha ${row}: Data de saída inválida`);
-      }
-
-      // Validar se data de saída é posterior à data de entrada
-      if (item.Entrada && item.Saída && item.Saída !== '') {
-        const entryDate = new Date(item.Entrada);
-        const exitDate = new Date(item.Saída);
-        if (exitDate < entryDate) {
-          errors.push(`Linha ${row}: Data de saída não pode ser anterior à data de entrada`);
-        }
+      // Validar se número de série não está vazio
+      if (item['Número de Série'] && typeof item['Número de Série'] !== 'string') {
+        errors.push(`Linha ${row}: Número de série deve ser texto`);
       }
     });
 
     return errors;
   };
 
-  const transformData = (data: any[]) => {
-    return data.map(item => {
-      const company = companies.find(c => c.name === item.Empresa);
+  const transformData = async (data: any[]) => {
+    // Buscar a empresa TACOM Sistema POA
+    const { data: tacomCompany, error } = await supabase
+      .from('empresas')
+      .select('id')
+      .ilike('name', '%tacom%sistema%poa%')
+      .limit(1);
+
+    let tacomId = '';
+    if (tacomCompany && tacomCompany.length > 0) {
+      tacomId = tacomCompany[0].id;
+    } else {
+      // Se não encontrar, criar a empresa
+      const { data: newCompany, error: createError } = await supabase
+        .from('empresas')
+        .insert([{ name: 'TACOM Sistema POA', estado: 'Rio Grande do Sul' }])
+        .select()
+        .single();
       
-      return {
-        tipo: item.Tipo,
-        modelo: item.Modelo || null,
-        numero_serie: item.Série,
-        data_entrada: item.Entrada,
-        data_saida: item.Saída && item.Saída !== '' ? item.Saída : null,
-        id_empresa: company?.id || '',
-        estado: item.Estado,
-        status: item.Status || 'disponivel'
-      };
-    });
+      if (createError) throw createError;
+      tacomId = newCompany.id;
+    }
+
+    return data.map(item => ({
+      tipo: item['Tipo de Equipamento'],
+      numero_serie: String(item['Número de Série']),
+      data_entrada: new Date().toISOString().split('T')[0],
+      id_empresa: tacomId,
+      estado: 'Rio Grande do Sul',
+      status: 'disponivel',
+      modelo: null
+    }));
   };
 
   const handleImport = async () => {
     if (!file) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione um arquivo CSV.",
+        description: "Por favor, selecione um arquivo Excel.",
         variant: "destructive",
       });
       return;
@@ -160,11 +147,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
     setLoading(true);
 
     try {
-      const text = await file.text();
-      const rawData = parseCSV(text);
+      const rawData = await parseXLSX(file);
 
       if (rawData.length === 0) {
-        throw new Error('Arquivo CSV vazio ou formato inválido');
+        throw new Error('Arquivo Excel vazio ou formato inválido');
       }
 
       // Validar dados
@@ -174,10 +160,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
       }
 
       // Transformar dados para o formato correto
-      const transformedData = transformData(rawData);
+      const transformedData = await transformData(rawData);
 
       // Importar dados
-      await bulkInsertEquipments(transformedData);
+      const { error: insertError } = await supabase
+        .from('equipamentos')
+        .insert(transformedData);
+
+      if (insertError) throw insertError;
 
       toast({
         title: "Sucesso",
@@ -214,29 +204,32 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
         </DialogHeader>
         <div className="space-y-4">
           <div className="text-sm text-gray-600">
-            <p>Faça o upload de um arquivo CSV com os dados dos equipamentos.</p>
+            <p>Faça o upload de um arquivo Excel com os dados dos equipamentos.</p>
             <p className="mt-2">
-              <strong>Campos obrigatórios:</strong> Tipo, Série, Empresa, Estado, Entrada
+              <strong>Campos obrigatórios:</strong> Número de Série, Tipo de Equipamento
+            </p>
+            <p className="mt-1 text-xs">
+              <strong>Observação:</strong> Data de entrada será definida automaticamente como hoje e empresa será definida como "TACOM Sistema POA"
             </p>
           </div>
 
           <div className="space-y-3">
             <Button
-              onClick={generateCSVTemplate}
+              onClick={generateXLSXTemplate}
               variant="outline"
               className="w-full flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
-              Baixar Modelo CSV
+              Baixar Modelo Excel
             </Button>
 
             <div className="space-y-2">
-              <Label htmlFor="csvFile">Arquivo CSV</Label>
+              <Label htmlFor="xlsxFile">Arquivo Excel</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  id="csvFile"
+                  id="xlsxFile"
                   type="file"
-                  accept=".csv"
+                  accept=".xlsx,.xls"
                   onChange={handleFileChange}
                   className="flex-1"
                 />

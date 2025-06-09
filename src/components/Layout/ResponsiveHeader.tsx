@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Settings, FileText, Package, Truck, Menu, X, Building, BarChart3, Laptop, Wrench } from 'lucide-react';
@@ -97,7 +98,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <div className="bg-red-500 text-white px-3 py-2 rounded-lg font-bold text-lg sm:text-xl flex items-center">
+            <div className="bg-red-500 text-white px-3 py-2 rounded-lg font-bold text-lg sm:text-xl flex items-center mr-8">
               <Package className="h-5 w-5 mr-2" />
               TACOM
             </div>

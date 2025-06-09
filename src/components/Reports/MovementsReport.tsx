@@ -5,8 +5,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FileDown, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface Movement {
   id: string;
@@ -130,6 +134,69 @@ const MovementsReport = () => {
     setFilteredMovements(filtered);
   };
 
+  const exportToXLSX = () => {
+    const data = filteredMovements.map(movement => ({
+      'Data': new Date(movement.data_movimento).toLocaleDateString('pt-BR'),
+      'Tipo': getMovementTypeLabel(movement.tipo_movimento),
+      'Equipamento': movement.equipamentos?.tipo,
+      'Série': movement.equipamentos?.numero_serie,
+      'Empresa': movement.equipamentos?.empresas?.name,
+      'Responsável': movement.usuario_responsavel || 'N/A',
+      'Manutenção': movement.tipos_manutencao ? `${movement.tipos_manutencao.codigo} - ${movement.tipos_manutencao.descricao}` : '',
+      'Detalhes Manutenção': movement.detalhes_manutencao || '',
+      'Observações': movement.observacoes || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Movimentações');
+    
+    XLSX.writeFile(wb, `relatorio_movimentacoes_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: "Sucesso",
+      description: "Relatório XLSX exportado com sucesso!",
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Relatório de Movimentações', 14, 22);
+    
+    const tableColumn = ["Data", "Tipo", "Equipamento", "Série", "Empresa", "Responsável", "Observações"];
+    const tableRows: any[] = [];
+
+    filteredMovements.forEach(movement => {
+      const movementData = [
+        new Date(movement.data_movimento).toLocaleDateString('pt-BR'),
+        getMovementTypeLabel(movement.tipo_movimento),
+        movement.equipamentos?.tipo,
+        movement.equipamentos?.numero_serie,
+        movement.equipamentos?.empresas?.name,
+        movement.usuario_responsavel || 'N/A',
+        movement.observacoes || ''
+      ];
+      tableRows.push(movementData);
+    });
+
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [220, 38, 38] }
+    });
+
+    doc.save(`relatorio_movimentacoes_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: "Sucesso",
+      description: "Relatório PDF exportado com sucesso!",
+    });
+  };
+
   const getMovementTypeLabel = (type: string) => {
     switch (type) {
       case 'entrada': return 'Entrada';
@@ -162,9 +229,19 @@ const MovementsReport = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Relatório de Movimentações</h1>
-        <Button onClick={fetchData}>
-          Atualizar Dados
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportToXLSX} variant="outline" className="flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Exportar XLSX
+          </Button>
+          <Button onClick={exportToPDF} variant="outline" className="flex items-center gap-2">
+            <FileDown className="h-4 w-4" />
+            Exportar PDF
+          </Button>
+          <Button onClick={fetchData}>
+            Atualizar Dados
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -340,7 +417,7 @@ const MovementsReport = () => {
                     </td>
                     <td className="border border-gray-300 p-2">
                       {movement.observacoes && (
-                        <div className="text-sm text-gray-600 max-w-xs truncate">
+                        <div className="text-sm text-gray-600 max-w-xs">
                           {movement.observacoes}
                         </div>
                       )}
