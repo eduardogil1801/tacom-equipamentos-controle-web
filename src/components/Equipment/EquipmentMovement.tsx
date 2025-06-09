@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -33,7 +34,8 @@ interface MaintenanceType {
 const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
-  const [selectedEquipment, setSelectedEquipment] = useState('');
+  const [selectedEquipments, setSelectedEquipments] = useState<string[]>([]);
+  const [multipleSelection, setMultipleSelection] = useState(false);
   const [movementType, setMovementType] = useState('');
   const [maintenanceType, setMaintenanceType] = useState('');
   const [movementDate, setMovementDate] = useState('');
@@ -45,7 +47,19 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   useEffect(() => {
     loadEquipments();
     loadMaintenanceTypes();
+    loadCurrentUser();
   }, []);
+
+  const loadCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setResponsibleUser(user.email);
+      }
+    } catch (error) {
+      console.error('Error loading current user:', error);
+    }
+  };
 
   const loadEquipments = async () => {
     try {
@@ -99,10 +113,22 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
+  const handleEquipmentSelection = (equipmentId: string, checked: boolean) => {
+    if (multipleSelection) {
+      setSelectedEquipments(prev => 
+        checked 
+          ? [...prev, equipmentId]
+          : prev.filter(id => id !== equipmentId)
+      );
+    } else {
+      setSelectedEquipments(checked ? [equipmentId] : []);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedEquipment || !movementType || !movementDate) {
+    if (selectedEquipments.length === 0 || !movementType || !movementDate) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios",
@@ -123,72 +149,67 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     setLoading(true);
 
     try {
-      console.log('Registrando movimentação:', {
-        selectedEquipment,
-        movementType,
-        movementDate,
-        maintenanceType,
-        observations,
-        maintenanceDetails,
-        responsibleUser
-      });
+      console.log('Registrando movimentação para equipamentos:', selectedEquipments);
 
-      const movementData = {
-        id_equipamento: selectedEquipment,
-        tipo_movimento: movementType,
-        data_movimento: movementDate,
-        observacoes: observations || null,
-        usuario_responsavel: responsibleUser || null,
-        tipo_manutencao_id: movementType === 'manutencao' ? maintenanceType : null,
-        detalhes_manutencao: movementType === 'manutencao' ? maintenanceDetails : null,
-      };
+      // Processar cada equipamento selecionado
+      for (const equipmentId of selectedEquipments) {
+        const movementData = {
+          id_equipamento: equipmentId,
+          tipo_movimento: movementType,
+          data_movimento: movementDate,
+          observacoes: observations || null,
+          usuario_responsavel: responsibleUser || null,
+          tipo_manutencao_id: movementType === 'manutencao' ? maintenanceType : null,
+          detalhes_manutencao: movementType === 'manutencao' ? maintenanceDetails : null,
+        };
 
-      console.log('Dados da movimentação a serem inseridos:', movementData);
+        console.log('Dados da movimentação a serem inseridos:', movementData);
 
-      const { data, error } = await supabase
-        .from('movimentacoes')
-        .insert([movementData])
-        .select();
+        const { data, error } = await supabase
+          .from('movimentacoes')
+          .insert([movementData])
+          .select();
 
-      if (error) {
-        console.error('Erro ao inserir movimentação:', error);
-        throw error;
-      }
-
-      console.log('Movimentação registrada com sucesso:', data);
-
-      // Atualizar status do equipamento se necessário
-      if (movementType === 'manutencao') {
-        const { error: updateError } = await supabase
-          .from('equipamentos')
-          .update({ 
-            em_manutencao: true,
-            status: 'aguardando_manutencao'
-          })
-          .eq('id', selectedEquipment);
-
-        if (updateError) {
-          console.error('Erro ao atualizar status do equipamento:', updateError);
-          throw updateError;
+        if (error) {
+          console.error('Erro ao inserir movimentação:', error);
+          throw error;
         }
-      } else if (movementType === 'saida') {
-        const { error: updateError } = await supabase
-          .from('equipamentos')
-          .update({ 
-            data_saida: movementDate,
-            status: 'em_uso'
-          })
-          .eq('id', selectedEquipment);
 
-        if (updateError) {
-          console.error('Erro ao atualizar data de saída:', updateError);
-          throw updateError;
+        console.log('Movimentação registrada com sucesso:', data);
+
+        // Atualizar status do equipamento se necessário
+        if (movementType === 'manutencao') {
+          const { error: updateError } = await supabase
+            .from('equipamentos')
+            .update({ 
+              em_manutencao: true,
+              status: 'aguardando_manutencao'
+            })
+            .eq('id', equipmentId);
+
+          if (updateError) {
+            console.error('Erro ao atualizar status do equipamento:', updateError);
+            throw updateError;
+          }
+        } else if (movementType === 'saida') {
+          const { error: updateError } = await supabase
+            .from('equipamentos')
+            .update({ 
+              data_saida: movementDate,
+              status: 'em_uso'
+            })
+            .eq('id', equipmentId);
+
+          if (updateError) {
+            console.error('Erro ao atualizar data de saída:', updateError);
+            throw updateError;
+          }
         }
       }
 
       toast({
         title: "Sucesso",
-        description: "Movimentação registrada com sucesso!",
+        description: `Movimentação registrada com sucesso para ${selectedEquipments.length} equipamento(s)!`,
       });
 
       onSuccess();
@@ -224,20 +245,54 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="multipleSelection"
+                checked={multipleSelection}
+                onCheckedChange={(checked) => {
+                  setMultipleSelection(!!checked);
+                  setSelectedEquipments([]);
+                }}
+              />
+              <Label htmlFor="multipleSelection">
+                Permitir seleção múltipla de equipamentos
+              </Label>
+            </div>
+
             <div>
-              <Label htmlFor="equipment">Equipamento *</Label>
-              <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um equipamento" />
-                </SelectTrigger>
-                <SelectContent>
+              <Label htmlFor="equipment">Equipamento(s) *</Label>
+              {multipleSelection ? (
+                <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
                   {equipments.map(equipment => (
-                    <SelectItem key={equipment.id} value={equipment.id}>
-                      {equipment.numero_serie} - {equipment.tipo} ({equipment.empresas?.name || 'Sem empresa'})
-                    </SelectItem>
+                    <div key={equipment.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`equipment-${equipment.id}`}
+                        checked={selectedEquipments.includes(equipment.id)}
+                        onCheckedChange={(checked) => handleEquipmentSelection(equipment.id, !!checked)}
+                      />
+                      <Label htmlFor={`equipment-${equipment.id}`} className="text-sm">
+                        {equipment.numero_serie} - {equipment.tipo} ({equipment.empresas?.name || 'Sem empresa'})
+                      </Label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              ) : (
+                <Select 
+                  value={selectedEquipments[0] || ''} 
+                  onValueChange={(value) => setSelectedEquipments(value ? [value] : [])}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um equipamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipments.map(equipment => (
+                      <SelectItem key={equipment.id} value={equipment.id}>
+                        {equipment.numero_serie} - {equipment.tipo} ({equipment.empresas?.name || 'Sem empresa'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div>
