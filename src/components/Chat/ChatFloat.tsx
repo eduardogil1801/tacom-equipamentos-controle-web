@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Users, Send, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ const ChatFloat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messageText, setMessageText] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
   const {
     messages,
     conversations,
@@ -26,9 +28,18 @@ const ChatFloat: React.FC = () => {
     setSelectedUser
   } = useChat();
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedUser) return;
     
+    console.log('Sending message from ChatFloat:', { selectedUser: selectedUser.id, content: messageText });
     await sendMessage(selectedUser.id, messageText);
     setMessageText('');
   };
@@ -126,6 +137,7 @@ const ChatFloat: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                      <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
 

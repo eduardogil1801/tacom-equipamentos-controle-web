@@ -170,13 +170,15 @@ export const useChat = () => {
     try {
       console.log('Sending message:', { sender_id: user.id, receiver_id: receiverId, content });
       
+      const messageData = {
+        sender_id: user.id,
+        receiver_id: receiverId,
+        content: content.trim()
+      };
+
       const { data, error } = await supabase
         .from('chat_messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: receiverId,
-          content: content.trim()
-        })
+        .insert(messageData)
         .select()
         .single();
 
@@ -186,6 +188,12 @@ export const useChat = () => {
       }
 
       console.log('Message sent successfully:', data);
+      
+      // Adicionar mensagem imediatamente à lista local
+      setMessages(prev => [...prev, data]);
+      
+      // Criar ou atualizar conversa
+      await createOrUpdateConversation(receiverId);
       
       // Recarregar conversas para atualizar a lista
       loadConversations();
@@ -197,6 +205,29 @@ export const useChat = () => {
         description: "Não foi possível enviar a mensagem.",
         variant: "destructive",
       });
+    }
+  };
+
+  const createOrUpdateConversation = async (otherUserId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const user1Id = user.id < otherUserId ? user.id : otherUserId;
+      const user2Id = user.id < otherUserId ? otherUserId : user.id;
+
+      const { error } = await supabase
+        .from('chat_conversations')
+        .upsert({
+          user1_id: user1Id,
+          user2_id: user2Id,
+          last_message_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error creating/updating conversation:', error);
+      }
+    } catch (error) {
+      console.error('Error in createOrUpdateConversation:', error);
     }
   };
 
@@ -262,11 +293,18 @@ export const useChat = () => {
           filter: `sender_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Message sent:', payload);
+          console.log('Message sent confirmation:', payload);
           
-          // Se é para o usuário selecionado, adicionar à lista de mensagens
+          // Se é para o usuário selecionado, garantir que está na lista
           if (selectedUser && payload.new.receiver_id === selectedUser.id) {
-            setMessages(prev => [...prev, payload.new as ChatMessage]);
+            setMessages(prev => {
+              // Verificar se a mensagem já existe para evitar duplicatas
+              const exists = prev.some(msg => msg.id === payload.new.id);
+              if (!exists) {
+                return [...prev, payload.new as ChatMessage];
+              }
+              return prev;
+            });
           }
         }
       )
