@@ -57,6 +57,15 @@ const ChatFloat: React.FC = () => {
     setIsMinimized(false);
   };
 
+  const handleConversationClick = (user: any) => {
+    startConversation(user);
+    // Não fechar o chat, apenas carregar a conversa
+  };
+
+  const handleBackToList = () => {
+    setSelectedUser(null);
+  };
+
   return (
     <>
       {/* Botão flutuante - só aparece quando não há conversa ativa ou chat fechado */}
@@ -77,17 +86,27 @@ const ChatFloat: React.FC = () => {
         </div>
       )}
 
-      {/* Janela do chat - posicionada acima do botão */}
+      {/* Janela do chat */}
       {isOpen && (
         <div className={`fixed right-6 z-50 bg-white rounded-lg shadow-2xl border border-gray-200 transition-all duration-300 ${
           isMinimized ? 'h-12' : 'h-96 md:h-[500px]'
         } w-80 md:w-96`}
         style={{ 
-          bottom: selectedUser ? '6px' : '90px' // 6px do fundo quando há conversa, 90px acima do botão quando não há
+          bottom: selectedUser ? '6px' : '90px'
         }}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-red-500 to-red-600 text-white rounded-t-lg">
             <div className="flex items-center space-x-2">
+              {selectedUser && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBackToList}
+                  className="h-8 w-8 text-white hover:bg-white/20 mr-2"
+                >
+                  ←
+                </Button>
+              )}
               <MessageCircle className="h-5 w-5" />
               <span className="font-medium">
                 {selectedUser ? `${selectedUser.nome} ${selectedUser.sobrenome}` : 'Chat'}
@@ -150,7 +169,7 @@ const ChatFloat: React.FC = () => {
                   </ScrollArea>
 
                   {/* Input de mensagem */}
-                  <div className="p-4 border-t">
+                  <div className="p-4 border-t bg-white rounded-b-lg">
                     <div className="flex space-x-2">
                       <Input
                         value={messageText}
@@ -188,7 +207,7 @@ const ChatFloat: React.FC = () => {
                           {conversations.map((conversation) => (
                             <div
                               key={conversation.id}
-                              onClick={() => startConversation(conversation.other_user)}
+                              onClick={() => handleConversationClick(conversation.other_user)}
                               className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                             >
                               <Avatar className="h-10 w-10 bg-gradient-to-r from-red-500 to-red-600">
@@ -229,7 +248,7 @@ const ChatFloat: React.FC = () => {
                         {users.map((user) => (
                           <div
                             key={user.id}
-                            onClick={() => startConversation(user)}
+                            onClick={() => handleConversationClick(user)}
                             className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                           >
                             <Avatar className="h-10 w-10 bg-gradient-to-r from-red-500 to-red-600">
