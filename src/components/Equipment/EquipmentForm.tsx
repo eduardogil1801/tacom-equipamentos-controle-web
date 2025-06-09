@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import StateManager from './StateManager';
 
 interface Equipment {
   id: string;
@@ -255,14 +254,14 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo de Equipamento *</Label>
-                <Select value={formData.tipo || 'placeholder'} onValueChange={(value) => {
-                  handleChange('tipo', value === 'placeholder' ? '' : value);
+                <Select value={formData.tipo || 'placeholder-tipo'} onValueChange={(value) => {
+                  handleChange('tipo', value === 'placeholder-tipo' ? '' : value);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder" disabled>Selecione o tipo</SelectItem>
+                    <SelectItem value="placeholder-tipo" disabled>Selecione o tipo</SelectItem>
                     {equipmentTypes.map(tipo => (
                       <SelectItem key={tipo} value={tipo}>
                         {tipo}
@@ -295,12 +294,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
-                <Select value={formData.id_empresa || 'placeholder'} onValueChange={(value) => handleChange('id_empresa', value === 'placeholder' ? '' : value)}>
+                <Select value={formData.id_empresa || 'placeholder-empresa'} onValueChange={(value) => handleChange('id_empresa', value === 'placeholder-empresa' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder" disabled>Selecione uma empresa</SelectItem>
+                    <SelectItem value="placeholder-empresa" disabled>Selecione uma empresa</SelectItem>
                     {companies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
@@ -312,12 +311,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="estado">Estado do Estoque *</Label>
-                <Select value={formData.estado || 'placeholder'} onValueChange={(value) => handleChange('estado', value === 'placeholder' ? '' : value)}>
+                <Select value={formData.estado || 'placeholder-estado'} onValueChange={(value) => handleChange('estado', value === 'placeholder-estado' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um estado" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder" disabled>Selecione um estado</SelectItem>
+                    <SelectItem value="placeholder-estado" disabled>Selecione um estado</SelectItem>
                     {estados.map(estado => (
                       <SelectItem key={estado} value={estado}>
                         {estado}
@@ -329,12 +328,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
-                <Select value={formData.status || 'placeholder'} onValueChange={(value) => handleChange('status', value === 'placeholder' ? '' : value)}>
+                <Select value={formData.status || 'placeholder-status'} onValueChange={(value) => handleChange('status', value === 'placeholder-status' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder" disabled>Selecione o status</SelectItem>
+                    <SelectItem value="placeholder-status" disabled>Selecione o status</SelectItem>
                     {statusOptions.map(status => (
                       <SelectItem key={status} value={status}>
                         {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
