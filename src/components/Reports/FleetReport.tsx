@@ -25,6 +25,11 @@ interface FleetData {
   usuario_responsavel?: string;
 }
 
+// Função para formatar números com pontos
+const formatNumber = (num: number): string => {
+  return num.toLocaleString('pt-BR');
+};
+
 const FleetReport: React.FC = () => {
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [filteredData, setFilteredData] = useState<FleetData[]>([]);
@@ -52,14 +57,7 @@ const FleetReport: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Calcular coluna nuvem baseada no total
-      const dataWithNuvem = (data || []).map(item => ({
-        ...item,
-        nuvem: item.total
-      }));
-      
-      setFleetData(dataWithNuvem);
+      setFleetData(data || []);
     } catch (error) {
       console.error('Erro ao carregar dados da frota:', error);
       toast({
@@ -116,13 +114,13 @@ const FleetReport: React.FC = () => {
       item.cod_operadora,
       item.nome_empresa,
       new Date(item.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
-      item.simples_com_imagem.toString(),
-      item.simples_sem_imagem.toString(),
-      item.secao.toString(),
-      item.citgis.toString(),
-      item.buszoom.toString(),
-      item.nuvem.toString(),
-      item.total.toString()
+      formatNumber(item.simples_com_imagem || 0),
+      formatNumber(item.simples_sem_imagem || 0),
+      formatNumber(item.secao || 0),
+      formatNumber(item.citgis || 0),
+      formatNumber(item.buszoom || 0),
+      formatNumber(item.nuvem || 0),
+      formatNumber(item.total || 0)
     ]);
 
     (doc as any).autoTable({
@@ -133,11 +131,11 @@ const FleetReport: React.FC = () => {
       headStyles: { fillColor: [66, 139, 202] }
     });
 
-    const totalGeral = filteredData.reduce((sum, item) => sum + item.total, 0);
+    const totalGeral = filteredData.reduce((sum, item) => sum + (item.total || 0), 0);
     const finalY = (doc as any).lastAutoTable.finalY + 10;
     
     doc.setFontSize(12);
-    doc.text(`Total Geral de Equipamentos: ${totalGeral}`, 14, finalY);
+    doc.text(`Total Geral de Equipamentos: ${formatNumber(totalGeral)}`, 14, finalY);
 
     doc.save('relatorio-frota.pdf');
     
@@ -234,13 +232,13 @@ const FleetReport: React.FC = () => {
                     <td className="p-3">{fleet.cod_operadora}</td>
                     <td className="p-3">{fleet.nome_empresa}</td>
                     <td className="p-3">{new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}</td>
-                    <td className="p-3">{fleet.simples_com_imagem}</td>
-                    <td className="p-3">{fleet.simples_sem_imagem}</td>
-                    <td className="p-3">{fleet.secao}</td>
-                    <td className="p-3">{fleet.citgis}</td>
-                    <td className="p-3">{fleet.buszoom}</td>
-                    <td className="p-3">{fleet.nuvem}</td>
-                    <td className="p-3 font-bold">{fleet.total}</td>
+                    <td className="p-3">{formatNumber(fleet.simples_com_imagem || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.secao || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
+                    <td className="p-3 font-bold">{formatNumber(fleet.total || 0)}</td>
                     <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
                   </tr>
                 ))}

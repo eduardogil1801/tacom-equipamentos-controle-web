@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +28,11 @@ interface Company {
   id: string;
   name: string;
 }
+
+// Função para formatar números com pontos
+const formatNumber = (num: number): string => {
+  return num.toLocaleString('pt-BR');
+};
 
 // Mapeamento de operadoras com código primeiro
 const operadoraMapping: { [key: string]: string } = {
@@ -387,7 +391,7 @@ const FleetManagement: React.FC = () => {
 
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-lg font-semibold">
-                  Total: {formData.total} equipamentos
+                  Total: {formatNumber(formData.total)} equipamentos
                 </div>
               </div>
 
@@ -435,13 +439,13 @@ const FleetManagement: React.FC = () => {
                     <td className="p-3">{fleet.cod_operadora}</td>
                     <td className="p-3">{fleet.nome_empresa}</td>
                     <td className="p-3">{new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}</td>
-                    <td className="p-3">{fleet.simples_com_imagem}</td>
-                    <td className="p-3">{fleet.simples_sem_imagem}</td>
-                    <td className="p-3">{fleet.secao}</td>
-                    <td className="p-3">{fleet.citgis}</td>
-                    <td className="p-3">{fleet.buszoom}</td>
-                    <td className="p-3">{fleet.nuvem}</td>
-                    <td className="p-3 font-bold">{fleet.total}</td>
+                    <td className="p-3">{formatNumber(fleet.simples_com_imagem || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.secao || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
+                    <td className="p-3 font-bold">{formatNumber(fleet.total || 0)}</td>
                     <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
                     <td className="p-3">
                       <div className="flex gap-2">
