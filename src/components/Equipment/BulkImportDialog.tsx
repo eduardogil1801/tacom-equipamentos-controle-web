@@ -91,9 +91,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
         }
       });
 
-      // Validar se número de série não está vazio
-      if (item['Número de Série'] && typeof item['Número de Série'] !== 'string') {
-        errors.push(`Linha ${row}: Número de série deve ser texto`);
+      // Validar se número de série não está vazio (aceitar texto ou número)
+      if (item['Número de Série'] && (typeof item['Número de Série'] !== 'string' && typeof item['Número de Série'] !== 'number')) {
+        errors.push(`Linha ${row}: Número de série deve ser texto ou número`);
       }
     });
 
@@ -162,16 +162,42 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ companies, onImport
       // Transformar dados para o formato correto
       const transformedData = await transformData(rawData);
 
-      // Importar dados
+      // Verificar se já existem equipamentos com os mesmos números de série
+      const serialNumbers = transformedData.map(item => item.numero_serie);
+      const { data: existingEquipment } = await supabase
+        .from('equipamentos')
+        .select('numero_serie')
+        .in('numero_serie', serialNumbers);
+
+      const existingSeries = existingEquipment?.map(eq => eq.numero_serie) || [];
+      const newEquipment = transformedData.filter(item => !existingSeries.includes(item.numero_serie));
+
+      if (newEquipment.length === 0) {
+        toast({
+          title: "Aviso",
+          description: "Todos os equipamentos já existem no sistema.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (existingSeries.length > 0) {
+        toast({
+          title: "Aviso",
+          description: `${existingSeries.length} equipamento(s) já existem e serão ignorados.`,
+        });
+      }
+
+      // Importar apenas equipamentos novos
       const { error: insertError } = await supabase
         .from('equipamentos')
-        .insert(transformedData);
+        .insert(newEquipment);
 
       if (insertError) throw insertError;
 
       toast({
         title: "Sucesso",
-        description: `${transformedData.length} equipamentos importados com sucesso!`,
+        description: `${newEquipment.length} equipamentos importados com sucesso!`,
       });
 
       setFile(null);

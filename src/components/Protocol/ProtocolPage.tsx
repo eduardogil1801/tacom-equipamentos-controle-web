@@ -37,21 +37,16 @@ const ProtocolPage: React.FC = () => {
   const { user } = useAuth();
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
   const [showEquipmentList, setShowEquipmentList] = useState(false);
-  
-  const [responsibleUserSearch, setResponsibleUserSearch] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [showUserList, setShowUserList] = useState(false);
 
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     empresa_destinataria: '',
-    responsavel_recebimento: '',
+    responsavel_recebimento: user?.name || '',
     data_recebimento: new Date().toISOString().split('T')[0],
     observacoes: ''
   });
@@ -59,6 +54,13 @@ const ProtocolPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Atualizar o responsável quando o usuário for carregado
+    if (user?.name) {
+      setFormData(prev => ({ ...prev, responsavel_recebimento: user.name }));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (searchTerm.length >= 3) {
@@ -73,20 +75,6 @@ const ProtocolPage: React.FC = () => {
       setShowEquipmentList(false);
     }
   }, [searchTerm, equipment]);
-
-  useEffect(() => {
-    if (responsibleUserSearch) {
-      const filtered = users.filter(user => 
-        user.nome.toLowerCase().includes(responsibleUserSearch.toLowerCase()) ||
-        user.username.toLowerCase().includes(responsibleUserSearch.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-      setShowUserList(true);
-    } else {
-      setFilteredUsers([]);
-      setShowUserList(false);
-    }
-  }, [responsibleUserSearch, users]);
 
   const loadData = async () => {
     try {
@@ -116,16 +104,6 @@ const ProtocolPage: React.FC = () => {
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
-      // Carregar usuários
-      const { data: userData, error: userError } = await supabase
-        .from('usuarios')
-        .select('id, nome, username')
-        .eq('ativo', true)
-        .order('nome');
-
-      if (userError) throw userError;
-      setUsers(userData || []);
-
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({
@@ -148,12 +126,6 @@ const ProtocolPage: React.FC = () => {
 
   const removeEquipment = (equipmentId: string) => {
     setSelectedEquipment(prev => prev.filter(id => id !== equipmentId));
-  };
-
-  const handleUserSelect = (user: User) => {
-    setResponsibleUserSearch(user.nome);
-    setFormData(prev => ({ ...prev, responsavel_recebimento: user.nome }));
-    setShowUserList(false);
   };
 
   const generateProtocol = () => {
@@ -254,12 +226,11 @@ const ProtocolPage: React.FC = () => {
       // Limpar formulário
       setFormData({
         empresa_destinataria: '',
-        responsavel_recebimento: '',
+        responsavel_recebimento: user?.name || '',
         data_recebimento: new Date().toISOString().split('T')[0],
         observacoes: ''
       });
       setSelectedEquipment([]);
-      setResponsibleUserSearch('');
       
     } catch (error) {
       console.error('Erro ao gerar termo:', error);
@@ -323,33 +294,15 @@ const ProtocolPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative">
+          <div>
             <Label htmlFor="responsavel_recebimento">Responsável pelo Recebimento *</Label>
-            <div className="relative">
-              <Input
-                id="responsavel_recebimento"
-                value={responsibleUserSearch}
-                onChange={(e) => setResponsibleUserSearch(e.target.value)}
-                placeholder="Digite para buscar usuário..."
-                required
-              />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
-            
-            {showUserList && filteredUsers.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
-                {filteredUsers.map(user => (
-                  <div 
-                    key={user.id} 
-                    className="p-3 hover:bg-gray-50 cursor-pointer border-b"
-                    onClick={() => handleUserSelect(user)}
-                  >
-                    <div className="font-medium">{user.nome}</div>
-                    <div className="text-sm text-gray-500">@{user.username}</div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Input
+              id="responsavel_recebimento"
+              value={formData.responsavel_recebimento}
+              onChange={(e) => setFormData(prev => ({ ...prev, responsavel_recebimento: e.target.value }))}
+              placeholder="Nome do responsável"
+              required
+            />
           </div>
 
           <div className="relative">
