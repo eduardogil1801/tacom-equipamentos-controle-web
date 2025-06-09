@@ -167,94 +167,168 @@ const FleetReport: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Relatório de Frota</h1>
-        <Button onClick={generatePDF} className="flex items-center gap-2">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Relatório de Frota</h1>
+        <Button onClick={generatePDF} className="flex items-center justify-center gap-2 w-full sm:w-auto">
           <Download className="h-4 w-4" />
           Gerar PDF
         </Button>
       </div>
 
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="operadora">Operadora</Label>
+              <Label htmlFor="operadora" className="text-sm">Operadora</Label>
               <Input
                 id="operadora"
                 value={filters.operadora}
                 onChange={(e) => handleFilterChange('operadora', e.target.value)}
                 placeholder="Nome ou código da operadora"
+                className="text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="mesInicio">Mês Início</Label>
+              <Label htmlFor="mesInicio" className="text-sm">Mês Início</Label>
               <Input
                 id="mesInicio"
                 type="month"
                 value={filters.mesInicio}
                 onChange={(e) => handleFilterChange('mesInicio', e.target.value)}
+                className="text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="mesFim">Mês Fim</Label>
+              <Label htmlFor="mesFim" className="text-sm">Mês Fim</Label>
               <Input
                 id="mesFim"
                 type="month"
                 value={filters.mesFim}
                 onChange={(e) => handleFilterChange('mesFim', e.target.value)}
+                className="text-sm"
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Fleet Data */}
       <Card>
         <CardHeader>
-          <CardTitle>Dados da Frota</CardTitle>
+          <CardTitle className="text-lg">Dados da Frota</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            {/* Mobile Card View */}
+            <div className="block lg:hidden space-y-4 p-4">
+              {filteredData.map(fleet => (
+                <Card key={fleet.id} className="border border-gray-200">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold text-sm">{fleet.nome_empresa}</p>
+                          <p className="text-xs text-gray-600">Código: {fleet.cod_operadora}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">Mês:</p>
+                          <p className="text-sm font-medium">
+                            {new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <p className="text-gray-500">Simples C/Img:</p>
+                          <p className="font-medium">{formatNumber(fleet.simples_com_imagem || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Simples S/Img:</p>
+                          <p className="font-medium">{formatNumber(fleet.simples_sem_imagem || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Seção:</p>
+                          <p className="font-medium">{formatNumber(fleet.secao || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">CITGIS:</p>
+                          <p className="font-medium">{formatNumber(fleet.citgis || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">BUSZOOM:</p>
+                          <p className="font-medium">{formatNumber(fleet.buszoom || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Nuvem:</p>
+                          <p className="font-medium">{formatNumber(fleet.nuvem || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Telemetria:</p>
+                          <p className="font-medium">{formatNumber(fleet.telemetria || 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Total:</p>
+                          <p className="font-bold text-lg">{formatNumber(fleet.total || 0)}</p>
+                        </div>
+                      </div>
+                      
+                      {fleet.usuario_responsavel && (
+                        <div>
+                          <p className="text-xs text-gray-500">Responsável:</p>
+                          <p className="text-sm">{fleet.usuario_responsavel}</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <table className="hidden lg:table w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Código</th>
-                  <th className="text-left p-3">Operadora</th>
-                  <th className="text-left p-3">Mês</th>
-                  <th className="text-left p-3">Simples C/Img</th>
-                  <th className="text-left p-3">Simples S/Img</th>
-                  <th className="text-left p-3">Seção</th>
-                  <th className="text-left p-3">CITGIS</th>
-                  <th className="text-left p-3">BUSZOOM</th>
-                  <th className="text-left p-3">Nuvem</th>
-                  <th className="text-left p-3">Telemetria</th>
-                  <th className="text-left p-3">Total</th>
-                  <th className="text-left p-3">Responsável</th>
+                  <th className="text-left p-3 text-sm font-medium">Código</th>
+                  <th className="text-left p-3 text-sm font-medium">Operadora</th>
+                  <th className="text-left p-3 text-sm font-medium">Mês</th>
+                  <th className="text-left p-3 text-sm font-medium">Simples C/Img</th>
+                  <th className="text-left p-3 text-sm font-medium">Simples S/Img</th>
+                  <th className="text-left p-3 text-sm font-medium">Seção</th>
+                  <th className="text-left p-3 text-sm font-medium">CITGIS</th>
+                  <th className="text-left p-3 text-sm font-medium">BUSZOOM</th>
+                  <th className="text-left p-3 text-sm font-medium">Nuvem</th>
+                  <th className="text-left p-3 text-sm font-medium">Telemetria</th>
+                  <th className="text-left p-3 text-sm font-medium">Total</th>
+                  <th className="text-left p-3 text-sm font-medium">Responsável</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredData.map(fleet => (
                   <tr key={fleet.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{fleet.cod_operadora}</td>
-                    <td className="p-3">{fleet.nome_empresa}</td>
-                    <td className="p-3">{new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}</td>
-                    <td className="p-3">{formatNumber(fleet.simples_com_imagem || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.secao || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.telemetria || 0)}</td>
-                    <td className="p-3 font-bold">{formatNumber(fleet.total || 0)}</td>
-                    <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
+                    <td className="p-3 text-sm">{fleet.cod_operadora}</td>
+                    <td className="p-3 text-sm">{fleet.nome_empresa}</td>
+                    <td className="p-3 text-sm">{new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.simples_com_imagem || 0)}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.secao || 0)}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.citgis || 0)}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.buszoom || 0)}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.nuvem || 0)}</td>
+                    <td className="p-3 text-sm">{formatNumber(fleet.telemetria || 0)}</td>
+                    <td className="p-3 font-bold text-sm">{formatNumber(fleet.total || 0)}</td>
+                    <td className="p-3 text-sm">{fleet.usuario_responsavel || '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            
             {filteredData.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 Nenhum dado encontrado com os filtros aplicados
