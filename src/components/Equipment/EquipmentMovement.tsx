@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -151,15 +151,17 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
-  const handleEquipmentSelect = (equipment: Equipment) => {
+  const handleEquipmentSelect = useCallback((equipment: Equipment) => {
     if (multipleSelection) {
-      const isSelected = formData.selectedEquipments.includes(equipment.id);
-      setFormData(prev => ({
-        ...prev,
-        selectedEquipments: isSelected 
-          ? prev.selectedEquipments.filter(id => id !== equipment.id)
-          : [...prev.selectedEquipments, equipment.id]
-      }));
+      setFormData(prev => {
+        const isSelected = prev.selectedEquipments.includes(equipment.id);
+        return {
+          ...prev,
+          selectedEquipments: isSelected 
+            ? prev.selectedEquipments.filter(id => id !== equipment.id)
+            : [...prev.selectedEquipments, equipment.id]
+        };
+      });
     } else {
       setFormData(prev => ({
         ...prev,
@@ -169,7 +171,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       }));
       setShowEquipmentList(false);
     }
-  };
+  }, [multipleSelection]);
 
   const handleApplyMovement = async () => {
     if (!formData.tipo_movimento) {
@@ -282,9 +284,20 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
-  const handleChange = (field: string, value: string | boolean) => {
+  const handleChange = useCallback((field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
+
+  const handleMultipleSelectionChange = useCallback((checked: boolean) => {
+    setMultipleSelection(checked);
+    if (!checked) {
+      setFormData(prev => ({ ...prev, selectedEquipments: [] }));
+    }
+  }, []);
+
+  const handleForaEstoqueChange = useCallback((checked: boolean) => {
+    setFormData(prev => ({ ...prev, fora_estoque: checked }));
+  }, []);
 
   if (loadingData) {
     return (
@@ -312,7 +325,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               <Checkbox 
                 id="multipleSelection"
                 checked={multipleSelection}
-                onCheckedChange={(checked) => setMultipleSelection(checked === true)}
+                onCheckedChange={handleMultipleSelectionChange}
               />
               <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
             </div>
@@ -352,7 +365,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                         {multipleSelection && (
                           <Checkbox
                             checked={formData.selectedEquipments.includes(equipment.id)}
-                            onChange={() => {}}
+                            onCheckedChange={() => handleEquipmentSelect(equipment)}
                           />
                         )}
                         <div className="flex-1">
@@ -458,7 +471,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               <Checkbox 
                 id="fora_estoque"
                 checked={formData.fora_estoque}
-                onCheckedChange={(checked) => handleChange('fora_estoque', checked === true)}
+                onCheckedChange={handleForaEstoqueChange}
               />
               <Label htmlFor="fora_estoque">Fora de Estoque</Label>
             </div>
