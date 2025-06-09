@@ -275,6 +275,79 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permissions: {
+        Row: {
+          can_create: boolean | null
+          can_delete: boolean | null
+          can_edit: boolean | null
+          can_view: boolean | null
+          created_at: string | null
+          id: string
+          module_name: string
+          user_id: string | null
+        }
+        Insert: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          module_name: string
+          user_id?: string | null
+        }
+        Update: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          created_at?: string | null
+          id?: string
+          module_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usuarios: {
         Row: {
           ativo: boolean | null
@@ -282,9 +355,12 @@ export type Database = {
           data_criacao: string | null
           email: string
           id: string
+          is_temp_password: boolean | null
+          must_change_password: boolean | null
           nome: string
           senha: string
           sobrenome: string
+          username: string
         }
         Insert: {
           ativo?: boolean | null
@@ -292,9 +368,12 @@ export type Database = {
           data_criacao?: string | null
           email: string
           id?: string
+          is_temp_password?: boolean | null
+          must_change_password?: boolean | null
           nome: string
           senha: string
           sobrenome: string
+          username: string
         }
         Update: {
           ativo?: boolean | null
@@ -302,9 +381,12 @@ export type Database = {
           data_criacao?: string | null
           email?: string
           id?: string
+          is_temp_password?: boolean | null
+          must_change_password?: boolean | null
           nome?: string
           senha?: string
           sobrenome?: string
+          username?: string
         }
         Relationships: []
       }
@@ -316,7 +398,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_type: "administrador" | "operacional"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -431,6 +513,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_type: ["administrador", "operacional"],
+    },
   },
 } as const

@@ -12,14 +12,14 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!username || !password) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos.",
@@ -28,7 +28,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm }) => {
       return;
     }
 
-    const success = await login(email, password);
+    const success = await login(username, password);
     
     if (success) {
       toast({
@@ -55,13 +55,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm }) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="username">Nome de Usuário</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="username"
+              type="text"
+              placeholder="seu.usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
             />
           </div>

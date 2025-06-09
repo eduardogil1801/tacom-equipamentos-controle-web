@@ -1,138 +1,304 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
-import { User, LogOut, ChevronDown, Package, Building, BarChart3, FileText, Settings, Home } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Package, 
+  Building, 
+  FileText, 
+  Settings, 
+  LogOut, 
+  Menu,
+  X,
+  Truck,
+  ClipboardList,
+  Users,
+  Shield
+} from 'lucide-react';
+
 interface HeaderProps {
   currentPage: string;
   onNavigate: (page: string) => void;
 }
-const Header: React.FC<HeaderProps> = ({
-  currentPage,
-  onNavigate
-}) => {
-  const {
-    user,
-    logout
-  } = useAuth();
-  const [reportsOpen, setReportsOpen] = useState(false);
-  const handleLogout = () => {
-    logout();
+
+const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
+  const { user, logout, checkPermission } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const menuItems = [
+    {
+      key: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      permission: 'dashboard'
+    },
+    {
+      key: 'equipments',
+      label: 'Equipamentos',
+      icon: Package,
+      permission: 'equipments'
+    },
+    {
+      key: 'companies',
+      label: 'Empresas',
+      icon: Building,
+      permission: 'companies'
+    },
+    {
+      key: 'fleet-management',
+      label: 'Frota',
+      icon: Truck,
+      permission: 'fleet'
+    },
+    {
+      key: 'protocol',
+      label: 'Protocolo',
+      icon: ClipboardList,
+      permission: 'protocol'
+    }
+  ];
+
+  const reportItems = [
+    {
+      key: 'reports-inventory',
+      label: 'Estoque',
+      permission: 'reports'
+    },
+    {
+      key: 'reports-movements',
+      label: 'Movimentações',
+      permission: 'reports'
+    },
+    {
+      key: 'reports-equipment-history',
+      label: 'Histórico Equipamentos',
+      permission: 'reports'
+    }
+  ];
+
+  const adminItems = [
+    {
+      key: 'users',
+      label: 'Usuários',
+      icon: Users,
+      adminOnly: true
+    },
+    {
+      key: 'permissions',
+      label: 'Permissões',
+      icon: Shield,
+      adminOnly: true
+    }
+  ];
+
+  const hasReportsAccess = checkPermission('reports', 'view');
+  const isAdmin = user?.userType === 'administrador';
+
+  const handleNavigate = (page: string) => {
+    onNavigate(page);
+    setIsMobileMenuOpen(false);
   };
-  const navigationItems = [{
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: Home
-  }, {
-    id: 'equipments',
-    label: 'Equipamentos',
-    icon: Package
-  }, {
-    id: 'companies',
-    label: 'Empresas',
-    icon: Building
-  }];
-  const reportItems = [{
-    id: 'reports-inventory',
-    label: 'Inventário'
-  }, {
-    id: 'reports-movements',
-    label: 'Movimentações'
-  }, {
-    id: 'reports-companies',
-    label: 'Empresas'
-  }, {
-    id: 'reports-equipment-status',
-    label: 'Status dos Equipamentos'
-  }, {
-    id: 'reports-equipment-distribution',
-    label: 'Distribuição de Equipamentos'
-  }, {
-    id: 'reports-fleet',
-    label: 'Frota'
-  }, {
-    id: 'reports-monthly',
-    label: 'Mensal'
-  }, {
-    id: 'reports-equipment-history',
-    label: 'Histórico de Equipamentos'
-  }];
-  return <header className="bg-gradient-to-r from-primary/10 to-secondary/10 shadow-lg border-b border-primary/20 backdrop-blur-sm">
+
+  return (
+    <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-8">
-            {/* Logo TACOM sem fundo e maior */}
-            <div className="flex items-center">
-              <div className="relative group cursor-pointer">
-                <img src="/lovable-uploads/3f258a34-e20d-4ca8-98a3-6b977db4fb93.png" alt="TACOM Logo" className="h-20 w-auto transition-all duration-300 group-hover:scale-105" />
-              </div>
+          {/* Logo */}
+          <div className="flex items-center">
+            <div className="tacom-gradient text-white px-4 py-2 rounded-lg">
+              <h1 className="text-xl font-bold">TACOM</h1>
             </div>
-            
-            {/* Navigation */}
-            <nav className="hidden lg:flex space-x-1">
-              {navigationItems.map(item => {
-              const Icon = item.icon;
-              return <Button key={item.id} variant={currentPage === item.id ? "default" : "ghost"} onClick={() => onNavigate(item.id)} className="flex items-center gap-2 transition-all duration-200 hover:shadow-md">
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Button>;
-            })}
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center space-x-1">
+            {menuItems.map((item) => {
+              if (!checkPermission(item.permission, 'view')) return null;
               
-              <DropdownMenu open={reportsOpen} onOpenChange={setReportsOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant={currentPage.startsWith('reports-') ? "default" : "ghost"} className="flex items-center gap-2 transition-all duration-200 hover:shadow-md">
-                    <FileText className="h-4 w-4" />
-                    Relatórios
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  {reportItems.map(item => <DropdownMenuItem key={item.id} onClick={() => {
-                  onNavigate(item.id);
-                  setReportsOpen(false);
-                }} className={currentPage === item.id ? "bg-primary/10" : ""}>
-                      {item.label}
-                    </DropdownMenuItem>)}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.key}
+                  variant={currentPage === item.key ? "default" : "ghost"}
+                  onClick={() => handleNavigate(item.key)}
+                  className="flex items-center gap-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
 
-              <Button variant={currentPage === 'protocol' ? "default" : "ghost"} onClick={() => onNavigate('protocol')} className="flex items-center gap-2 transition-all duration-200 hover:shadow-md">
-                <BarChart3 className="h-4 w-4" />
-                Protocolo
-              </Button>
+            {/* Relatórios Dropdown */}
+            {hasReportsAccess && (
+              <div className="relative group">
+                <Button
+                  variant={currentPage.startsWith('reports-') ? "default" : "ghost"}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Relatórios
+                </Button>
+                <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="py-1">
+                    {reportItems.map((item) => {
+                      if (!checkPermission(item.permission, 'view')) return null;
+                      
+                      return (
+                        <button
+                          key={item.key}
+                          onClick={() => handleNavigate(item.key)}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
-              <Button variant={currentPage === 'settings' ? "default" : "ghost"} onClick={() => onNavigate('settings')} className="flex items-center gap-2 transition-all duration-200 hover:shadow-md">
+            {/* Admin Items */}
+            {isAdmin && adminItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.key}
+                  variant={currentPage === item.key ? "default" : "ghost"}
+                  onClick={() => handleNavigate(item.key)}
+                  className="flex items-center gap-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
+
+            {/* Settings */}
+            {checkPermission('settings', 'view') && (
+              <Button
+                variant={currentPage === 'settings' ? "default" : "ghost"}
+                onClick={() => handleNavigate('settings')}
+                className="flex items-center gap-2"
+              >
                 <Settings className="h-4 w-4" />
                 Configurações
               </Button>
-            </nav>
-          </div>
+            )}
+          </nav>
 
-          {/* User Menu */}
-          <div className="flex items-center space-x-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center space-x-2 hover:bg-white/50 transition-all duration-200">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:block">{user?.name}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
-                  <span>{user?.name} {user?.surname}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="flex items-center space-x-2 text-red-600">
-                  <LogOut className="h-4 w-4" />
-                  <span>Sair</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* User Info and Logout */}
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-medium text-gray-900">
+                {user?.name} {user?.surname}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">
+                {user?.userType}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={logout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              className="lg:hidden"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t border-gray-200 py-4">
+            <div className="space-y-2">
+              {menuItems.map((item) => {
+                if (!checkPermission(item.permission, 'view')) return null;
+                
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.key}
+                    variant={currentPage === item.key ? "default" : "ghost"}
+                    onClick={() => handleNavigate(item.key)}
+                    className="w-full justify-start flex items-center gap-2"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+
+              {/* Mobile Reports */}
+              {hasReportsAccess && (
+                <div className="space-y-1">
+                  <div className="px-3 py-2 text-sm font-medium text-gray-900">Relatórios</div>
+                  {reportItems.map((item) => {
+                    if (!checkPermission(item.permission, 'view')) return null;
+                    
+                    return (
+                      <Button
+                        key={item.key}
+                        variant={currentPage === item.key ? "default" : "ghost"}
+                        onClick={() => handleNavigate(item.key)}
+                        className="w-full justify-start pl-6"
+                      >
+                        {item.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Mobile Admin Items */}
+              {isAdmin && (
+                <div className="space-y-1">
+                  <div className="px-3 py-2 text-sm font-medium text-gray-900">Administração</div>
+                  {adminItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Button
+                        key={item.key}
+                        variant={currentPage === item.key ? "default" : "ghost"}
+                        onClick={() => handleNavigate(item.key)}
+                        className="w-full justify-start flex items-center gap-2 pl-6"
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Mobile Settings */}
+              {checkPermission('settings', 'view') && (
+                <Button
+                  variant={currentPage === 'settings' ? "default" : "ghost"}
+                  onClick={() => handleNavigate('settings')}
+                  className="w-full justify-start flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Configurações
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    </header>;
+    </header>
+  );
 };
+
 export default Header;
