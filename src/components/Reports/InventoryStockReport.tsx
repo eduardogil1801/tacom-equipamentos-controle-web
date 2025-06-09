@@ -1,45 +1,60 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { FileDown, Package, TrendingUp, TrendingDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-interface InventoryData {
-  totalEquipments: number;
-  available: number;
-  moved: number;
-  withdrawn: number;
-  equipmentsByType: { [key: string]: { available: number; moved: number; withdrawn: number } };
+interface Equipment {
+  id: string;
+  tipo: string;
+  modelo?: string;
+  numero_serie: string;
+  data_entrada: string;
+  data_saida?: string;
+  estado?: string;
+  status?: string;
+  empresas: {
+    name: string;
+  };
 }
 
-const InventoryStockReport: React.FC = () => {
+const InventoryStockReport = () => {
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedState, setSelectedState] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [inventoryData, setInventoryData] = useState<InventoryData>({
-    totalEquipments: 0,
-    available: 0,
-    moved: 0,
-    withdrawn: 0,
-    equipmentsByType: {}
-  });
-  const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
-    equipmentType: ''
-  });
+
+  const statusOptions = [
+    'disponivel',
+    'recuperados',
+    'aguardando_despacho_contagem',
+    'enviados_manutencao_contagem',
+    'aguardando_manutencao',
+    'em_uso',
+    'danificado'
+  ];
+
+  const states = ['Rio Grande do Sul', 'Santa Catarina'];
 
   useEffect(() => {
-    loadInventoryData();
-  }, [filters]);
+    fetchData();
+  }, []);
 
-  const loadInventoryData = async () => {
+  useEffect(() => {
+    filterEquipments();
+  }, [equipments, selectedCompany, selectedStatus, selectedState]);
+
+  const fetchData = async () => {
     try {
       setLoading(true);
-
-      let equipmentQuery = supabase
+      
+      // Fetch equipments with company data
+      const { data: equipmentData, error: equipmentError } = await supabase
         .from('equipamentos')
         .select(`
           *,
@@ -48,47 +63,22 @@ const InventoryStockReport: React.FC = () => {
           )
         `);
 
-      if (filters.startDate) {
-        equipmentQuery = equipmentQuery.gte('data_entrada', filters.startDate);
-      }
-      if (filters.endDate) {
-        equipmentQuery = equipmentQuery.lte('data_entrada', filters.endDate);
-      }
-      if (filters.equipmentType) {
-        equipmentQuery = equipmentQuery.eq('tipo', filters.equipmentType);
-      }
+      if (equipmentError) throw equipmentError;
 
-      const { data: equipments, error } = await equipmentQuery;
+      // Fetch companies
+      const { data: companyData, error: companyError } = await supabase
+        .from('empresas')
+        .select('id, name');
 
-      if (error) throw error;
+      if (companyError) throw companyError;
 
-      const totalEquipments = equipments?.length || 0;
-      const available = equipments?.filter(eq => eq.status === 'disponivel').length || 0;
-      const moved = equipments?.filter(eq => eq.status === 'em_uso').length || 0;
-      const withdrawn = equipments?.filter(eq => eq.data_saida).length || 0;
-
-      const equipmentsByType: { [key: string]: { available: number; moved: number; withdrawn: number } } = {};
-      equipments?.forEach(eq => {
-        if (!equipmentsByType[eq.tipo]) {
-          equipmentsByType[eq.tipo] = { available: 0, moved: 0, withdrawn: 0 };
-        }
-        if (eq.status === 'disponivel') equipmentsByType[eq.tipo].available++;
-        if (eq.status === 'em_uso') equipmentsByType[eq.tipo].moved++;
-        if (eq.data_saida) equipmentsByType[eq.tipo].withdrawn++;
-      });
-
-      setInventoryData({
-        totalEquipments,
-        available,
-        moved,
-        withdrawn,
-        equipmentsByType
-      });
+      setEquipments(equipmentData || []);
+      setCompanies(companyData || []);
     } catch (error) {
-      console.error('Erro ao carregar dados de inventário:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar relatório de inventário",
+        description: "Erro ao carregar dados do relatório",
         variant: "destructive",
       });
     } finally {
@@ -96,55 +86,53 @@ const InventoryStockReport: React.FC = () => {
     }
   };
 
-  const exportToCSV = () => {
-    const csvData = [
-      ['Relatório de Inventário de Equipamentos'],
-      [''],
-      ['Resumo Geral'],
-      ['Total de Equipamentos', inventoryData.totalEquipments],
-      ['Disponíveis', inventoryData.available],
-      ['Movidos/Em Uso', inventoryData.moved],
-      ['Retirados', inventoryData.withdrawn],
-      [''],
-      ['Inventário por Tipo'],
-      ['Tipo', 'Disponíveis', 'Em Uso', 'Retirados'],
-      ...Object.entries(inventoryData.equipmentsByType).map(([type, counts]) => [
-        type, counts.available, counts.moved, counts.withdrawn
-      ]),
-    ];
+  const filterEquipments = () => {
+    let filtered = [...equipments];
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `inventario_equipamentos_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (selectedCompany !== 'all') {
+      filtered = filtered.filter(eq => eq.empresas?.name === selectedCompany);
+    }
 
-    toast({
-      title: "Sucesso",
-      description: "Relatório de inventário exportado com sucesso!",
-    });
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(eq => eq.status === selectedStatus);
+    }
+
+    if (selectedState !== 'all') {
+      filtered = filtered.filter(eq => eq.estado === selectedState);
+    }
+
+    setFilteredEquipments(filtered);
   };
+
+  const getInventorySummary = () => {
+    const total = filteredEquipments.length;
+    const inStock = filteredEquipments.filter(eq => !eq.data_saida).length;
+    const outOfStock = filteredEquipments.filter(eq => eq.data_saida).length;
+    const available = filteredEquipments.filter(eq => eq.status === 'disponivel').length;
+    const inUse = filteredEquipments.filter(eq => eq.status === 'em_uso').length;
+    const maintenance = filteredEquipments.filter(eq => 
+      eq.status === 'aguardando_manutencao' || eq.status === 'enviados_manutencao_contagem'
+    ).length;
+
+    return { total, inStock, outOfStock, available, inUse, maintenance };
+  };
+
+  const summary = getInventorySummary();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando relatório de inventário...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Carregando relatório...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Relatório de Inventário</h1>
-        <Button onClick={exportToCSV} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Exportar CSV
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Relatório de Inventário</h1>
+        <Button onClick={fetchData}>
+          Atualizar Dados
         </Button>
       </div>
 
@@ -155,136 +143,148 @@ const InventoryStockReport: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="startDate">Data Inicial</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-              />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Empresa</label>
+              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as empresas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.name}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label htmlFor="endDate">Data Final</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-              />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  {statusOptions.map(status => (
+                    <SelectItem key={status} value={status}>
+                      {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label htmlFor="equipmentType">Tipo de Equipamento</Label>
-              <Input
-                id="equipmentType"
-                placeholder="Ex: CCIT 4.0, CCIT 5.0..."
-                value={filters.equipmentType}
-                onChange={(e) => setFilters({...filters, equipmentType: e.target.value})}
-              />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Estado</label>
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os estados</SelectItem>
+                  {states.map(state => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Resumo */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total de Equipamentos</p>
-                <p className="text-2xl font-bold">{inventoryData.totalEquipments}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-600" />
-            </div>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-600">{summary.total}</div>
+            <div className="text-sm text-gray-600">Total</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Disponíveis</p>
-                <p className="text-2xl font-bold text-green-600">{inventoryData.available}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
-            </div>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-green-600">{summary.inStock}</div>
+            <div className="text-sm text-gray-600">Em Estoque</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Em Uso</p>
-                <p className="text-2xl font-bold text-blue-600">{inventoryData.moved}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-600" />
-            </div>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-red-600">{summary.outOfStock}</div>
+            <div className="text-sm text-gray-600">Fora de Estoque</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Retirados</p>
-                <p className="text-2xl font-bold text-red-600">{inventoryData.withdrawn}</p>
-              </div>
-              <TrendingDown className="h-8 w-8 text-red-600" />
-            </div>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-emerald-600">{summary.available}</div>
+            <div className="text-sm text-gray-600">Disponível</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-orange-600">{summary.inUse}</div>
+            <div className="text-sm text-gray-600">Em Uso</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-600">{summary.maintenance}</div>
+            <div className="text-sm text-gray-600">Manutenção</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Inventário por Tipo */}
+      {/* Lista de Equipamentos */}
       <Card>
         <CardHeader>
-          <CardTitle>Inventário por Tipo de Equipamento</CardTitle>
+          <CardTitle>Equipamentos ({filteredEquipments.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse border border-gray-300">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Tipo de Equipamento</th>
-                  <th className="text-left p-3">Disponíveis</th>
-                  <th className="text-left p-3">Em Uso</th>
-                  <th className="text-left p-3">Retirados</th>
-                  <th className="text-left p-3">Total</th>
+                <tr className="bg-gray-50">
+                  <th className="border border-gray-300 p-2 text-left">Número de Série</th>
+                  <th className="border border-gray-300 p-2 text-left">Tipo</th>
+                  <th className="border border-gray-300 p-2 text-left">Modelo</th>
+                  <th className="border border-gray-300 p-2 text-left">Empresa</th>
+                  <th className="border border-gray-300 p-2 text-left">Estado</th>
+                  <th className="border border-gray-300 p-2 text-left">Status</th>
+                  <th className="border border-gray-300 p-2 text-left">Data Entrada</th>
+                  <th className="border border-gray-300 p-2 text-left">Data Saída</th>
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(inventoryData.equipmentsByType).map(([type, counts]) => (
-                  <tr key={type} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-medium">{type}</td>
-                    <td className="p-3">
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">
-                        {counts.available}
+                {filteredEquipments.map(equipment => (
+                  <tr key={equipment.id} className="hover:bg-gray-50">
+                    <td className="border border-gray-300 p-2">{equipment.numero_serie}</td>
+                    <td className="border border-gray-300 p-2">{equipment.tipo}</td>
+                    <td className="border border-gray-300 p-2">{equipment.modelo || '-'}</td>
+                    <td className="border border-gray-300 p-2">{equipment.empresas?.name}</td>
+                    <td className="border border-gray-300 p-2">{equipment.estado || '-'}</td>
+                    <td className="border border-gray-300 p-2">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
+                        equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
+                        equipment.status === 'danificado' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {equipment.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                       </span>
                     </td>
-                    <td className="p-3">
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
-                        {counts.moved}
-                      </span>
+                    <td className="border border-gray-300 p-2">
+                      {new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="p-3">
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm">
-                        {counts.withdrawn}
-                      </span>
-                    </td>
-                    <td className="p-3 font-bold">
-                      {counts.available + counts.moved + counts.withdrawn}
+                    <td className="border border-gray-300 p-2">
+                      {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {Object.keys(inventoryData.equipmentsByType).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Nenhum equipamento encontrado com os filtros selecionados
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
