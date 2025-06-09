@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -263,16 +262,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="tipo">Tipo de Equipamento *</Label>
-                <Select value={formData.tipo || 'placeholder-tipo'} onValueChange={(value) => {
-                  if (value !== 'placeholder-tipo') {
-                    handleChange('tipo', value);
-                  }
+                <Select value={formData.tipo || ''} onValueChange={(value) => {
+                  handleChange('tipo', value);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder-tipo" disabled>Selecione o tipo</SelectItem>
                     {equipmentTypes.map(tipo => (
                       <SelectItem key={tipo} value={tipo}>
                         {tipo}
@@ -294,16 +290,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa *</Label>
-                <Select value={formData.id_empresa || 'placeholder-empresa'} onValueChange={(value) => {
-                  if (value !== 'placeholder-empresa') {
-                    handleChange('id_empresa', value);
-                  }
+                <Select value={formData.id_empresa || ''} onValueChange={(value) => {
+                  handleChange('id_empresa', value);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder-empresa" disabled>Selecione uma empresa</SelectItem>
                     {companies.map(company => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}

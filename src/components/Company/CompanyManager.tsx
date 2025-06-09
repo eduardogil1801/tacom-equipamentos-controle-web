@@ -260,16 +260,13 @@ const CompanyManager: React.FC<CompanyManagerProps> = ({ onBack }) => {
 
                 <div>
                   <Label htmlFor="estado">Estado *</Label>
-                  <Select value={formData.estado_id || 'placeholder-estado'} onValueChange={(value) => {
-                    if (value !== 'placeholder-estado') {
-                      setFormData(prev => ({ ...prev, estado_id: value }));
-                    }
+                  <Select value={formData.estado_id || ''} onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, estado_id: value }));
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="placeholder-estado" disabled>Selecione um estado</SelectItem>
                       {states.map(state => (
                         <SelectItem key={state.id} value={state.id}>
                           {state.nome}

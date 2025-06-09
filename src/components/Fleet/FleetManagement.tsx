@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -283,18 +282,15 @@ const FleetManagement: React.FC = () => {
                 <div>
                   <Label htmlFor="cod_operadora">Código da Operadora *</Label>
                   <Select 
-                    value={formData.cod_operadora || 'placeholder-codigo'} 
+                    value={formData.cod_operadora || ''} 
                     onValueChange={(value) => {
-                      if (value !== 'placeholder-codigo') {
-                        handleOperadoraChange(value);
-                      }
+                      handleOperadoraChange(value);
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o código" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="placeholder-codigo" disabled>Selecione o código</SelectItem>
                       {Object.entries(operadoraMapping).map(([codigo, nome]) => (
                         <SelectItem key={codigo} value={codigo}>
                           {codigo}

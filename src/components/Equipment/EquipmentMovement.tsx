@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -219,16 +218,13 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="equipamento">Equipamento *</Label>
-                <Select value={formData.id_equipamento || 'placeholder-equipment'} onValueChange={(value) => {
-                  if (value !== 'placeholder-equipment') {
-                    handleChange('id_equipamento', value);
-                  }
+                <Select value={formData.id_equipamento || ''} onValueChange={(value) => {
+                  handleChange('id_equipamento', value);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um equipamento" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder-equipment" disabled>Selecione um equipamento</SelectItem>
                     {equipments.map(equipment => (
                       <SelectItem key={equipment.id} value={equipment.id}>
                         {equipment.numero_serie} - {equipment.tipo} ({equipment.empresas?.name})
@@ -240,16 +236,13 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
               <div className="space-y-2">
                 <Label htmlFor="tipo_movimento">Tipo de Movimento *</Label>
-                <Select value={formData.tipo_movimento || 'placeholder-movement'} onValueChange={(value) => {
-                  if (value !== 'placeholder-movement') {
-                    handleChange('tipo_movimento', value);
-                  }
+                <Select value={formData.tipo_movimento || ''} onValueChange={(value) => {
+                  handleChange('tipo_movimento', value);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="placeholder-movement" disabled>Selecione o tipo</SelectItem>
                     <SelectItem value="entrada">Entrada</SelectItem>
                     <SelectItem value="saida">Saída</SelectItem>
                     <SelectItem value="manutencao">Manutenção</SelectItem>
@@ -272,16 +265,13 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               {(formData.tipo_movimento === 'manutencao' || formData.tipo_movimento === 'retorno_manutencao') && (
                 <div className="space-y-2">
                   <Label htmlFor="tipo_manutencao">Tipo de Manutenção *</Label>
-                  <Select value={formData.tipo_manutencao_id || 'placeholder-maintenance'} onValueChange={(value) => {
-                    if (value !== 'placeholder-maintenance') {
-                      handleChange('tipo_manutencao_id', value);
-                    }
+                  <Select value={formData.tipo_manutencao_id || ''} onValueChange={(value) => {
+                    handleChange('tipo_manutencao_id', value);
                   }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="placeholder-maintenance" disabled>Selecione o tipo</SelectItem>
                       {maintenanceTypes.map(type => (
                         <SelectItem key={type.id} value={type.id}>
                           {type.codigo} - {type.descricao}
