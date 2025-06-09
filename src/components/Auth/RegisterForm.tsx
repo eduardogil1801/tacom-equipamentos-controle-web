@@ -16,6 +16,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleForm }) => {
     name: '',
     surname: '',
     email: '',
+    username: '',
     password: '',
     confirmPassword: ''
   });
@@ -31,7 +32,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleForm }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.surname || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.surname || !formData.email || !formData.username || !formData.password || !formData.confirmPassword) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos.",
@@ -49,7 +50,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleForm }) => {
       return;
     }
 
-    const success = await register(formData.name, formData.surname, formData.email, formData.password, formData.confirmPassword);
+    const success = await register(formData.name, formData.surname, formData.email, formData.username, formData.password, formData.confirmPassword);
     
     if (success) {
       toast({
@@ -107,6 +108,18 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleForm }) => {
               type="email"
               placeholder="seu@email.com"
               value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="username">Nome de Usuário</Label>
+            <Input
+              id="username"
+              name="username"
+              placeholder="seu.usuario"
+              value={formData.username}
               onChange={handleChange}
               required
             />
