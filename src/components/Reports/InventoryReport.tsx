@@ -5,106 +5,80 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Package, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { FileText, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
 
-interface InventoryData {
-  totalEquipments: number;
-  inStock: number;
-  outOfStock: number;
-  companies: number;
-  equipmentsByType: { [key: string]: number };
-  equipmentsByCompany: { [key: string]: number };
+interface Equipment {
+  id: string;
+  tipo: string;
+  numero_serie: string;
+  data_entrada: string;
+  data_saida?: string;
+  status: string;
+  estado: string;
+  modelo?: string;
+  em_manutencao: boolean;
+  empresas: {
+    name: string;
+    cnpj?: string;
+  };
 }
 
-const InventoryReport: React.FC = () => {
+const InventoryReport = () => {
+  const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inventoryData, setInventoryData] = useState<InventoryData>({
-    totalEquipments: 0,
-    inStock: 0,
-    outOfStock: 0,
-    companies: 0,
-    equipmentsByType: {},
-    equipmentsByCompany: {}
-  });
+  const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
+  
+  // Filtros
   const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
+    companyId: '',
+    tipo: '',
+    status: '',
+    estado: '',
+    serialNumber: '',
     equipmentType: ''
   });
 
   useEffect(() => {
-    loadInventoryData();
-  }, [filters]);
+    loadData();
+  }, []);
 
-  const loadInventoryData = async () => {
+  useEffect(() => {
+    applyFilters();
+  }, [filters, equipments]);
+
+  const loadData = async () => {
     try {
       setLoading(true);
+      
+      // Carregar empresas/operadoras
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
 
-      // Query base para equipamentos
-      let equipmentQuery = supabase
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
+
+      // Carregar equipamentos
+      const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
           *,
-          empresas (
-            name
-          )
-        `);
+          empresas (name, cnpj)
+        `)
+        .order('data_entrada', { ascending: false });
 
-      // Aplicar filtros
-      if (filters.startDate) {
-        equipmentQuery = equipmentQuery.gte('data_entrada', filters.startDate);
-      }
-      if (filters.endDate) {
-        equipmentQuery = equipmentQuery.lte('data_entrada', filters.endDate);
-      }
-      if (filters.equipmentType) {
-        equipmentQuery = equipmentQuery.eq('tipo', filters.equipmentType);
-      }
-
-      const { data: equipments, error: equipError } = await equipmentQuery;
-
-      if (equipError) throw equipError;
-
-      // Contar empresas
-      const { data: companies, error: compError } = await supabase
-        .from('empresas')
-        .select('id');
-
-      if (compError) throw compError;
-
-      // Processar dados
-      const totalEquipments = equipments?.length || 0;
-      const inStock = equipments?.filter(eq => !eq.data_saida).length || 0;
-      const outOfStock = equipments?.filter(eq => eq.data_saida).length || 0;
-
-      // Agrupar por tipo
-      const equipmentsByType: { [key: string]: number } = {};
-      equipments?.forEach(eq => {
-        equipmentsByType[eq.tipo] = (equipmentsByType[eq.tipo] || 0) + 1;
-      });
-
-      // Agrupar por empresa
-      const equipmentsByCompany: { [key: string]: number } = {};
-      equipments?.forEach(eq => {
-        const companyName = eq.empresas?.name || 'Sem empresa';
-        equipmentsByCompany[companyName] = (equipmentsByCompany[companyName] || 0) + 1;
-      });
-
-      setInventoryData({
-        totalEquipments,
-        inStock,
-        outOfStock,
-        companies: companies?.length || 0,
-        equipmentsByType,
-        equipmentsByCompany
-      });
+      if (equipmentsError) throw equipmentsError;
+      setEquipments(equipmentsData || []);
     } catch (error) {
-      console.error('Erro ao carregar dados de estoque:', error);
+      console.error('Erro ao carregar dados:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar relatório de estoque",
+        description: "Erro ao carregar dados do inventário",
         variant: "destructive",
       });
     } finally {
@@ -112,56 +86,93 @@ const InventoryReport: React.FC = () => {
     }
   };
 
-  const exportToCSV = () => {
-    const csvData = [
-      ['Relatório de Estoque'],
-      [''],
-      ['Resumo Geral'],
-      ['Total de Equipamentos', inventoryData.totalEquipments],
-      ['Em Estoque', inventoryData.inStock],
-      ['Retirados', inventoryData.outOfStock],
-      ['Total de Empresas', inventoryData.companies],
-      [''],
-      ['Equipamentos por Tipo'],
-      ...Object.entries(inventoryData.equipmentsByType).map(([type, count]) => [type, count]),
-      [''],
-      ['Equipamentos por Empresa'],
-      ...Object.entries(inventoryData.equipmentsByCompany).map(([company, count]) => [company, count]),
-    ];
+  const applyFilters = () => {
+    let filtered = [...equipments];
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio_estoque_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (filters.companyId) {
+      filtered = filtered.filter(eq => eq.id_empresa === filters.companyId);
+    }
 
-    toast({
-      title: "Sucesso",
-      description: "Relatório de estoque exportado com sucesso!",
+    if (filters.tipo) {
+      filtered = filtered.filter(eq => eq.tipo?.toLowerCase().includes(filters.tipo.toLowerCase()));
+    }
+
+    if (filters.status) {
+      filtered = filtered.filter(eq => eq.status === filters.status);
+    }
+
+    if (filters.estado) {
+      filtered = filtered.filter(eq => eq.estado === filters.estado);
+    }
+
+    if (filters.serialNumber) {
+      filtered = filtered.filter(eq => 
+        eq.numero_serie?.toLowerCase().includes(filters.serialNumber.toLowerCase())
+      );
+    }
+
+    if (filters.equipmentType) {
+      filtered = filtered.filter(eq => 
+        eq.tipo?.toLowerCase().includes(filters.equipmentType.toLowerCase())
+      );
+    }
+
+    setFilteredEquipments(filtered);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      companyId: '',
+      tipo: '',
+      status: '',
+      estado: '',
+      serialNumber: '',
+      equipmentType: ''
     });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Relatório de Inventário', 20, 30);
+    
+    doc.setFontSize(12);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 50);
+    doc.text(`Total de Equipamentos: ${filteredEquipments.length}`, 20, 60);
+    
+    let yPosition = 80;
+    
+    filteredEquipments.forEach((equipment, index) => {
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.text(`${index + 1}. ${equipment.tipo} - ${equipment.numero_serie}`, 20, yPosition);
+      doc.text(`   Operadora: ${equipment.empresas?.name || 'N/A'}`, 20, yPosition + 10);
+      doc.text(`   Status: ${equipment.status} | Estado: ${equipment.estado}`, 20, yPosition + 20);
+      doc.text(`   Entrada: ${new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}`, 20, yPosition + 30);
+      
+      yPosition += 40;
+    });
+    
+    doc.save('relatorio-inventario.pdf');
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando relatório de estoque...</div>
+        <div className="text-lg">Carregando relatório...</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Relatório de Estoque</h1>
-        <Button onClick={exportToCSV} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Exportar CSV
-        </Button>
+      <div className="flex items-center gap-4">
+        <FileText className="h-8 w-8 text-blue-600" />
+        <h1 className="text-2xl font-bold text-gray-900">Relatório de Inventário</h1>
       </div>
 
       {/* Filtros */}
@@ -170,128 +181,176 @@ const InventoryReport: React.FC = () => {
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
-              <Label htmlFor="startDate">Data Inicial</Label>
+              <Label htmlFor="company">Operadora</Label>
+              <Select value={filters.companyId} onValueChange={(value) => setFilters({...filters, companyId: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="disponivel">Disponível</SelectItem>
+                  <SelectItem value="em_uso">Em Uso</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="defeito">Defeito</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="estado">Estado</Label>
+              <Select value={filters.estado} onValueChange={(value) => setFilters({...filters, estado: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="novo">Novo</SelectItem>
+                  <SelectItem value="usado">Usado</SelectItem>
+                  <SelectItem value="recondicionado">Recondicionado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="serialNumber">Número de Série</Label>
               <Input
-                id="startDate"
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+                id="serialNumber"
+                placeholder="Filtrar por série..."
+                value={filters.serialNumber}
+                onChange={(e) => setFilters({...filters, serialNumber: e.target.value})}
               />
             </div>
-            <div>
-              <Label htmlFor="endDate">Data Final</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-              />
-            </div>
+
             <div>
               <Label htmlFor="equipmentType">Tipo de Equipamento</Label>
               <Input
                 id="equipmentType"
-                placeholder="Ex: Notebook, Desktop..."
+                placeholder="Filtrar por tipo..."
                 value={filters.equipmentType}
                 onChange={(e) => setFilters({...filters, equipmentType: e.target.value})}
               />
             </div>
+
+            <div className="flex items-end">
+              <Button onClick={clearFilters} variant="outline" className="w-full">
+                Limpar Filtros
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total de Equipamentos</p>
-                <p className="text-2xl font-bold">{inventoryData.totalEquipments}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-600" />
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{filteredEquipments.length}</div>
+            <div className="text-sm text-gray-500">Total de Equipamentos</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Em Estoque</p>
-                <p className="text-2xl font-bold text-green-600">{inventoryData.inStock}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
+            <div className="text-2xl font-bold text-green-600">
+              {filteredEquipments.filter(eq => eq.status === 'disponivel').length}
             </div>
+            <div className="text-sm text-gray-500">Disponíveis</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Retirados</p>
-                <p className="text-2xl font-bold text-red-600">{inventoryData.outOfStock}</p>
-              </div>
-              <TrendingDown className="h-8 w-8 text-red-600" />
+            <div className="text-2xl font-bold text-yellow-600">
+              {filteredEquipments.filter(eq => eq.status === 'em_uso').length}
             </div>
+            <div className="text-sm text-gray-500">Em Uso</div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Empresas Cadastradas</p>
-                <p className="text-2xl font-bold">{inventoryData.companies}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-orange-600" />
+            <div className="text-2xl font-bold text-red-600">
+              {filteredEquipments.filter(eq => eq.status === 'manutencao' || eq.em_manutencao).length}
             </div>
+            <div className="text-sm text-gray-500">Em Manutenção</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Equipamentos por Tipo */}
+      {/* Tabela */}
       <Card>
-        <CardHeader>
-          <CardTitle>Equipamentos por Tipo</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Equipamentos ({filteredEquipments.length})</CardTitle>
+          <Button onClick={exportToPDF} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Exportar PDF
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {Object.entries(inventoryData.equipmentsByType).map(([type, count]) => (
-              <div key={type} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">{type}</span>
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                  {count} unidades
-                </span>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Tipo</th>
+                  <th className="text-left p-3">Número de Série</th>
+                  <th className="text-left p-3">Operadora</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Estado</th>
+                  <th className="text-left p-3">Modelo</th>
+                  <th className="text-left p-3">Data Entrada</th>
+                  <th className="text-left p-3">Manutenção</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEquipments.map(equipment => (
+                  <tr key={equipment.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3">{equipment.tipo}</td>
+                    <td className="p-3">{equipment.numero_serie}</td>
+                    <td className="p-3">{equipment.empresas?.name || 'N/A'}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
+                        equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
+                        equipment.status === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {equipment.status}
+                      </span>
+                    </td>
+                    <td className="p-3">{equipment.estado}</td>
+                    <td className="p-3">{equipment.modelo || 'N/A'}</td>
+                    <td className="p-3">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        equipment.em_manutencao ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {equipment.em_manutencao ? 'Sim' : 'Não'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredEquipments.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                Nenhum equipamento encontrado com os filtros aplicados
               </div>
-            ))}
-            {Object.keys(inventoryData.equipmentsByType).length === 0 && (
-              <p className="text-gray-500 text-center py-4">Nenhum equipamento encontrado</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Equipamentos por Empresa */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Equipamentos por Empresa</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Object.entries(inventoryData.equipmentsByCompany).map(([company, count]) => (
-              <div key={company} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">{company}</span>
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                  {count} equipamentos
-                </span>
-              </div>
-            ))}
-            {Object.keys(inventoryData.equipmentsByCompany).length === 0 && (
-              <p className="text-gray-500 text-center py-4">Nenhuma empresa encontrada</p>
             )}
           </div>
         </CardContent>

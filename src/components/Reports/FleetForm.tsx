@@ -26,6 +26,29 @@ interface FleetData {
   nuvem: number;
 }
 
+// Mapeamento de operadoras
+const operadoraMapping: { [key: string]: string } = {
+  'Catsul': '32',
+  'Guaíba': '9',
+  'Itapuã': '11',
+  'Sogal': '12',
+  'Soul': '14',
+  'Sogil': '13',
+  'Transcal': '15',
+  'Viamão': '16',
+  'Cmt': '27',
+  'Central': '29',
+  'Transbus': '21',
+  'Tc_Sapi': '23',
+  'Sti': '20',
+  'Sapucaia': '26',
+  'Trensurb': '34',
+  'Nova Santa Rita': '41',
+  'Hamburguesa': '42',
+  'Parobe': '46',
+  'Soul Municipal': '47'
+};
+
 const FleetForm = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [formData, setFormData] = useState<FleetData>({
@@ -58,7 +81,7 @@ const FleetForm = () => {
       console.error('Error loading companies:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar empresas",
+        description: "Erro ao carregar operadoras",
         variant: "destructive",
       });
     }
@@ -66,6 +89,15 @@ const FleetForm = () => {
 
   const handleInputChange = (field: keyof FleetData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCompanyChange = (companyName: string) => {
+    const codOperadora = operadoraMapping[companyName] || '';
+    setFormData(prev => ({ 
+      ...prev, 
+      nome_empresa: companyName,
+      cod_operadora: codOperadora
+    }));
   };
 
   const calculateTotal = () => {
@@ -177,13 +209,13 @@ const FleetForm = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="empresa">Empresa *</Label>
+                <Label htmlFor="empresa">Operadora *</Label>
                 <Select 
                   value={formData.nome_empresa} 
-                  onValueChange={(value) => handleInputChange('nome_empresa', value)}
+                  onValueChange={handleCompanyChange}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma empresa" />
+                    <SelectValue placeholder="Selecione uma operadora" />
                   </SelectTrigger>
                   <SelectContent>
                     {companies.map(company => (
@@ -199,10 +231,10 @@ const FleetForm = () => {
                 <Label htmlFor="cod_operadora">Código da Operadora *</Label>
                 <Input
                   id="cod_operadora"
-                  placeholder="Ex: OP001"
+                  placeholder="Código automático"
                   value={formData.cod_operadora}
-                  onChange={(e) => handleInputChange('cod_operadora', e.target.value)}
-                  required
+                  readOnly
+                  className="bg-gray-100"
                 />
               </div>
 

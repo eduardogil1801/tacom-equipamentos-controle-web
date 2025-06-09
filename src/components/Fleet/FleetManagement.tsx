@@ -23,11 +23,35 @@ interface FleetData {
   total: number;
 }
 
+// Mapeamento de operadoras
+const operadoraMapping: { [key: string]: string } = {
+  'Catsul': '32',
+  'Guaíba': '9',
+  'Itapuã': '11',
+  'Sogal': '12',
+  'Soul': '14',
+  'Sogil': '13',
+  'Transcal': '15',
+  'Viamão': '16',
+  'Cmt': '27',
+  'Central': '29',
+  'Transbus': '21',
+  'Tc_Sapi': '23',
+  'Sti': '20',
+  'Sapucaia': '26',
+  'Trensurb': '34',
+  'Nova Santa Rita': '41',
+  'Hamburguesa': '42',
+  'Parobe': '46',
+  'Soul Municipal': '47'
+};
+
 const FleetManagement: React.FC = () => {
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFleet, setEditingFleet] = useState<FleetData | null>(null);
+  const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
   const [formData, setFormData] = useState<FleetData>({
     cod_operadora: '',
     nome_empresa: '',
@@ -43,11 +67,26 @@ const FleetManagement: React.FC = () => {
 
   useEffect(() => {
     loadFleetData();
+    loadCompanies();
   }, []);
 
   useEffect(() => {
     calculateTotal();
   }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao, formData.citgis, formData.buszoom, formData.nuvem]);
+
+  const loadCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar operadoras:', error);
+    }
+  };
 
   const loadFleetData = async () => {
     try {
@@ -89,6 +128,15 @@ const FleetManagement: React.FC = () => {
       [field]: typeof value === 'string' && field !== 'cod_operadora' && field !== 'nome_empresa' && field !== 'mes_referencia' 
         ? parseInt(value) || 0 
         : value
+    }));
+  };
+
+  const handleCompanyChange = (companyName: string) => {
+    const codOperadora = operadoraMapping[companyName] || '';
+    setFormData(prev => ({ 
+      ...prev, 
+      nome_empresa: companyName,
+      cod_operadora: codOperadora
     }));
   };
 
@@ -220,23 +268,31 @@ const FleetManagement: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
+                  <Label htmlFor="nome_empresa">Operadora *</Label>
+                  <Select 
+                    value={formData.nome_empresa} 
+                    onValueChange={handleCompanyChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma operadora" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(company => (
+                        <SelectItem key={company.id} value={company.name}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label htmlFor="cod_operadora">Código da Operadora *</Label>
                   <Input
                     id="cod_operadora"
                     value={formData.cod_operadora}
-                    onChange={(e) => handleInputChange('cod_operadora', e.target.value)}
-                    placeholder="Ex: OP001"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="nome_empresa">Nome da Empresa *</Label>
-                  <Input
-                    id="nome_empresa"
-                    value={formData.nome_empresa}
-                    onChange={(e) => handleInputChange('nome_empresa', e.target.value)}
-                    placeholder="Nome da empresa"
-                    required
+                    readOnly
+                    className="bg-gray-100"
+                    placeholder="Código automático"
                   />
                 </div>
                 <div>
@@ -345,7 +401,7 @@ const FleetManagement: React.FC = () => {
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-3">Código</th>
-                  <th className="text-left p-3">Empresa</th>
+                  <th className="text-left p-3">Operadora</th>
                   <th className="text-left p-3">Mês</th>
                   <th className="text-left p-3">Simples C/Img</th>
                   <th className="text-left p-3">Simples S/Img</th>
