@@ -51,29 +51,40 @@ const ChatFloat: React.FC = () => {
     }
   };
 
+  const handleCloseChat = () => {
+    setIsOpen(false);
+    setSelectedUser(null);
+    setIsMinimized(false);
+  };
+
   return (
     <>
-      {/* Botão flutuante */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="h-14 w-14 rounded-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg transition-all duration-300 transform hover:scale-105"
-          size="icon"
-        >
-          <MessageCircle className="h-6 w-6 text-white" />
-          {unreadCount > 0 && (
-            <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-orange-500 text-white text-xs">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </Badge>
-          )}
-        </Button>
-      </div>
+      {/* Botão flutuante - só aparece quando não há conversa ativa ou chat fechado */}
+      {(!selectedUser || !isOpen) && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={() => setIsOpen(true)}
+            className="h-14 w-14 rounded-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg transition-all duration-300 transform hover:scale-105"
+            size="icon"
+          >
+            <MessageCircle className="h-6 w-6 text-white" />
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-orange-500 text-white text-xs">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            )}
+          </Button>
+        </div>
+      )}
 
-      {/* Janela do chat */}
+      {/* Janela do chat - posicionada acima do botão */}
       {isOpen && (
-        <div className={`fixed bottom-24 right-6 z-50 bg-white rounded-lg shadow-2xl border border-gray-200 transition-all duration-300 ${
+        <div className={`fixed right-6 z-50 bg-white rounded-lg shadow-2xl border border-gray-200 transition-all duration-300 ${
           isMinimized ? 'h-12' : 'h-96 md:h-[500px]'
-        } w-80 md:w-96`}>
+        } w-80 md:w-96`}
+        style={{ 
+          bottom: selectedUser ? '6px' : '90px' // 6px do fundo quando há conversa, 90px acima do botão quando não há
+        }}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-red-500 to-red-600 text-white rounded-t-lg">
             <div className="flex items-center space-x-2">
@@ -94,10 +105,7 @@ const ChatFloat: React.FC = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
-                  setIsOpen(false);
-                  setSelectedUser(null);
-                }}
+                onClick={handleCloseChat}
                 className="h-8 w-8 text-white hover:bg-white/20"
               >
                 <X className="h-4 w-4" />
