@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Download, Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -13,69 +13,68 @@ import jsPDF from 'jspdf';
 interface Equipment {
   id: string;
   tipo: string;
+  modelo?: string;
   numero_serie: string;
   data_entrada: string;
   data_saida?: string;
   status: string;
   estado: string;
-  modelo?: string;
-  em_manutencao: boolean;
-  empresas: {
+  operadoras?: {
     name: string;
-    cnpj?: string;
   };
+}
+
+interface Company {
+  id: string;
+  name: string;
 }
 
 const InventoryReport = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [companies, setCompanies] = useState<{id: string, name: string}[]>([]);
-  
-  // Filtros
   const [filters, setFilters] = useState({
-    companyId: '',
-    tipo: '',
+    operadora: '',
     status: '',
     estado: '',
-    serialNumber: '',
-    equipmentType: ''
+    tipo: '',
+    numero_serie: ''
   });
 
   useEffect(() => {
-    loadData();
+    fetchData();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [filters, equipments]);
+  }, [equipments, filters]);
 
-  const loadData = async () => {
+  const fetchData = async () => {
     try {
-      setLoading(true);
-      
-      // Carregar empresas/operadoras
-      const { data: companiesData, error: companiesError } = await supabase
+      // Buscar equipamentos com join das operadoras
+      const { data: equipmentData, error: equipmentError } = await supabase
+        .from('equipamentos')
+        .select(`
+          *,
+          operadoras:empresas(name)
+        `)
+        .order('data_entrada', { ascending: false });
+
+      if (equipmentError) throw equipmentError;
+
+      // Buscar operadoras
+      const { data: companyData, error: companyError } = await supabase
         .from('empresas')
         .select('id, name')
         .order('name');
 
-      if (companiesError) throw companiesError;
-      setCompanies(companiesData || []);
+      if (companyError) throw companyError;
 
-      // Carregar equipamentos
-      const { data: equipmentsData, error: equipmentsError } = await supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (name, cnpj)
-        `)
-        .order('data_entrada', { ascending: false });
-
-      if (equipmentsError) throw equipmentsError;
-      setEquipments(equipmentsData || []);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      setEquipments(equipmentData || []);
+      setCompanies(companyData || []);
+    } catch (error: any) {
+      console.error('Erro ao buscar dados:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar dados do inventário",
@@ -87,14 +86,10 @@ const InventoryReport = () => {
   };
 
   const applyFilters = () => {
-    let filtered = [...equipments];
+    let filtered = equipments;
 
-    if (filters.companyId) {
-      filtered = filtered.filter(eq => eq.id_empresa === filters.companyId);
-    }
-
-    if (filters.tipo) {
-      filtered = filtered.filter(eq => eq.tipo?.toLowerCase().includes(filters.tipo.toLowerCase()));
+    if (filters.operadora) {
+      filtered = filtered.filter(eq => eq.operadoras?.name === filters.operadora);
     }
 
     if (filters.status) {
@@ -105,254 +100,264 @@ const InventoryReport = () => {
       filtered = filtered.filter(eq => eq.estado === filters.estado);
     }
 
-    if (filters.serialNumber) {
+    if (filters.tipo) {
       filtered = filtered.filter(eq => 
-        eq.numero_serie?.toLowerCase().includes(filters.serialNumber.toLowerCase())
+        eq.tipo.toLowerCase().includes(filters.tipo.toLowerCase())
       );
     }
 
-    if (filters.equipmentType) {
+    if (filters.numero_serie) {
       filtered = filtered.filter(eq => 
-        eq.tipo?.toLowerCase().includes(filters.equipmentType.toLowerCase())
+        eq.numero_serie.toLowerCase().includes(filters.numero_serie.toLowerCase())
       );
     }
 
     setFilteredEquipments(filtered);
   };
 
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
   const clearFilters = () => {
     setFilters({
-      companyId: '',
-      tipo: '',
+      operadora: '',
       status: '',
       estado: '',
-      serialNumber: '',
-      equipmentType: ''
+      tipo: '',
+      numero_serie: ''
     });
   };
 
   const exportToPDF = () => {
     const doc = new jsPDF();
     
-    doc.setFontSize(20);
-    doc.text('Relatório de Inventário', 20, 30);
+    // Título
+    doc.setFontSize(16);
+    doc.text('Relatório de Inventário', 20, 20);
     
-    doc.setFontSize(12);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 50);
-    doc.text(`Total de Equipamentos: ${filteredEquipments.length}`, 20, 60);
+    // Data do relatório
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 30);
+    doc.text(`Total de equipamentos: ${filteredEquipments.length}`, 20, 35);
     
-    let yPosition = 80;
+    // Cabeçalhos da tabela
+    const headers = ['Tipo', 'Modelo', 'Série', 'Operadora', 'Status', 'Estado', 'Entrada'];
+    let yPosition = 50;
     
+    doc.setFontSize(8);
+    headers.forEach((header, index) => {
+      doc.text(header, 20 + (index * 25), yPosition);
+    });
+    
+    // Dados da tabela
+    yPosition += 10;
     filteredEquipments.forEach((equipment, index) => {
-      if (yPosition > 270) {
+      if (yPosition > 280) {
         doc.addPage();
         yPosition = 20;
       }
       
-      doc.text(`${index + 1}. ${equipment.tipo} - ${equipment.numero_serie}`, 20, yPosition);
-      doc.text(`   Operadora: ${equipment.empresas?.name || 'N/A'}`, 20, yPosition + 10);
-      doc.text(`   Status: ${equipment.status} | Estado: ${equipment.estado}`, 20, yPosition + 20);
-      doc.text(`   Entrada: ${new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}`, 20, yPosition + 30);
+      const row = [
+        equipment.tipo || '',
+        equipment.modelo || '',
+        equipment.numero_serie || '',
+        equipment.operadoras?.name || '',
+        equipment.status || '',
+        equipment.estado || '',
+        equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : ''
+      ];
       
-      yPosition += 40;
+      row.forEach((cell, cellIndex) => {
+        doc.text(cell.substring(0, 12), 20 + (cellIndex * 25), yPosition);
+      });
+      
+      yPosition += 8;
     });
     
     doc.save('relatorio-inventario.pdf');
+    
+    toast({
+      title: "Sucesso",
+      description: "Relatório exportado com sucesso!",
+    });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando relatório...</div>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Carregando dados do inventário...</div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <FileText className="h-8 w-8 text-blue-600" />
-        <h1 className="text-2xl font-bold text-gray-900">Relatório de Inventário</h1>
-      </div>
-
-      {/* Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Relatório de Inventário
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div>
-              <Label htmlFor="company">Operadora</Label>
-              <Select value={filters.companyId} onValueChange={(value) => setFilters({...filters, companyId: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
-                  {companies.map(company => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent className="space-y-4">
+          {/* Filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <Select value={filters.operadora} onValueChange={(value) => handleFilterChange('operadora', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Operadora" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todas</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.name}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  <SelectItem value="disponivel">Disponível</SelectItem>
-                  <SelectItem value="em_uso">Em Uso</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="defeito">Defeito</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="disponivel">Disponível</SelectItem>
+                <SelectItem value="em_uso">Em Uso</SelectItem>
+                <SelectItem value="manutencao">Manutenção</SelectItem>
+                <SelectItem value="defeito">Defeito</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div>
-              <Label htmlFor="estado">Estado</Label>
-              <Select value={filters.estado} onValueChange={(value) => setFilters({...filters, estado: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
-                  <SelectItem value="novo">Novo</SelectItem>
-                  <SelectItem value="usado">Usado</SelectItem>
-                  <SelectItem value="recondicionado">Recondicionado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={filters.estado} onValueChange={(value) => handleFilterChange('estado', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="novo">Novo</SelectItem>
+                <SelectItem value="usado">Usado</SelectItem>
+                <SelectItem value="recondicionado">Recondicionado</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div>
-              <Label htmlFor="serialNumber">Número de Série</Label>
-              <Input
-                id="serialNumber"
-                placeholder="Filtrar por série..."
-                value={filters.serialNumber}
-                onChange={(e) => setFilters({...filters, serialNumber: e.target.value})}
-              />
-            </div>
+            <Input
+              placeholder="Tipo do equipamento"
+              value={filters.tipo}
+              onChange={(e) => handleFilterChange('tipo', e.target.value)}
+            />
 
-            <div>
-              <Label htmlFor="equipmentType">Tipo de Equipamento</Label>
-              <Input
-                id="equipmentType"
-                placeholder="Filtrar por tipo..."
-                value={filters.equipmentType}
-                onChange={(e) => setFilters({...filters, equipmentType: e.target.value})}
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Button onClick={clearFilters} variant="outline" className="w-full">
-                Limpar Filtros
-              </Button>
-            </div>
+            <Input
+              placeholder="Número de série"
+              value={filters.numero_serie}
+              onChange={(e) => handleFilterChange('numero_serie', e.target.value)}
+            />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-blue-600">{filteredEquipments.length}</div>
-            <div className="text-sm text-gray-500">Total de Equipamentos</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-green-600">
-              {filteredEquipments.filter(eq => eq.status === 'disponivel').length}
-            </div>
-            <div className="text-sm text-gray-500">Disponíveis</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-yellow-600">
-              {filteredEquipments.filter(eq => eq.status === 'em_uso').length}
-            </div>
-            <div className="text-sm text-gray-500">Em Uso</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-red-600">
-              {filteredEquipments.filter(eq => eq.status === 'manutencao' || eq.em_manutencao).length}
-            </div>
-            <div className="text-sm text-gray-500">Em Manutenção</div>
-          </CardContent>
-        </Card>
-      </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={clearFilters}>
+              <Filter className="h-4 w-4 mr-2" />
+              Limpar Filtros
+            </Button>
+            <Button onClick={exportToPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar PDF
+            </Button>
+          </div>
 
-      {/* Tabela */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Equipamentos ({filteredEquipments.length})</CardTitle>
-          <Button onClick={exportToPDF} className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Exportar PDF
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Tipo</th>
-                  <th className="text-left p-3">Número de Série</th>
-                  <th className="text-left p-3">Operadora</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Estado</th>
-                  <th className="text-left p-3">Modelo</th>
-                  <th className="text-left p-3">Data Entrada</th>
-                  <th className="text-left p-3">Manutenção</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEquipments.map(equipment => (
-                  <tr key={equipment.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{equipment.tipo}</td>
-                    <td className="p-3">{equipment.numero_serie}</td>
-                    <td className="p-3">{equipment.empresas?.name || 'N/A'}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${
+          {/* Resumo */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold">{filteredEquipments.length}</div>
+                <p className="text-sm text-gray-600">Total de Equipamentos</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-green-600">
+                  {filteredEquipments.filter(eq => eq.status === 'disponivel').length}
+                </div>
+                <p className="text-sm text-gray-600">Disponíveis</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-blue-600">
+                  {filteredEquipments.filter(eq => eq.status === 'em_uso').length}
+                </div>
+                <p className="text-sm text-gray-600">Em Uso</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-red-600">
+                  {filteredEquipments.filter(eq => eq.status === 'manutencao' || eq.status === 'defeito').length}
+                </div>
+                <p className="text-sm text-gray-600">Manutenção/Defeito</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabela */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Modelo</TableHead>
+                  <TableHead>Número de Série</TableHead>
+                  <TableHead>Operadora</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Data Entrada</TableHead>
+                  <TableHead>Data Saída</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEquipments.map((equipment) => (
+                  <TableRow key={equipment.id}>
+                    <TableCell>{equipment.tipo}</TableCell>
+                    <TableCell>{equipment.modelo || '-'}</TableCell>
+                    <TableCell>{equipment.numero_serie}</TableCell>
+                    <TableCell>{equipment.operadoras?.name || '-'}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
                         equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
                         equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
                         equipment.status === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {equipment.status}
+                        {equipment.status === 'disponivel' ? 'Disponível' :
+                         equipment.status === 'em_uso' ? 'Em Uso' :
+                         equipment.status === 'manutencao' ? 'Manutenção' :
+                         'Defeito'}
                       </span>
-                    </td>
-                    <td className="p-3">{equipment.estado}</td>
-                    <td className="p-3">{equipment.modelo || 'N/A'}</td>
-                    <td className="p-3">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        equipment.em_manutencao ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {equipment.em_manutencao ? 'Sim' : 'Não'}
-                      </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>{equipment.estado}</TableCell>
+                    <TableCell>
+                      {equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-            {filteredEquipments.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Nenhum equipamento encontrado com os filtros aplicados
-              </div>
-            )}
+              </TableBody>
+            </Table>
           </div>
+
+          {filteredEquipments.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              Nenhum equipamento encontrado com os filtros aplicados.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

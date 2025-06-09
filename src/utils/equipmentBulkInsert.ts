@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 export interface BulkEquipmentData {
   tipo: string;
   numero_serie: string;
@@ -65,5 +67,17 @@ export const parseCSV = (csvContent: string): any[] => {
     data.push(item);
   }
   
+  return data;
+};
+
+export const bulkInsertEquipments = async (equipments: BulkEquipmentData[]) => {
+  const { data, error } = await supabase
+    .from('equipamentos')
+    .insert(equipments);
+
+  if (error) {
+    throw new Error(`Erro ao inserir equipamentos: ${error.message}`);
+  }
+
   return data;
 };
