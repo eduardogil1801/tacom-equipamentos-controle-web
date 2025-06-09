@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthContextType, User, UserPermission } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +9,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [permissions, setPermissions] = useState<UserPermission[]>([]);
+
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     // Check if user is logged in from localStorage
@@ -305,7 +306,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, changePassword, checkPermission }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, changePassword, checkPermission, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

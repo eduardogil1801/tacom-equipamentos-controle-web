@@ -53,4 +53,5 @@ export interface AuthContextType {
   isLoading: boolean;
   changePassword: (newPassword: string, confirmPassword: string) => Promise<boolean>;
   checkPermission: (module: string, action: 'view' | 'create' | 'edit' | 'delete') => boolean;
+  isAuthenticated: boolean;
 }

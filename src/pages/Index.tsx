@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import LoginForm from '@/components/Auth/LoginForm';
+import AuthPage from '@/components/Auth/AuthPage';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
 import FleetManagement from '@/components/Fleet/FleetManagement';
@@ -13,7 +14,7 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
 
   if (!isAuthenticated) {
-    return <LoginForm />;
+    return <AuthPage />;
   }
 
   const handlePageChange = (page: string) => {
