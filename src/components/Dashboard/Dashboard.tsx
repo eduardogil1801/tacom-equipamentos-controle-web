@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
       console.log('Companies loaded:', companiesData?.length);
       setCompanies(companiesData || []);
 
-      // Load equipments with company data
+      // Load ALL equipments with company data - removed any limits
       const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
@@ -139,12 +139,14 @@ const Dashboard: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.total - a.total);
 
-  // Data for company equipment chart
+  // Data for company equipment chart - take top 15 companies for better visualization
   const companyData = companies.map(company => ({
     name: company.name,
     total: equipments.filter(eq => eq.id_empresa === company.id).length,
     inStock: equipments.filter(eq => eq.id_empresa === company.id && !eq.data_saida).length
-  })).filter(item => item.total > 0).sort((a, b) => b.total - a.total);
+  })).filter(item => item.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 15); // Show top 15 companies for better chart readability
 
   // Data for pie chart
   const pieData = [
@@ -313,27 +315,27 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Equipment by Company */}
+      {/* Equipment by Company - Changed to stacked bar chart as requested */}
       {companyData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Equipamentos por Empresa</CardTitle>
+            <CardTitle>Equipamentos por Empresa (Top 15)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={400}>
               <BarChart data={companyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="name" 
                   angle={-45}
                   textAnchor="end"
-                  height={80}
-                  fontSize={12}
+                  height={100}
+                  fontSize={10}
                 />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="total" fill="#DC2626" name="Total" />
-                <Bar dataKey="inStock" fill="#16A34A" name="Em Estoque" />
+                <Bar dataKey="inStock" stackId="a" fill="#16A34A" name="Em Estoque" />
+                <Bar dataKey="total" stackId="a" fill="#DC2626" name="Retirados" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

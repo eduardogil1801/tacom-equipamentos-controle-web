@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Save, Search, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Search, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface EquipmentMovementProps {
   onCancel: () => void;
@@ -25,6 +27,11 @@ interface Equipment {
   };
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 interface MaintenanceType {
   id: string;
   codigo: string;
@@ -32,12 +39,15 @@ interface MaintenanceType {
 }
 
 const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSuccess }) => {
+  const { user } = useAuth();
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [movementType, setMovementType] = useState('');
+  const [targetCompany, setTargetCompany] = useState('');
   const [maintenanceType, setMaintenanceType] = useState('');
   const [movementDate, setMovementDate] = useState('');
   const [observations, setObservations] = useState('');
@@ -45,9 +55,11 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const [responsibleUser, setResponsibleUser] = useState('');
   const [loading, setLoading] = useState(false);
   const [enableMultipleSelection, setEnableMultipleSelection] = useState(false);
+  const [isSelectionExpanded, setIsSelectionExpanded] = useState(true);
 
   useEffect(() => {
     loadEquipments();
+    loadCompanies();
     loadMaintenanceTypes();
     loadCurrentUser();
   }, []);
@@ -65,19 +77,8 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   const loadCurrentUser = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data: userData, error } = await supabase
-          .from('usuarios')
-          .select('nome, sobrenome')
-          .eq('email', user.email)
-          .single();
-
-        if (userData && !error) {
-          setResponsibleUser(`${userData.nome} ${userData.sobrenome}`);
-        } else {
-          setResponsibleUser(user.email);
-        }
+      if (user) {
+        setResponsibleUser(`${user.name} ${user.surname}`);
       }
     } catch (error) {
       console.error('Error loading current user:', error);
@@ -103,6 +104,25 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       toast({
         title: "Erro",
         description: "Erro ao carregar equipamentos",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar empresas",
         variant: "destructive",
       });
     }
@@ -188,6 +208,15 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       return;
     }
 
+    if (movementType === 'saida' && !targetCompany) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione a empresa de destino para a saída",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -236,7 +265,8 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
             .from('equipamentos')
             .update({ 
               data_saida: movementDate,
-              status: 'em_uso'
+              status: 'em_uso',
+              id_empresa: targetCompany
             })
             .eq('id', equipment.id);
 
@@ -282,89 +312,111 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
       {/* Card para Busca e Seleção de Equipamentos */}
       <Card>
         <CardHeader>
-          <CardTitle>Buscar e Selecionar Equipamentos</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            Buscar e Selecionar Equipamentos
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSelectionExpanded(!isSelectionExpanded)}
+              className="flex items-center gap-2"
+            >
+              {isSelectionExpanded ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  Recolher Seleção
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  Expandir Seleção
+                </>
+              )}
+            </Button>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="multipleSelection"
-              checked={enableMultipleSelection}
-              onCheckedChange={handleMultipleSelectionChange}
-            />
-            <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
-          </div>
+        {isSelectionExpanded && (
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="multipleSelection"
+                checked={enableMultipleSelection}
+                onCheckedChange={handleMultipleSelectionChange}
+              />
+              <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
+            </div>
 
-          <div>
-            <Label htmlFor="serialNumber">Número de Série *</Label>
-            <Input
-              id="serialNumber"
-              placeholder="Digite o número de série..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+            <div>
+              <Label htmlFor="serialNumber">Número de Série *</Label>
+              <Input
+                id="serialNumber"
+                placeholder="Digite o número de série..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
 
-          {searchTerm && filteredEquipments.length > 0 && (
-            <div className="border rounded-md p-4 max-h-64 overflow-y-auto bg-gray-50">
-              <div className="space-y-2">
-                {filteredEquipments.map(equipment => (
-                  <div key={equipment.id} className="flex items-center space-x-3 p-2 bg-white rounded border">
-                    <Checkbox
-                      checked={selectedEquipments.some(item => item.id === equipment.id)}
-                      onCheckedChange={(checked) => {
-                        if (enableMultipleSelection) {
-                          handleEquipmentSelect(equipment, checked === true);
-                        } else {
-                          if (checked) {
-                            setSelectedEquipments([equipment]);
+            {searchTerm && filteredEquipments.length > 0 && (
+              <div className="border rounded-md p-4 max-h-64 overflow-y-auto bg-gray-50">
+                <div className="space-y-2">
+                  {filteredEquipments.map(equipment => (
+                    <div key={equipment.id} className="flex items-center space-x-3 p-2 bg-white rounded border">
+                      <Checkbox
+                        checked={selectedEquipments.some(item => item.id === equipment.id)}
+                        onCheckedChange={(checked) => {
+                          if (enableMultipleSelection) {
+                            handleEquipmentSelect(equipment, checked === true);
                           } else {
-                            setSelectedEquipments([]);
+                            if (checked) {
+                              setSelectedEquipments([equipment]);
+                            } else {
+                              setSelectedEquipments([]);
+                            }
                           }
-                        }
-                      }}
-                    />
-                    <div className="flex-1">
-                      <div className="font-semibold">{equipment.numero_serie}</div>
-                      <div className="text-sm text-gray-600">
-                        {equipment.tipo} - {equipment.empresas?.name || 'Sem empresa'}
+                        }}
+                      />
+                      <div className="flex-1">
+                        <div className="font-semibold">{equipment.numero_serie}</div>
+                        <div className="text-sm text-gray-600">
+                          {equipment.tipo} - {equipment.empresas?.name || 'Sem empresa'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                
+                {enableMultipleSelection && (
+                  <Button 
+                    onClick={handleSelectEquipments}
+                    className="w-full mt-3"
+                    variant="outline"
+                  >
+                    Selecionar Equipamentos ({selectedEquipments.length})
+                  </Button>
+                )}
               </div>
-              
-              {enableMultipleSelection && (
-                <Button 
-                  onClick={handleSelectEquipments}
-                  className="w-full mt-3"
-                  variant="outline"
-                >
-                  Selecionar Equipamentos ({selectedEquipments.length})
-                </Button>
-              )}
-            </div>
-          )}
+            )}
 
-          {selectedEquipments.length > 0 && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-md">
-              <h4 className="font-medium mb-2">Equipamentos Selecionados ({selectedEquipments.length}):</h4>
-              <div className="space-y-1">
-                {selectedEquipments.map(equipment => (
-                  <div key={equipment.id} className="flex items-center justify-between text-sm">
-                    <span>{equipment.numero_serie} - {equipment.tipo}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id))}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+            {selectedEquipments.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                <h4 className="font-medium mb-2">Equipamentos Selecionados ({selectedEquipments.length}):</h4>
+                <div className="space-y-1">
+                  {selectedEquipments.map(equipment => (
+                    <div key={equipment.id} className="flex items-center justify-between text-sm">
+                      <span>{equipment.numero_serie} - {equipment.tipo}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </CardContent>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       {/* Card para Formulário de Movimentação */}
@@ -399,6 +451,24 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                 />
               </div>
             </div>
+
+            {movementType === 'saida' && (
+              <div>
+                <Label htmlFor="targetCompany">Empresa de Destino *</Label>
+                <Select value={targetCompany} onValueChange={setTargetCompany}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a empresa de destino" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map(company => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {movementType === 'manutencao' && (
               <div>
