@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings, FileText, Package, Truck, Menu, X, Building, BarChart3, Laptop, Wrench, ArrowUpDown } from 'lucide-react';
+import { LogOut, User, Settings, FileText, Package, Truck, Menu, X, Building, BarChart3, Laptop, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { 
@@ -29,7 +28,6 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
     { id: 'new-movement', label: 'Movimentações', icon: ArrowUpDown },
     { id: 'fleet', label: 'Frota', icon: Truck },
     { id: 'companies', label: 'Empresas', icon: Building },
-    { id: 'maintenance', label: 'Manutenção', icon: Wrench },
     { id: 'movements', label: 'Histórico', icon: FileText },
     { id: 'protocol', label: 'Protocolo', icon: FileText },
     { id: 'reports', label: 'Relatórios', icon: FileText },
@@ -38,7 +36,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
 
   // Filtrar itens baseado nas permissões
   const filteredMenuItems = menuItems.filter(item => {
-    if (item.id === 'settings' || item.id === 'maintenance') {
+    if (item.id === 'settings') {
       return user?.userType === 'administrador';
     }
     return true;
