@@ -128,13 +128,15 @@ const Dashboard: React.FC = () => {
     : [];
   const tacomInStockCount = tacomEquipments.length;
 
+  // Equipamentos atualmente em manutenção
   const equipmentsInMaintenance = equipments.filter(eq => 
     eq.em_manutencao === true || 
     eq.status === 'aguardando_manutencao' || 
     eq.status === 'em_manutencao'
-  ).length;
+  );
+  const equipmentsInMaintenanceCount = equipmentsInMaintenance.length;
 
-  console.log('Equipment stats:', { totalEquipments, inStockEquipments, tacomInStockCount, equipmentsInMaintenance });
+  console.log('Equipment stats:', { totalEquipments, inStockEquipments, tacomInStockCount, equipmentsInMaintenanceCount });
 
   // Data for company equipment chart - Horizontal stacked bar (like the image)
   const companyData = companies.map(company => {
@@ -171,9 +173,17 @@ const Dashboard: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.value - a.value);
 
-  // Maintenance types data
-  const maintenanceTypesData = maintenanceMovements.reduce((acc: any[], movement) => {
-    const tipo = movement.tipos_manutencao?.descricao || movement.detalhes_manutencao || 'Não especificado';
+  // Maintenance types data - Agora baseado nos equipamentos atualmente em manutenção
+  const maintenanceTypesData = equipmentsInMaintenance.reduce((acc: any[], equipment) => {
+    // Buscar o tipo de manutenção mais recente deste equipamento
+    const recentMaintenance = maintenanceMovements
+      .filter(mov => mov.id_equipamento === equipment.id)
+      .sort((a, b) => new Date(b.data_criacao || '').getTime() - new Date(a.data_criacao || '').getTime())[0];
+    
+    const tipo = recentMaintenance?.tipos_manutencao?.descricao || 
+                 recentMaintenance?.detalhes_manutencao || 
+                 'Tipo não especificado';
+    
     const existing = acc.find(item => item.name === tipo);
     if (existing) {
       existing.value += 1;
@@ -238,7 +248,7 @@ const Dashboard: React.FC = () => {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenance.toLocaleString('pt-BR')}</div>
+            <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenanceCount.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">Equipamentos em manutenção</p>
           </CardContent>
         </Card>
@@ -285,7 +295,7 @@ const Dashboard: React.FC = () => {
         {/* Maintenance Types Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Equipamentos por Tipo de Manutenção</CardTitle>
+            <CardTitle>Equipamentos em Manutenção por Tipo</CardTitle>
           </CardHeader>
           <CardContent>
             {maintenanceTypesData.length > 0 ? (
@@ -311,7 +321,7 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center justify-center h-[300px] text-gray-500">
                 <div className="text-center">
                   <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum dado de manutenção encontrado</p>
+                  <p>Nenhum equipamento em manutenção</p>
                 </div>
               </div>
             )}
