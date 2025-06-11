@@ -1,35 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Edit, Trash, Move, Upload } from 'lucide-react';
-import { 
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
-import EquipmentForm from './EquipmentForm';
-import EquipmentMovement from './EquipmentMovement';
-import BulkImportDialog from './BulkImportDialog';
-import EquipmentFilters from './EquipmentFilters';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Search, Plus, Edit, Trash2, Filter, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import EquipmentForm from './EquipmentForm';
+import EquipmentFilters from './EquipmentFilters';
 
 interface Equipment {
   id: string;
+  numero_serie: string;
   tipo: string;
   modelo?: string;
-  numero_serie: string;
+  estado?: string;
+  status?: string;
   data_entrada: string;
   data_saida?: string;
   id_empresa: string;
-  estado?: string;
-  status?: string;
   empresas?: {
     name: string;
+    estado?: string;
   };
 }
 
@@ -49,189 +44,133 @@ interface FilterValues {
 
 const EquipmentList: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [showMovement, setShowMovement] = useState(false);
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
-  const [totalCount, setTotalCount] = useState(0);
-  
-  // Filter states
-  const [appliedFilters, setAppliedFilters] = useState<FilterValues>({
-    searchTerm: '',
-    selectedCompany: '',
-    selectedStatus: '',
-    selectedType: '',
-    selectedModel: '',
-    selectedState: ''
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadData();
-  }, [currentPage, appliedFilters]);
+  }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
       
+      // Load companies
       const { data: companiesData, error: companiesError } = await supabase
         .from('empresas')
-        .select('*')
+        .select('id, name')
         .order('name');
 
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
-      // Build query with filters
-      let query = supabase
+      // Load equipments with company data
+      const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
           *,
           empresas (
-            name
+            name,
+            estado
           )
-        `, { count: 'exact' });
-
-      // Apply filters
-      if (appliedFilters.searchTerm) {
-        query = query.ilike('numero_serie', `%${appliedFilters.searchTerm}%`);
-      }
-      if (appliedFilters.selectedType) {
-        query = query.eq('tipo', appliedFilters.selectedType);
-      }
-      if (appliedFilters.selectedModel) {
-        query = query.eq('modelo', appliedFilters.selectedModel);
-      }
-      if (appliedFilters.selectedState) {
-        query = query.eq('estado', appliedFilters.selectedState);
-      }
-      if (appliedFilters.selectedStatus) {
-        query = query.eq('status', appliedFilters.selectedStatus);
-      }
-      if (appliedFilters.selectedCompany) {
-        query = query.eq('id_empresa', appliedFilters.selectedCompany);
-      }
-
-      // Add pagination
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      const { data: equipmentsData, error: equipmentsError, count } = await query
-        .range(from, to)
+        `)
         .order('data_entrada', { ascending: false });
 
       if (equipmentsError) throw equipmentsError;
-      
       setEquipments(equipmentsData || []);
-      setTotalCount(count || 0);
+      setFilteredEquipments(equipmentsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleFiltersChange = (filters: FilterValues) => {
-    setAppliedFilters(filters);
-    setCurrentPage(1); // Reset to first page when filtering
+    let filtered = [...equipments];
+
+    // Search term filter
+    if (filters.searchTerm) {
+      filtered = filtered.filter(eq => 
+        eq.numero_serie.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        eq.tipo.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        (eq.modelo && eq.modelo.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+      );
+    }
+
+    // Company filter
+    if (filters.selectedCompany) {
+      filtered = filtered.filter(eq => eq.id_empresa === filters.selectedCompany);
+    }
+
+    // Status filter
+    if (filters.selectedStatus) {
+      if (filters.selectedStatus === 'disponivel') {
+        filtered = filtered.filter(eq => !eq.data_saida);
+      } else if (filters.selectedStatus === 'em_uso') {
+        filtered = filtered.filter(eq => eq.data_saida && eq.status !== 'em_manutencao');
+      } else {
+        filtered = filtered.filter(eq => eq.status === filters.selectedStatus);
+      }
+    }
+
+    // Type filter
+    if (filters.selectedType) {
+      filtered = filtered.filter(eq => eq.tipo === filters.selectedType);
+    }
+
+    // Model filter
+    if (filters.selectedModel) {
+      filtered = filtered.filter(eq => eq.modelo === filters.selectedModel);
+    }
+
+    // State filter
+    if (filters.selectedState) {
+      filtered = filtered.filter(eq => eq.estado === filters.selectedState);
+    }
+
+    setFilteredEquipments(filtered);
   };
 
   const handleClearFilters = () => {
-    setAppliedFilters({
-      searchTerm: '',
-      selectedCompany: '',
-      selectedStatus: '',
-      selectedType: '',
-      selectedModel: '',
-      selectedState: ''
-    });
-    setCurrentPage(1);
+    setFilteredEquipments(equipments);
   };
 
-  const handleSaveEquipment = () => {
-    loadData();
-    setShowForm(false);
-    setEditingEquipment(null);
+  const handleEdit = (equipment: Equipment) => {
+    setEditingEquipment(equipment);
+    setShowForm(true);
   };
 
-  const handleMovementSuccess = () => {
-    loadData();
-    setShowMovement(false);
-  };
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este equipamento?')) {
+      try {
+        const { error } = await supabase
+          .from('equipamentos')
+          .delete()
+          .eq('id', id);
 
-  const handleBulkImportSuccess = () => {
-    loadData();
-    setShowBulkImport(false);
-  };
-
-  const handleDeleteEquipment = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('equipamentos')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Equipamento excluído com sucesso!",
-      });
-      
-      loadData();
-    } catch (error) {
-      console.error('Error deleting equipment:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir equipamento",
-        variant: "destructive",
-      });
+        if (error) throw error;
+        
+        loadData();
+      } catch (error) {
+        console.error('Error deleting equipment:', error);
+      }
     }
   };
 
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
-
-  const getStatusLabel = (status?: string) => {
-    if (!status) return 'N/A';
-    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const getStatusBadge = (equipment: Equipment) => {
+    if (equipment.data_saida) {
+      if (equipment.status === 'em_manutencao') {
+        return <Badge variant="destructive">Em Manutenção</Badge>;
+      }
+      return <Badge variant="secondary">Em Uso</Badge>;
+    }
+    return <Badge variant="default">Disponível</Badge>;
   };
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('pt-BR');
-  };
-
-  if (showForm) {
-    return (
-      <EquipmentForm
-        equipment={editingEquipment}
-        companies={companies}
-        onSave={handleSaveEquipment}
-        onCancel={() => {
-          setShowForm(false);
-          setEditingEquipment(null);
-        }}
-      />
-    );
-  }
-
-  if (showMovement) {
-    return (
-      <EquipmentMovement
-        onCancel={() => setShowMovement(false)}
-        onSuccess={handleMovementSuccess}
-      />
-    );
-  }
 
   if (loading) {
     return (
@@ -242,259 +181,101 @@ const EquipmentList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Controle de Equipamentos</h1>
-        <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-          <Button
-            onClick={() => setShowMovement(true)}
-            className="bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2 w-full sm:w-auto"
-            size="sm"
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Controle de Equipamentos</h1>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
           >
-            <Move className="h-4 w-4" />
-            <span className="hidden sm:inline">Movimentação</span>
-            <span className="sm:hidden">Mover</span>
+            <Filter className="h-4 w-4" />
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </Button>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="bg-primary hover:bg-primary/90 flex items-center justify-center gap-2 w-full sm:w-auto"
-            size="sm"
-          >
+          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Adicionar Equipamento</span>
-            <span className="sm:hidden">Adicionar</span>
-          </Button>
-          <Button
-            onClick={() => setShowBulkImport(true)}
-            className="bg-green-600 hover:bg-green-700 flex items-center justify-center gap-2 w-full sm:w-auto"
-            size="sm"
-          >
-            <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Importação em Lote</span>
-            <span className="sm:hidden">Importar</span>
+            Novo Equipamento
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <EquipmentFilters
-        onFiltersChange={handleFiltersChange}
-        onClearFilters={handleClearFilters}
-      />
+      {showFilters && (
+        <EquipmentFilters 
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+        />
+      )}
 
-      {/* Equipment List */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
-            <CardTitle className="text-lg">
-              Histórico de Equipamentos ({formatNumber(totalCount)})
-            </CardTitle>
-            <div className="text-sm text-gray-600">
-              Página {currentPage} de {totalPages} ({itemsPerPage} por página)
-            </div>
-          </div>
+          <CardTitle>Equipamentos Cadastrados ({filteredEquipments.length})</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 sm:p-6">
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {/* Mobile Card View */}
-              <div className="block sm:hidden space-y-4 p-4">
-                {equipments.map(equipment => (
-                  <Card key={equipment.id} className="border border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold text-sm">{equipment.tipo}</p>
-                            <p className="text-xs text-gray-600">{equipment.modelo || '-'}</p>
-                          </div>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
-                            equipment.status === 'danificado' ? 'bg-red-100 text-red-800' :
-                            equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {getStatusLabel(equipment.status)}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Série:</p>
-                          <p className="font-mono text-sm">{equipment.numero_serie}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Empresa:</p>
-                          <p className="text-sm">{equipment.empresas?.name || 'N/A'}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <p className="text-gray-500">Estado:</p>
-                            <p>{equipment.estado || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Entrada:</p>
-                            <p>{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingEquipment(equipment);
-                              setShowForm(true);
-                            }}
-                            className="flex-1"
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteEquipment(equipment.id)}
-                            className="flex-1 text-red-600 hover:text-red-800"
-                          >
-                            <Trash className="h-3 w-3 mr-1" />
-                            Excluir
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <table className="hidden sm:table w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2 text-sm font-medium">Tipo</th>
-                    <th className="text-left p-2 text-sm font-medium">Modelo</th>
-                    <th className="text-left p-2 text-sm font-medium">Série</th>
-                    <th className="text-left p-2 text-sm font-medium">Empresa</th>
-                    <th className="text-left p-2 text-sm font-medium">Estado</th>
-                    <th className="text-left p-2 text-sm font-medium">Status</th>
-                    <th className="text-left p-2 text-sm font-medium">Entrada</th>
-                    <th className="text-left p-2 text-sm font-medium">Saída</th>
-                    <th className="text-left p-2 text-sm font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {equipments.map(equipment => (
-                    <tr key={equipment.id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 text-sm">{equipment.tipo}</td>
-                      <td className="p-2 text-sm">{equipment.modelo || '-'}</td>
-                      <td className="p-2 font-mono text-sm">{equipment.numero_serie}</td>
-                      <td className="p-2 text-sm">{equipment.empresas?.name || 'N/A'}</td>
-                      <td className="p-2 text-sm">{equipment.estado || '-'}</td>
-                      <td className="p-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
-                          equipment.status === 'danificado' ? 'bg-red-100 text-red-800' :
-                          equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {getStatusLabel(equipment.status)}
-                        </span>
-                      </td>
-                      <td className="p-2 text-sm">{new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}</td>
-                      <td className="p-2 text-sm">
-                        {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingEquipment(equipment);
-                              setShowForm(true);
-                            }}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteEquipment(equipment.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {equipments.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  Nenhum equipamento encontrado
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-              <div className="text-sm text-gray-600">
-                Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, totalCount)} de {totalCount} equipamentos
-              </div>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-
-                    return (
-                      <PaginationItem key={pageNum}>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(pageNum)}
-                          isActive={currentPage === pageNum}
-                          className="cursor-pointer"
-                        >
-                          {pageNum}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  })}
-
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Número de Série</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Modelo</TableHead>
+                <TableHead>Empresa</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Data Entrada</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredEquipments.map((equipment) => (
+                <TableRow key={equipment.id}>
+                  <TableCell className="font-medium">{equipment.numero_serie}</TableCell>
+                  <TableCell>{equipment.tipo}</TableCell>
+                  <TableCell>{equipment.modelo || '-'}</TableCell>
+                  <TableCell>{equipment.empresas?.name || 'N/A'}</TableCell>
+                  <TableCell>{equipment.empresas?.estado || equipment.estado || '-'}</TableCell>
+                  <TableCell>{getStatusBadge(equipment)}</TableCell>
+                  <TableCell>
+                    {new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(equipment)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(equipment.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <BulkImportDialog
-        isOpen={showBulkImport}
-        onClose={() => setShowBulkImport(false)}
-        onSuccess={handleBulkImportSuccess}
-      />
+      {showForm && (
+        <EquipmentForm
+          equipment={editingEquipment}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingEquipment(null);
+          }}
+          onSuccess={() => {
+            setShowForm(false);
+            setEditingEquipment(null);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 };
