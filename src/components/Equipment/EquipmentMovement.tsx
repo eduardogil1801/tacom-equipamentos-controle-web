@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const [maintenanceDetails, setMaintenanceDetails] = useState('');
   const [responsibleUser, setResponsibleUser] = useState('');
   const [loading, setLoading] = useState(false);
+  const [enableMultipleSelection, setEnableMultipleSelection] = useState(false);
 
   useEffect(() => {
     loadEquipments();
@@ -66,7 +68,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
-        // Buscar o nome do usuário da tabela usuarios
         const { data: userData, error } = await supabase
           .from('usuarios')
           .select('nome, sobrenome')
@@ -118,7 +119,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
       if (error) throw error;
       
-      // Filtrar e ordenar numericamente pelo código, garantindo que todos os campos necessários existam
       const filteredAndSortedData = (data || [])
         .filter(type => type.id && type.id.trim() !== '' && type.codigo && type.descricao)
         .sort((a, b) => {
@@ -138,24 +138,30 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     }
   };
 
-  const addEquipmentToSelection = (equipment: Equipment) => {
-    if (!selectedEquipments.find(item => item.id === equipment.id)) {
-      setSelectedEquipments(prev => [...prev, equipment]);
-      toast({
-        title: "Equipamento adicionado",
-        description: `${equipment.numero_serie} adicionado ao lote`,
-      });
+  const handleEquipmentSelect = (equipment: Equipment, checked: boolean) => {
+    if (checked) {
+      if (!selectedEquipments.find(item => item.id === equipment.id)) {
+        setSelectedEquipments(prev => [...prev, equipment]);
+      }
     } else {
-      toast({
-        title: "Equipamento já selecionado",
-        description: `${equipment.numero_serie} já está no lote`,
-        variant: "destructive",
-      });
+      setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id));
     }
   };
 
-  const removeEquipmentFromSelection = (equipmentId: string) => {
-    setSelectedEquipments(prev => prev.filter(item => item.id !== equipmentId));
+  const handleSelectEquipments = () => {
+    if (selectedEquipments.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Selecione pelo menos um equipamento",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Equipamentos selecionados",
+      description: `${selectedEquipments.length} equipamento(s) selecionado(s) para movimentação`,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -184,7 +190,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
     try {
       console.log('Registrando movimentação em lote para:', selectedEquipments.length, 'equipamentos');
 
-      // Processar cada equipamento selecionado
       for (const equipment of selectedEquipments) {
         const movementData = {
           id_equipamento: equipment.id,
@@ -210,7 +215,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
         console.log('Movimentação registrada:', data);
 
-        // Atualizar status do equipamento se necessário
         if (movementType === 'manutencao') {
           const { error: updateError } = await supabase
             .from('equipamentos')
@@ -269,86 +273,79 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold">Registrar Movimentação</h1>
+        <h1 className="text-2xl font-bold">Movimentação de Equipamentos</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Card de Busca e Seleção */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Buscar e Selecionar Equipamentos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="search">Buscar por Número de Série</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="search"
-                  placeholder="Digite o número de série..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Button variant="outline" size="icon">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Registrar Movimentação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="multipleSelection"
+              checked={enableMultipleSelection}
+              onCheckedChange={setEnableMultipleSelection}
+            />
+            <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
+          </div>
 
-            {filteredEquipments.length > 0 && (
-              <div className="border rounded-md p-2 max-h-64 overflow-y-auto">
-                <h4 className="font-medium mb-2">Equipamentos Encontrados:</h4>
-                <div className="space-y-2">
-                  {filteredEquipments.map(equipment => (
-                    <div key={equipment.id} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex-1">
-                        <span className="font-medium">{equipment.numero_serie}</span>
-                        <span className="text-sm text-gray-600 ml-2">
-                          {equipment.tipo} - {equipment.empresas?.name || 'Sem empresa'}
-                        </span>
+          <div>
+            <Label htmlFor="serialNumber">Número de Série *</Label>
+            <Input
+              id="serialNumber"
+              placeholder="Digite o número de série..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {searchTerm && filteredEquipments.length > 0 && (
+            <div className="border rounded-md p-4 max-h-64 overflow-y-auto bg-gray-50">
+              <div className="space-y-2">
+                {filteredEquipments.map(equipment => (
+                  <div key={equipment.id} className="flex items-center space-x-3 p-2 bg-white rounded border">
+                    {enableMultipleSelection ? (
+                      <Checkbox
+                        checked={selectedEquipments.some(item => item.id === equipment.id)}
+                        onCheckedChange={(checked) => handleEquipmentSelect(equipment, checked as boolean)}
+                      />
+                    ) : (
+                      <Checkbox
+                        checked={selectedEquipments.some(item => item.id === equipment.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedEquipments([equipment]);
+                          } else {
+                            setSelectedEquipments([]);
+                          }
+                        }}
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold">{equipment.numero_serie}</div>
+                      <div className="text-sm text-gray-600">
+                        {equipment.tipo} - {equipment.empresas?.name || 'Sem empresa'}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => addEquipmentToSelection(equipment)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Adicionar
-                      </Button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+              
+              {enableMultipleSelection && (
+                <Button 
+                  onClick={handleSelectEquipments}
+                  className="w-full mt-3"
+                  variant="outline"
+                >
+                  Selecionar Equipamentos ({selectedEquipments.length})
+                </Button>
+              )}
+            </div>
+          )}
 
-            {selectedEquipments.length > 0 && (
-              <div className="border rounded-md p-2 bg-blue-50">
-                <h4 className="font-medium mb-2">Lote Selecionado ({selectedEquipments.length} equipamentos):</h4>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {selectedEquipments.map(equipment => (
-                    <div key={equipment.id} className="flex items-center justify-between p-1 bg-white rounded text-sm">
-                      <span>{equipment.numero_serie} - {equipment.tipo}</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeEquipmentFromSelection(equipment.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Card do Formulário */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Dados da Movimentação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="movementType">Tipo de Movimentação *</Label>
                 <Select value={movementType} onValueChange={setMovementType}>
@@ -363,24 +360,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                 </Select>
               </div>
 
-              {movementType === 'manutencao' && (
-                <div>
-                  <Label htmlFor="maintenanceType">Tipo de Manutenção *</Label>
-                  <Select value={maintenanceType} onValueChange={setMaintenanceType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de manutenção" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {maintenanceTypes.map(type => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.codigo} - {type.descricao}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
               <div>
                 <Label htmlFor="movementDate">Data da Movimentação *</Label>
                 <Input
@@ -390,63 +369,101 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                   onChange={(e) => setMovementDate(e.target.value)}
                 />
               </div>
+            </div>
 
+            {movementType === 'manutencao' && (
               <div>
-                <Label htmlFor="responsibleUser">Usuário Responsável</Label>
-                <Input
-                  id="responsibleUser"
-                  value={responsibleUser}
-                  onChange={(e) => setResponsibleUser(e.target.value)}
-                  placeholder="Nome do usuário responsável"
-                />
+                <Label htmlFor="maintenanceType">Tipo de Manutenção *</Label>
+                <Select value={maintenanceType} onValueChange={setMaintenanceType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de manutenção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {maintenanceTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.codigo} - {type.descricao}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            )}
 
+            <div>
+              <Label htmlFor="responsibleUser">Usuário Responsável</Label>
+              <Input
+                id="responsibleUser"
+                value={responsibleUser}
+                onChange={(e) => setResponsibleUser(e.target.value)}
+                placeholder="Nome do usuário responsável"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="observations">Observações</Label>
+              <Textarea
+                id="observations"
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Observações sobre a movimentação"
+                rows={3}
+              />
+            </div>
+
+            {movementType === 'manutencao' && (
               <div>
-                <Label htmlFor="observations">Observações</Label>
+                <Label htmlFor="maintenanceDetails">Detalhes da Manutenção</Label>
                 <Textarea
-                  id="observations"
-                  value={observations}
-                  onChange={(e) => setObservations(e.target.value)}
-                  placeholder="Observações sobre a movimentação"
+                  id="maintenanceDetails"
+                  value={maintenanceDetails}
+                  onChange={(e) => setMaintenanceDetails(e.target.value)}
+                  placeholder="Detalhes específicos da manutenção"
                   rows={3}
                 />
               </div>
+            )}
 
-              {movementType === 'manutencao' && (
-                <div>
-                  <Label htmlFor="maintenanceDetails">Detalhes da Manutenção</Label>
-                  <Textarea
-                    id="maintenanceDetails"
-                    value={maintenanceDetails}
-                    onChange={(e) => setMaintenanceDetails(e.target.value)}
-                    placeholder="Detalhes específicos da manutenção"
-                    rows={3}
-                  />
-                </div>
-              )}
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="submit"
+                disabled={loading || selectedEquipments.length === 0}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {loading ? 'Registrando...' : 'Registrar Movimentação'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
 
-              <div className="flex gap-2 pt-4">
-                <Button
-                  type="submit"
-                  disabled={loading || selectedEquipments.length === 0}
-                  className="flex items-center gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  {loading ? 'Registrando...' : `Registrar Lote (${selectedEquipments.length})`}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onCancel}
-                  disabled={loading}
-                >
-                  Cancelar
-                </Button>
+          {selectedEquipments.length > 0 && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-md">
+              <h4 className="font-medium mb-2">Equipamentos Selecionados ({selectedEquipments.length}):</h4>
+              <div className="space-y-1">
+                {selectedEquipments.map(equipment => (
+                  <div key={equipment.id} className="flex items-center justify-between text-sm">
+                    <span>{equipment.numero_serie} - {equipment.tipo}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
