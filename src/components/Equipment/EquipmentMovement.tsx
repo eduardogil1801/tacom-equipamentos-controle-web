@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,14 +118,16 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
       if (error) throw error;
       
-      // Ordenar numericamente pelo código
-      const sortedData = (data || []).sort((a, b) => {
-        const aNum = parseInt(a.codigo);
-        const bNum = parseInt(b.codigo);
-        return aNum - bNum;
-      });
+      // Filtrar e ordenar numericamente pelo código, garantindo que todos os campos necessários existam
+      const filteredAndSortedData = (data || [])
+        .filter(type => type.id && type.id.trim() !== '' && type.codigo && type.descricao)
+        .sort((a, b) => {
+          const aNum = parseInt(a.codigo);
+          const bNum = parseInt(b.codigo);
+          return aNum - bNum;
+        });
       
-      setMaintenanceTypes(sortedData);
+      setMaintenanceTypes(filteredAndSortedData);
     } catch (error) {
       console.error('Error loading maintenance types:', error);
       toast({
