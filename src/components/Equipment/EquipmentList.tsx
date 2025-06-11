@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit, Trash2, Filter, X } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Filter, X, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import EquipmentForm from './EquipmentForm';
 import EquipmentFilters from './EquipmentFilters';
+import BulkImportDialog from './BulkImportDialog';
 
 interface Equipment {
   id: string;
@@ -50,6 +51,7 @@ const EquipmentList: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -181,7 +183,7 @@ const EquipmentList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Controle de Equipamentos</h1>
         <div className="flex gap-2">
@@ -192,6 +194,14 @@ const EquipmentList: React.FC = () => {
           >
             <Filter className="h-4 w-4" />
             {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowBulkImport(true)}
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Importar Lote
           </Button>
           <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -273,6 +283,17 @@ const EquipmentList: React.FC = () => {
           onSave={() => {
             setShowForm(false);
             setEditingEquipment(null);
+            loadData();
+          }}
+        />
+      )}
+
+      {showBulkImport && (
+        <BulkImportDialog
+          isOpen={showBulkImport}
+          onClose={() => setShowBulkImport(false)}
+          onSuccess={() => {
+            setShowBulkImport(false);
             loadData();
           }}
         />

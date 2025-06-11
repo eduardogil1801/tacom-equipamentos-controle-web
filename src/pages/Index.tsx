@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AuthPage from '@/components/Auth/AuthPage';
 import Dashboard from '@/components/Dashboard/Dashboard';
 import EquipmentList from '@/components/Equipment/EquipmentList';
+import EquipmentMovement from '@/components/Equipment/EquipmentMovement';
 import FleetManagement from '@/components/Fleet/FleetManagement';
 import CompanyManager from '@/components/Company/CompanyManager';
 import ReportsPage from '@/components/Reports/ReportsPage';
@@ -46,6 +47,8 @@ const Index = () => {
     switch (currentPage) {
       case 'equipment':
         return <EquipmentList />;
+      case 'movements':
+        return <EquipmentMovement />;
       case 'fleet':
         return <FleetManagement />;
       case 'companies':

@@ -122,7 +122,7 @@ const Dashboard: React.FC = () => {
 
   console.log('Equipment stats:', { totalEquipments, inStockEquipments, outEquipments, equipmentsInMaintenance });
 
-  // Data for company equipment chart - ALL companies, sorted by total (descending)
+  // Data for company equipment chart - Horizontal stacked bar (like the image)
   const companyData = companies.map(company => {
     const companyEquipments = equipments.filter(eq => eq.id_empresa === company.id);
     const total = companyEquipments.length;
@@ -130,19 +130,20 @@ const Dashboard: React.FC = () => {
     const retirados = total - emEstoque;
     
     return {
-      name: company.name.length > 25 ? company.name.substring(0, 25) + '...' : company.name,
+      name: company.name.length > 20 ? company.name.substring(0, 20) + '...' : company.name,
       fullName: company.name,
-      total,
-      emEstoque,
-      retirados
+      'Em Estoque': emEstoque,
+      'Retirados': retirados,
+      total
     };
   }).filter(item => item.total > 0)
-    .sort((a, b) => b.total - a.total); // Sort by total descending
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10); // Top 10 companies
 
   // Data for pie chart
   const pieData = [
-    { name: 'Em Estoque', value: inStockEquipments, color: '#16A34A' },
-    { name: 'Retirados', value: outEquipments, color: '#DC2626' }
+    { name: 'Em Estoque', value: inStockEquipments, color: '#3B82F6' },
+    { name: 'Retirados', value: outEquipments, color: '#EF4444' }
   ];
 
   // Maintenance types data
@@ -240,7 +241,7 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Charts - Side by side layout */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Stock Status Pie Chart */}
         <Card>
@@ -306,26 +307,29 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Equipment by Company - Horizontal stacked bar chart with companies on Y axis */}
+      {/* Equipment by Company - Horizontal stacked bar chart exactly like the image */}
       {companyData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Equipamentos por Empresa</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={Math.max(500, companyData.length * 30)}>
+            <ResponsiveContainer width="100%" height={Math.max(400, companyData.length * 40)}>
               <BarChart 
                 data={companyData} 
                 layout="horizontal"
-                margin={{ top: 20, right: 30, left: 200, bottom: 5 }}
+                margin={{ top: 20, right: 30, left: 180, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis 
+                  type="number" 
+                  tickFormatter={(value) => value.toLocaleString('pt-BR')}
+                />
                 <YAxis 
                   dataKey="name" 
                   type="category" 
-                  width={190}
-                  fontSize={11}
+                  width={170}
+                  fontSize={12}
                   interval={0}
                 />
                 <Tooltip 
@@ -335,8 +339,18 @@ const Dashboard: React.FC = () => {
                   }}
                   formatter={(value, name) => [Number(value).toLocaleString('pt-BR'), name]}
                 />
-                <Bar dataKey="emEstoque" stackId="a" fill="#16A34A" name="Em Estoque" />
-                <Bar dataKey="retirados" stackId="a" fill="#DC2626" name="Retirados" />
+                <Bar 
+                  dataKey="Em Estoque" 
+                  stackId="a" 
+                  fill="#3B82F6" 
+                  name="Em Estoque" 
+                />
+                <Bar 
+                  dataKey="Retirados" 
+                  stackId="a" 
+                  fill="#EF4444" 
+                  name="Retirados" 
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -356,7 +370,7 @@ const Dashboard: React.FC = () => {
                 <XAxis type="number" />
                 <YAxis dataKey="type" type="category" width={100} />
                 <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), 'Quantidade']} />
-                <Bar dataKey="count" fill="#DC2626" />
+                <Bar dataKey="count" fill="#3B82F6" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
