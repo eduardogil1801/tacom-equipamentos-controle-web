@@ -105,12 +105,12 @@ const EquipmentList: React.FC = () => {
     }
 
     // Company filter
-    if (filters.selectedCompany) {
+    if (filters.selectedCompany && filters.selectedCompany !== 'all') {
       filtered = filtered.filter(eq => eq.id_empresa === filters.selectedCompany);
     }
 
     // Status filter
-    if (filters.selectedStatus) {
+    if (filters.selectedStatus && filters.selectedStatus !== 'all') {
       if (filters.selectedStatus === 'disponivel') {
         filtered = filtered.filter(eq => !eq.data_saida);
       } else if (filters.selectedStatus === 'em_uso') {
@@ -121,17 +121,17 @@ const EquipmentList: React.FC = () => {
     }
 
     // Type filter
-    if (filters.selectedType) {
+    if (filters.selectedType && filters.selectedType !== 'all') {
       filtered = filtered.filter(eq => eq.tipo === filters.selectedType);
     }
 
     // Model filter
-    if (filters.selectedModel) {
+    if (filters.selectedModel && filters.selectedModel !== 'all') {
       filtered = filtered.filter(eq => eq.modelo === filters.selectedModel);
     }
 
     // State filter
-    if (filters.selectedState) {
+    if (filters.selectedState && filters.selectedState !== 'all') {
       filtered = filtered.filter(eq => eq.estado === filters.selectedState);
     }
 

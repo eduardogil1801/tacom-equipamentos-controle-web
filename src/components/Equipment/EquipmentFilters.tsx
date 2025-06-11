@@ -123,7 +123,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
                 <SelectValue placeholder="Todas as empresas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as empresas</SelectItem>
+                <SelectItem value="all">Todas as empresas</SelectItem>
                 {companies.map(company => (
                   <SelectItem key={company.id} value={company.id}>
                     {company.name}
@@ -140,7 +140,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="disponivel">Disponível</SelectItem>
                 <SelectItem value="em_uso">Em Uso</SelectItem>
                 <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
@@ -156,7 +156,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
                 <SelectValue placeholder="Todos os tipos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os tipos</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
                 {equipmentTypes.map(type => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -173,7 +173,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
                 <SelectValue placeholder="Todos os modelos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os modelos</SelectItem>
+                <SelectItem value="all">Todos os modelos</SelectItem>
                 {equipmentModels.map(model => (
                   <SelectItem key={model} value={model}>
                     {model}
@@ -190,7 +190,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
                 <SelectValue placeholder="Todos os estados" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os estados</SelectItem>
+                <SelectItem value="all">Todos os estados</SelectItem>
                 {equipmentStates.map(state => (
                   <SelectItem key={state} value={state}>
                     {state}
