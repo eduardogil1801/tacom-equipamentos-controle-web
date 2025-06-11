@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Users, Shield, FileText, Package, Wrench, Cogs } from 'lucide-react';
+import { Settings, Users, Shield, FileText, Package, Wrench, Cog } from 'lucide-react';
 import UserManagement from '@/components/Users/UserManagement';
 import PermissionManagement from '@/components/Users/PermissionManagement';
 import ReportPermissionManagement from '@/components/Users/ReportPermissionManagement';
@@ -54,7 +54,7 @@ const SettingsPage: React.FC = () => {
             Tipos de Movimentação
           </TabsTrigger>
           <TabsTrigger value="maintenance-rules" className="flex items-center gap-2">
-            <Cogs className="h-4 w-4" />
+            <Cog className="h-4 w-4" />
             Regras de Manutenção
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">

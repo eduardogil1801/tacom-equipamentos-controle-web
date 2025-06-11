@@ -325,6 +325,38 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_rules: {
+        Row: {
+          created_at: string
+          id: string
+          status_resultante: string
+          tipo_manutencao_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status_resultante: string
+          tipo_manutencao_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status_resultante?: string
+          tipo_manutencao_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_rules_tipo_manutencao_id_fkey"
+            columns: ["tipo_manutencao_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_manutencao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentacoes: {
         Row: {
           data_criacao: string | null

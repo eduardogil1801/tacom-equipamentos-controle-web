@@ -59,8 +59,8 @@ const MaintenanceRulesManager: React.FC = () => {
       if (typesError) throw typesError;
       setMaintenanceTypes(typesData || []);
 
-      // Carregar regras existentes
-      const { data: rulesData, error: rulesError } = await supabase
+      // Carregar regras existentes usando any para contornar problemas de tipagem temporariamente
+      const { data: rulesData, error: rulesError } = await (supabase as any)
         .from('maintenance_rules')
         .select(`
           *,
@@ -99,7 +99,7 @@ const MaintenanceRulesManager: React.FC = () => {
       };
 
       if (editingRule && editingRule.id) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('maintenance_rules')
           .update(ruleData)
           .eq('id', editingRule.id);
@@ -111,7 +111,7 @@ const MaintenanceRulesManager: React.FC = () => {
           description: "Regra atualizada com sucesso!",
         });
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('maintenance_rules')
           .insert([ruleData]);
 
@@ -149,7 +149,7 @@ const MaintenanceRulesManager: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('maintenance_rules')
         .delete()
         .eq('id', id);
