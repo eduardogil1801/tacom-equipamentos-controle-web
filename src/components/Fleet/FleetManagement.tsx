@@ -177,8 +177,12 @@ const FleetManagement: React.FC = () => {
     }
 
     try {
+      // Converter YYYY-MM para YYYY-MM-01 para formato DATE
+      const mesReferenciaFormatted = formData.mes_referencia + '-01';
+      
       const fleetDataWithUser = {
         ...formData,
+        mes_referencia: mesReferenciaFormatted,
         usuario_responsavel: user?.username || user?.name || 'Sistema'
       };
 
@@ -221,7 +225,12 @@ const FleetManagement: React.FC = () => {
 
   const handleEdit = (fleet: FleetData) => {
     setEditingFleet(fleet);
-    setFormData(fleet);
+    // Converter YYYY-MM-DD de volta para YYYY-MM para o input
+    const mesReferencia = fleet.mes_referencia ? fleet.mes_referencia.substring(0, 7) : '';
+    setFormData({
+      ...fleet,
+      mes_referencia: mesReferencia
+    });
     setShowForm(true);
   };
 
@@ -397,7 +406,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="citgis">Total CITGIS</Label>
+                  <Label htmlFor="citgis">CITGIS</Label>
                   <Input
                     id="citgis"
                     type="number"
@@ -407,7 +416,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="buszoom">Total BUSZOOM</Label>
+                  <Label htmlFor="buszoom">BUSZOOM</Label>
                   <Input
                     id="buszoom"
                     type="number"
@@ -417,7 +426,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="telemetria">Total Telemetria</Label>
+                  <Label htmlFor="telemetria">Telemetria</Label>
                   <Input
                     id="telemetria"
                     type="number"
