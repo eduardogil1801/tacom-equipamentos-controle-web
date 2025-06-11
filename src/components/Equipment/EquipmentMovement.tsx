@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -136,6 +135,10 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         variant: "destructive",
       });
     }
+  };
+
+  const handleMultipleSelectionChange = (checked: boolean | "indeterminate") => {
+    setEnableMultipleSelection(checked === true);
   };
 
   const handleEquipmentSelect = (equipment: Equipment, checked: boolean) => {
@@ -276,16 +279,17 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
         <h1 className="text-2xl font-bold">Movimentação de Equipamentos</h1>
       </div>
 
+      {/* Card para Busca e Seleção de Equipamentos */}
       <Card>
         <CardHeader>
-          <CardTitle>Registrar Movimentação</CardTitle>
+          <CardTitle>Buscar e Selecionar Equipamentos</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center space-x-2">
             <Checkbox 
               id="multipleSelection"
               checked={enableMultipleSelection}
-              onCheckedChange={setEnableMultipleSelection}
+              onCheckedChange={handleMultipleSelectionChange}
             />
             <Label htmlFor="multipleSelection">Ativar seleção múltipla de equipamentos</Label>
           </div>
@@ -305,23 +309,20 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               <div className="space-y-2">
                 {filteredEquipments.map(equipment => (
                   <div key={equipment.id} className="flex items-center space-x-3 p-2 bg-white rounded border">
-                    {enableMultipleSelection ? (
-                      <Checkbox
-                        checked={selectedEquipments.some(item => item.id === equipment.id)}
-                        onCheckedChange={(checked) => handleEquipmentSelect(equipment, checked as boolean)}
-                      />
-                    ) : (
-                      <Checkbox
-                        checked={selectedEquipments.some(item => item.id === equipment.id)}
-                        onCheckedChange={(checked) => {
+                    <Checkbox
+                      checked={selectedEquipments.some(item => item.id === equipment.id)}
+                      onCheckedChange={(checked) => {
+                        if (enableMultipleSelection) {
+                          handleEquipmentSelect(equipment, checked === true);
+                        } else {
                           if (checked) {
                             setSelectedEquipments([equipment]);
                           } else {
                             setSelectedEquipments([]);
                           }
-                        }}
-                      />
-                    )}
+                        }
+                      }}
+                    />
                     <div className="flex-1">
                       <div className="font-semibold">{equipment.numero_serie}</div>
                       <div className="text-sm text-gray-600">
@@ -344,6 +345,34 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
             </div>
           )}
 
+          {selectedEquipments.length > 0 && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-md">
+              <h4 className="font-medium mb-2">Equipamentos Selecionados ({selectedEquipments.length}):</h4>
+              <div className="space-y-1">
+                {selectedEquipments.map(equipment => (
+                  <div key={equipment.id} className="flex items-center justify-between text-sm">
+                    <span>{equipment.numero_serie} - {equipment.tipo}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Card para Formulário de Movimentação */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Dados da Movimentação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -442,26 +471,6 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
               </Button>
             </div>
           </form>
-
-          {selectedEquipments.length > 0 && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-md">
-              <h4 className="font-medium mb-2">Equipamentos Selecionados ({selectedEquipments.length}):</h4>
-              <div className="space-y-1">
-                {selectedEquipments.map(equipment => (
-                  <div key={equipment.id} className="flex items-center justify-between text-sm">
-                    <span>{equipment.numero_serie} - {equipment.tipo}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id))}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
