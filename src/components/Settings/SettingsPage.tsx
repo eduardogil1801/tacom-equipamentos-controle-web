@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Users, Shield, FileText, Package } from 'lucide-react';
+import { Settings, Users, Shield, FileText, Package, Wrench, Cogs } from 'lucide-react';
 import UserManagement from '@/components/Users/UserManagement';
 import PermissionManagement from '@/components/Users/PermissionManagement';
 import ReportPermissionManagement from '@/components/Users/ReportPermissionManagement';
 import StateManager from '@/components/Settings/StateManager';
+import MovementTypeManager from '@/components/Settings/MovementTypeManager';
+import MaintenanceRulesManager from '@/components/Settings/MaintenanceRulesManager';
 import { useAuth } from '@/hooks/useAuth';
 
 const SettingsPage: React.FC = () => {
@@ -42,10 +44,18 @@ const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="states" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Estados
+          </TabsTrigger>
+          <TabsTrigger value="movement-types" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Tipos de Movimentação
+          </TabsTrigger>
+          <TabsTrigger value="maintenance-rules" className="flex items-center gap-2">
+            <Cogs className="h-4 w-4" />
+            Regras de Manutenção
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -63,6 +73,14 @@ const SettingsPage: React.FC = () => {
 
         <TabsContent value="states">
           <StateManager />
+        </TabsContent>
+
+        <TabsContent value="movement-types">
+          <MovementTypeManager />
+        </TabsContent>
+
+        <TabsContent value="maintenance-rules">
+          <MaintenanceRulesManager />
         </TabsContent>
 
         <TabsContent value="users">

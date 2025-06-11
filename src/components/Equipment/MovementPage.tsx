@@ -27,19 +27,27 @@ interface Company {
   name: string;
 }
 
+interface MaintenanceType {
+  id: string;
+  codigo: string;
+  descricao: string;
+}
+
 const MovementPage: React.FC = () => {
   const { user } = useAuth();
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [movementType, setMovementType] = useState('');
   const [destinationCompany, setDestinationCompany] = useState('');
   const [movementDate, setMovementDate] = useState(new Date().toISOString().split('T')[0]);
   const [observations, setObservations] = useState('');
+  const [selectedEquipmentType, setSelectedEquipmentType] = useState('');
+  const [selectedMaintenanceType, setSelectedMaintenanceType] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [bulkSerialNumbers, setBulkSerialNumbers] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Campo do usuário responsável preenchido automaticamente
-  const responsibleUser = user?.name || user?.username || 'Sistema';
 
   const movementTypes = [
     { value: 'entrada', label: 'Entrada' },
@@ -48,9 +56,36 @@ const MovementPage: React.FC = () => {
     { value: 'manutencao', label: 'Manutenção' }
   ];
 
+  const equipmentTypes = [
+    'CCIT 4.0',
+    'CCIT 5.0',
+    'PM (Painel de Motorista)',
+    'UPEX',
+    'Connections 4.0',
+    'Connections 5.0'
+  ];
+
+  const statusOptions = [
+    { value: 'disponivel', label: 'Disponível' },
+    { value: 'manutencao', label: 'Manutenção' },
+    { value: 'em_uso', label: 'Em Uso' },
+    { value: 'aguardando_manutencao', label: 'Aguardando Manutenção' },
+    { value: 'danificado', label: 'Danificado' },
+    { value: 'indisponivel', label: 'Indisponível' }
+  ];
+
   useEffect(() => {
     loadCompanies();
+    loadMaintenanceTypes();
   }, []);
+
+  // Auto-definir status quando selecionar tipo de manutenção
+  useEffect(() => {
+    const maintenanceType = maintenanceTypes.find(mt => mt.id === selectedMaintenanceType);
+    if (maintenanceType && maintenanceType.descricao.toLowerCase().includes('tela quebrada')) {
+      setSelectedStatus('indisponivel');
+    }
+  }, [selectedMaintenanceType, maintenanceTypes]);
 
   const loadCompanies = async () => {
     try {
@@ -66,8 +101,65 @@ const MovementPage: React.FC = () => {
     }
   };
 
+  const loadMaintenanceTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_manutencao')
+        .select('id, codigo, descricao')
+        .eq('ativo', true)
+        .order('descricao');
+
+      if (error) throw error;
+      setMaintenanceTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de manutenção:', error);
+    }
+  };
+
   const handleEquipmentSelection = (equipments: Equipment[]) => {
     setSelectedEquipments(equipments);
+  };
+
+  const handleBulkSerialSearch = async () => {
+    if (!bulkSerialNumbers.trim()) return;
+
+    const serialNumbers = bulkSerialNumbers.split(',').map(s => s.trim()).filter(Boolean);
+    
+    try {
+      let query = supabase
+        .from('equipamentos')
+        .select(`
+          *,
+          empresas (
+            name
+          )
+        `)
+        .in('numero_serie', serialNumbers);
+
+      // Filtrar por tipo se selecionado
+      if (selectedEquipmentType) {
+        query = query.eq('tipo', selectedEquipmentType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setSelectedEquipments(data || []);
+      setBulkSerialNumbers('');
+
+      toast({
+        title: "Sucesso",
+        description: `${data?.length || 0} equipamento(s) encontrado(s)`,
+      });
+    } catch (error) {
+      console.error('Erro ao buscar equipamentos:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao buscar equipamentos",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveMovement = async () => {
@@ -97,7 +189,8 @@ const MovementPage: React.FC = () => {
         tipo_movimento: movementType,
         data_movimento: movementDate,
         observacoes: observations || null,
-        usuario_responsavel: responsibleUser
+        usuario_responsavel: user?.username || user?.name,
+        tipo_manutencao_id: selectedMaintenanceType || null
       }));
 
       const { error } = await supabase
@@ -122,6 +215,14 @@ const MovementPage: React.FC = () => {
           .in('id', selectedEquipments.map(eq => eq.id));
       }
 
+      // Atualizar status se foi definido
+      if (selectedStatus) {
+        await supabase
+          .from('equipamentos')
+          .update({ status: selectedStatus })
+          .in('id', selectedEquipments.map(eq => eq.id));
+      }
+
       toast({
         title: "Sucesso",
         description: `Movimentação de ${selectedEquipments.length} equipamento(s) registrada com sucesso!`,
@@ -132,6 +233,10 @@ const MovementPage: React.FC = () => {
       setMovementType('');
       setDestinationCompany('');
       setObservations('');
+      setSelectedEquipmentType('');
+      setSelectedMaintenanceType('');
+      setSelectedStatus('');
+      setBulkSerialNumbers('');
       
     } catch (error) {
       console.error('Erro ao salvar movimentação:', error);
@@ -184,11 +289,8 @@ const MovementPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Campo empresa destino para todos os tipos de movimentação */}
           <div>
-            <Label htmlFor="destinationCompany">
-              Empresa Destino {movementType === 'transferencia' ? '*' : ''}
-            </Label>
+            <Label htmlFor="destinationCompany">Empresa Destino {movementType === 'transferencia' ? '*' : ''}</Label>
             <Select value={destinationCompany} onValueChange={setDestinationCompany}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a empresa destino" />
@@ -203,15 +305,76 @@ const MovementPage: React.FC = () => {
             </Select>
           </div>
 
-          {/* Campo do usuário responsável (somente leitura) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="equipmentType">Tipo de Equipamento</Label>
+              <Select value={selectedEquipmentType} onValueChange={setSelectedEquipmentType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {equipmentTypes.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="maintenanceType">Tipo de Manutenção</Label>
+              <Select value={selectedMaintenanceType} onValueChange={setSelectedMaintenanceType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de manutenção" />
+                </SelectTrigger>
+                <SelectContent>
+                  {maintenanceTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.descricao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {selectedMaintenanceType && (
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
-            <Label htmlFor="responsibleUser">Usuário Responsável</Label>
-            <Input
-              id="responsibleUser"
-              value={responsibleUser}
-              readOnly
-              className="bg-gray-100 cursor-not-allowed"
-            />
+            <Label>Busca em Lote por Número de Série</Label>
+            <div className="flex gap-2 mt-2">
+              <Input
+                placeholder="Digite os números de série separados por vírgula (ex: 0001,0005,0006,0080)"
+                value={bulkSerialNumbers}
+                onChange={(e) => setBulkSerialNumbers(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                onClick={handleBulkSerialSearch}
+                className="flex items-center gap-2"
+              >
+                <Search className="h-4 w-4" />
+                Buscar Lote
+              </Button>
+            </div>
           </div>
 
           <div>
@@ -273,6 +436,7 @@ const MovementPage: React.FC = () => {
         isOpen={showSearchDialog}
         onClose={() => setShowSearchDialog(false)}
         onConfirm={handleEquipmentSelection}
+        equipmentType={selectedEquipmentType}
       />
     </div>
   );

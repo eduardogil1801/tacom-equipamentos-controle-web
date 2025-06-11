@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +46,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     tipo: '',
     modelo: '',
     id_empresa: '',
-    data_entrada: ''
+    data_entrada: '',
+    status: ''
   });
   const [loading, setLoading] = useState(false);
   const [duplicateAlert, setDuplicateAlert] = useState<string | null>(null);
@@ -59,6 +61,16 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     'Connections 5.0'
   ];
 
+  const statusOptions = [
+    { value: 'disponivel', label: 'Disponível' },
+    { value: 'manutencao', label: 'Manutenção' },
+    { value: 'em_uso', label: 'Em Uso' },
+    { value: 'aguardando_manutencao', label: 'Aguardando Manutenção' },
+    { value: 'danificado', label: 'Danificado' }
+  ];
+
+  const isOperational = user?.userType === 'operacional';
+
   useEffect(() => {
     if (equipment) {
       setFormData({
@@ -66,11 +78,18 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         tipo: equipment.tipo,
         modelo: equipment.modelo || '',
         id_empresa: equipment.id_empresa,
-        data_entrada: equipment.data_entrada
+        data_entrada: equipment.data_entrada,
+        status: equipment.status || 'disponivel'
       });
     } else {
-      const today = new Date().toISOString().split('T')[0];
-      setFormData(prev => ({ ...prev, data_entrada: today }));
+      // Corrigir data atual
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      setFormData(prev => ({ 
+        ...prev, 
+        data_entrada: todayString,
+        status: 'disponivel'
+      }));
     }
   }, [equipment]);
 
@@ -118,6 +137,21 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     }
   };
 
+  const getStatusByCompany = (companyId: string): string => {
+    const company = companies.find(c => c.id === companyId);
+    if (!company) return 'disponivel';
+
+    const companyName = company.name.toLowerCase();
+    
+    if (companyName.includes('tacom sistemas poa') || companyName.includes('tacom projetos sc')) {
+      return 'disponivel';
+    } else if (companyName.includes('tacom projetos ctg')) {
+      return 'manutencao';
+    } else {
+      return 'em_uso';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -133,7 +167,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     setLoading(true);
 
     try {
-      // Buscar dados da empresa para auto-preencher estado e status
+      // Buscar dados da empresa para auto-preencher estado
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
         .select('name, estado')
@@ -142,6 +176,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
       if (companyError) throw companyError;
 
+      let finalStatus = formData.status;
+      
+      // Se não estamos editando (novo equipamento) ou não é usuário operacional, aplicar regras de status
+      if (!equipment || !isOperational) {
+        finalStatus = getStatusByCompany(formData.id_empresa);
+      }
+
       const equipmentData = {
         numero_serie: formData.numero_serie,
         tipo: formData.tipo,
@@ -149,16 +190,26 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         id_empresa: formData.id_empresa,
         data_entrada: formData.data_entrada,
         estado: companyData?.estado || 'Rio Grande do Sul',
-        status: companyData?.name?.toLowerCase().includes('tacom') ? 'disponivel' : 'em_uso'
+        status: finalStatus
       };
 
       if (equipment) {
-        const { error } = await supabase
-          .from('equipamentos')
-          .update(equipmentData)
-          .eq('id', equipment.id);
+        // Se é usuário operacional, só pode atualizar o status
+        if (isOperational) {
+          const { error } = await supabase
+            .from('equipamentos')
+            .update({ status: formData.status })
+            .eq('id', equipment.id);
 
-        if (error) throw error;
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('equipamentos')
+            .update(equipmentData)
+            .eq('id', equipment.id);
+
+          if (error) throw error;
+        }
 
         // Registrar movimentação de atualização
         await supabase
@@ -167,7 +218,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
             id_equipamento: equipment.id,
             tipo_movimento: 'entrada',
             data_movimento: formData.data_entrada,
-            observacoes: 'Equipamento atualizado',
+            observacoes: isOperational ? 'Status atualizado por usuário operacional' : 'Equipamento atualizado',
             usuario_responsavel: user?.username || user?.name
           }]);
 
@@ -249,72 +300,110 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="numero_serie">Número de Série *</Label>
-                <Input
-                  id="numero_serie"
-                  placeholder="Ex: ABC123456"
-                  value={formData.numero_serie}
-                  onChange={(e) => handleChange('numero_serie', e.target.value)}
-                  required
-                />
+              {/* Primeira coluna */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="numero_serie">Número de Série *</Label>
+                  <Input
+                    id="numero_serie"
+                    placeholder="Ex: ABC123456"
+                    value={formData.numero_serie}
+                    onChange={(e) => handleChange('numero_serie', e.target.value)}
+                    required
+                    readOnly={isOperational}
+                    className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tipo">Tipo de Equipamento *</Label>
+                  <Select 
+                    value={formData.tipo || ''} 
+                    onValueChange={(value) => handleChange('tipo', value)}
+                    disabled={isOperational}
+                  >
+                    <SelectTrigger className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {equipmentTypes.map(tipo => (
+                        <SelectItem key={tipo} value={tipo}>
+                          {tipo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="company">Empresa *</Label>
+                  <Select 
+                    value={formData.id_empresa || ''} 
+                    onValueChange={(value) => handleChange('id_empresa', value)}
+                    disabled={isOperational}
+                  >
+                    <SelectTrigger className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}>
+                      <SelectValue placeholder="Selecione uma empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Campo Status para usuários operacionais */}
+                {isOperational && equipment && (
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status *</Label>
+                    <Select 
+                      value={formData.status || ''} 
+                      onValueChange={(value) => handleChange('status', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de Equipamento *</Label>
-                <Select value={formData.tipo || ''} onValueChange={(value) => {
-                  handleChange('tipo', value);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {equipmentTypes.map(tipo => (
-                      <SelectItem key={tipo} value={tipo}>
-                        {tipo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Segunda coluna */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="modelo">Modelo</Label>
+                  <Input
+                    id="modelo"
+                    placeholder="Ex: H2, DMX200, V2000..."
+                    value={formData.modelo}
+                    onChange={(e) => handleChange('modelo', e.target.value)}
+                    readOnly={isOperational}
+                    className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="modelo">Modelo</Label>
-                <Input
-                  id="modelo"
-                  placeholder="Ex: H2, DMX200, V2000..."
-                  value={formData.modelo}
-                  onChange={(e) => handleChange('modelo', e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="company">Empresa *</Label>
-                <Select value={formData.id_empresa || ''} onValueChange={(value) => {
-                  handleChange('id_empresa', value);
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(company => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="data_entrada">Data de Cadastro *</Label>
-                <Input
-                  id="data_entrada"
-                  type="date"
-                  value={formData.data_entrada}
-                  onChange={(e) => handleChange('data_entrada', e.target.value)}
-                  required
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="data_entrada">Data de Cadastro *</Label>
+                  <Input
+                    id="data_entrada"
+                    type="date"
+                    value={formData.data_entrada}
+                    onChange={(e) => handleChange('data_entrada', e.target.value)}
+                    required
+                    readOnly={isOperational}
+                    className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}
+                  />
+                </div>
               </div>
             </div>
 

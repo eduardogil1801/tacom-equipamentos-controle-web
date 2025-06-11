@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit, Trash2, Filter, X, Upload } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import EquipmentForm from './EquipmentForm';
 import EquipmentFilters from './EquipmentFilters';
@@ -50,7 +50,6 @@ const EquipmentList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
 
   useEffect(() => {
@@ -173,13 +172,22 @@ const EquipmentList: React.FC = () => {
   };
 
   const getStatusBadge = (equipment: Equipment) => {
-    if (equipment.data_saida) {
-      if (equipment.status === 'em_manutencao') {
-        return <Badge variant="destructive">Em Manutenção</Badge>;
-      }
-      return <Badge variant="secondary">Em Uso</Badge>;
+    const status = equipment.status || 'disponivel';
+    
+    switch (status) {
+      case 'disponivel':
+        return <Badge className="bg-green-500 text-white">Disponível</Badge>;
+      case 'manutencao':
+        return <Badge className="bg-yellow-500 text-white">Manutenção</Badge>;
+      case 'em_uso':
+        return <Badge className="bg-blue-500 text-white">Em Uso</Badge>;
+      case 'aguardando_manutencao':
+        return <Badge className="bg-orange-500 text-white">Aguardando Manutenção</Badge>;
+      case 'danificado':
+        return <Badge className="bg-red-500 text-white">Danificado</Badge>;
+      default:
+        return <Badge variant="default">Disponível</Badge>;
     }
-    return <Badge variant="default">Disponível</Badge>;
   };
 
   const handleFormClose = () => {
@@ -222,14 +230,6 @@ const EquipmentList: React.FC = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-          </Button>
-          <Button 
-            variant="outline" 
             onClick={() => setShowBulkImport(true)}
             className="flex items-center gap-2"
           >
@@ -246,12 +246,10 @@ const EquipmentList: React.FC = () => {
         </div>
       </div>
 
-      {showFilters && (
-        <EquipmentFilters 
-          onFiltersChange={handleFiltersChange}
-          onClearFilters={handleClearFilters}
-        />
-      )}
+      <EquipmentFilters 
+        onFiltersChange={handleFiltersChange}
+        onClearFilters={handleClearFilters}
+      />
 
       <Card>
         <CardHeader>

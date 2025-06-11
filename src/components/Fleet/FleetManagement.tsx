@@ -86,8 +86,8 @@ const FleetManagement: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    calculateTotal();
-  }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao, formData.citgis, formData.buszoom, formData.nuvem, formData.telemetria]);
+    calculateTotalFleet();
+  }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao]);
 
   const loadCompanies = async () => {
     try {
@@ -132,17 +132,18 @@ const FleetManagement: React.FC = () => {
     }
   };
 
-  const calculateTotal = () => {
-    const total = 
+  const calculateTotalFleet = () => {
+    // Total da frota = apenas Simples C/Imagem + Simples S/Imagem + Seção
+    const totalFleet = 
       formData.simples_com_imagem +
       formData.simples_sem_imagem +
-      formData.secao +
-      formData.citgis +
-      formData.buszoom +
-      formData.nuvem +
-      formData.telemetria;
+      formData.secao;
     
-    setFormData(prev => ({ ...prev, total }));
+    setFormData(prev => ({ 
+      ...prev, 
+      total: totalFleet,
+      nuvem: totalFleet // Nuvem = Total da Frota automaticamente
+    }));
   };
 
   const handleInputChange = (field: keyof FleetData, value: string | number) => {
@@ -178,10 +179,10 @@ const FleetManagement: React.FC = () => {
     try {
       const fleetDataWithUser = {
         ...formData,
-        usuario_responsavel: user?.username || user?.name
+        usuario_responsavel: user?.username || user?.name || 'Sistema'
       };
 
-      if (editingFleet) {
+      if (editingFleet && editingFleet.id) {
         const { error } = await supabase
           .from('frota')
           .update(fleetDataWithUser)
@@ -225,6 +226,10 @@ const FleetManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir estes dados da frota?')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('frota')
@@ -276,7 +281,7 @@ const FleetManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Cadastro de Frota</h1>
         <Button
@@ -338,7 +343,7 @@ const FleetManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
                   <Input
@@ -369,8 +374,30 @@ const FleetManagement: React.FC = () => {
                     onChange={(e) => handleInputChange('secao', e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-lg font-semibold text-blue-800">
+                  Total da Frota: {formatNumber(formData.total)} equipamentos
+                </div>
+                <div className="text-sm text-blue-600 mt-1">
+                  (Simples C/Imagem + Simples S/Imagem + Seção)
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <Label htmlFor="citgis">CITGIS</Label>
+                  <Label htmlFor="nuvem">Nuvem (Automático)</Label>
+                  <Input
+                    id="nuvem"
+                    type="number"
+                    value={formData.nuvem}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="citgis">Total CITGIS</Label>
                   <Input
                     id="citgis"
                     type="number"
@@ -380,7 +407,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="buszoom">BUSZOOM</Label>
+                  <Label htmlFor="buszoom">Total BUSZOOM</Label>
                   <Input
                     id="buszoom"
                     type="number"
@@ -390,17 +417,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="nuvem">Nuvem</Label>
-                  <Input
-                    id="nuvem"
-                    type="number"
-                    min="0"
-                    value={formData.nuvem}
-                    onChange={(e) => handleInputChange('nuvem', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="telemetria">Telemetria</Label>
+                  <Label htmlFor="telemetria">Total Telemetria</Label>
                   <Input
                     id="telemetria"
                     type="number"
@@ -408,12 +425,6 @@ const FleetManagement: React.FC = () => {
                     value={formData.telemetria}
                     onChange={(e) => handleInputChange('telemetria', e.target.value)}
                   />
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="text-lg font-semibold">
-                  Total: {formatNumber(formData.total)} equipamentos
                 </div>
               </div>
 
@@ -447,11 +458,11 @@ const FleetManagement: React.FC = () => {
                   <th className="text-left p-3">Simples C/Img</th>
                   <th className="text-left p-3">Simples S/Img</th>
                   <th className="text-left p-3">Seção</th>
+                  <th className="text-left p-3">Total Frota</th>
+                  <th className="text-left p-3">Nuvem</th>
                   <th className="text-left p-3">CITGIS</th>
                   <th className="text-left p-3">BUSZOOM</th>
-                  <th className="text-left p-3">Nuvem</th>
                   <th className="text-left p-3">Telemetria</th>
-                  <th className="text-left p-3">Total</th>
                   <th className="text-left p-3">Responsável</th>
                   <th className="text-left p-3">Ações</th>
                 </tr>
@@ -465,11 +476,11 @@ const FleetManagement: React.FC = () => {
                     <td className="p-3">{formatNumber(fleet.simples_com_imagem || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.secao || 0)}</td>
+                    <td className="p-3 font-bold text-blue-600">{formatNumber(fleet.total || 0)}</td>
+                    <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
                     <td className="p-3">{formatNumber(fleet.telemetria || 0)}</td>
-                    <td className="p-3 font-bold">{formatNumber(fleet.total || 0)}</td>
                     <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
                     <td className="p-3">
                       <div className="flex gap-2">
