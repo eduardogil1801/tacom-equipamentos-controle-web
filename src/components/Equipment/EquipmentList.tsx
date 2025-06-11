@@ -1,11 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Edit, Trash, Move, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash, Move, Upload } from 'lucide-react';
 import { 
   Pagination,
   PaginationContent,
@@ -17,6 +14,7 @@ import {
 import EquipmentForm from './EquipmentForm';
 import EquipmentMovement from './EquipmentMovement';
 import BulkImportDialog from './BulkImportDialog';
+import EquipmentFilters from './EquipmentFilters';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -40,6 +38,15 @@ interface Company {
   name: string;
 }
 
+interface FilterValues {
+  searchTerm: string;
+  selectedCompany: string;
+  selectedStatus: string;
+  selectedType: string;
+  selectedModel: string;
+  selectedState: string;
+}
+
 const EquipmentList: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -48,43 +55,25 @@ const EquipmentList: React.FC = () => {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
   const [totalCount, setTotalCount] = useState(0);
   
-  // Estados para as opções dos filtros
-  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [availableStates, setAvailableStates] = useState<string[]>([]);
-  
-  const [filters, setFilters] = useState({
-    numero_serie: '',
-    company: '',
-    data_entrada: '',
-    data_saida: '',
-    estado: '',
-    tipo: '',
-    modelo: '',
-    status: ''
+  // Filter states
+  const [appliedFilters, setAppliedFilters] = useState<FilterValues>({
+    searchTerm: '',
+    selectedCompany: '',
+    selectedStatus: '',
+    selectedType: '',
+    selectedModel: '',
+    selectedState: ''
   });
 
   useEffect(() => {
     loadData();
-  }, [currentPage, filters]);
-
-  useEffect(() => {
-    // Extrair tipos, modelos e estados únicos dos equipamentos
-    const types = [...new Set(equipments.map(eq => eq.tipo).filter(Boolean))].sort();
-    const models = [...new Set(equipments.map(eq => eq.modelo).filter(Boolean))].sort();
-    const states = [...new Set(equipments.map(eq => eq.estado).filter(Boolean))].sort();
-    
-    setAvailableTypes(types);
-    setAvailableModels(models);
-    setAvailableStates(states);
-  }, [equipments]);
+  }, [currentPage, appliedFilters]);
 
   const loadData = async () => {
     try {
@@ -109,26 +98,23 @@ const EquipmentList: React.FC = () => {
         `, { count: 'exact' });
 
       // Apply filters
-      if (filters.numero_serie) {
-        query = query.ilike('numero_serie', `%${filters.numero_serie}%`);
+      if (appliedFilters.searchTerm) {
+        query = query.ilike('numero_serie', `%${appliedFilters.searchTerm}%`);
       }
-      if (filters.tipo) {
-        query = query.eq('tipo', filters.tipo);
+      if (appliedFilters.selectedType) {
+        query = query.eq('tipo', appliedFilters.selectedType);
       }
-      if (filters.modelo) {
-        query = query.eq('modelo', filters.modelo);
+      if (appliedFilters.selectedModel) {
+        query = query.eq('modelo', appliedFilters.selectedModel);
       }
-      if (filters.estado) {
-        query = query.eq('estado', filters.estado);
+      if (appliedFilters.selectedState) {
+        query = query.eq('estado', appliedFilters.selectedState);
       }
-      if (filters.status) {
-        query = query.ilike('status', `%${filters.status}%`);
+      if (appliedFilters.selectedStatus) {
+        query = query.eq('status', appliedFilters.selectedStatus);
       }
-      if (filters.data_entrada) {
-        query = query.gte('data_entrada', filters.data_entrada);
-      }
-      if (filters.data_saida) {
-        query = query.lte('data_saida', filters.data_saida);
+      if (appliedFilters.selectedCompany) {
+        query = query.eq('id_empresa', appliedFilters.selectedCompany);
       }
 
       // Add pagination
@@ -153,6 +139,23 @@ const EquipmentList: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFiltersChange = (filters: FilterValues) => {
+    setAppliedFilters(filters);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handleClearFilters = () => {
+    setAppliedFilters({
+      searchTerm: '',
+      selectedCompany: '',
+      selectedStatus: '',
+      selectedType: '',
+      selectedModel: '',
+      selectedState: ''
+    });
+    setCurrentPage(1);
   };
 
   const handleSaveEquipment = () => {
@@ -194,19 +197,6 @@ const EquipmentList: React.FC = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleFilterChange = (field: string, value: string) => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const newTimeout = setTimeout(() => {
-      setFilters(prev => ({ ...prev, [field]: value }));
-      setCurrentPage(1); // Reset to first page when filtering
-    }, 500);
-
-    setSearchTimeout(newTimeout);
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -288,116 +278,10 @@ const EquipmentList: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Search className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <Label htmlFor="serialFilter" className="text-sm">Número de Série</Label>
-              <Input
-                id="serialFilter"
-                placeholder="Filtrar por série..."
-                onChange={(e) => handleFilterChange('numero_serie', e.target.value)}
-                className="text-sm"
-              />
-            </div>
-            <div>
-              <Label htmlFor="companyFilter" className="text-sm">Empresa</Label>
-              <Select value={filters.company || 'all'} onValueChange={(value) => {
-                setFilters({...filters, company: value === 'all' ? '' : value});
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Todas as empresas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as empresas</SelectItem>
-                  {companies.map(company => (
-                    <SelectItem key={company.id} value={company.name}>{company.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="tipoFilter" className="text-sm">Tipo</Label>
-              <Select value={filters.tipo || 'all'} onValueChange={(value) => {
-                setFilters({...filters, tipo: value === 'all' ? '' : value});
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  {availableTypes.map(tipo => (
-                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="modeloFilter" className="text-sm">Modelo</Label>
-              <Select value={filters.modelo || 'all'} onValueChange={(value) => {
-                setFilters({...filters, modelo: value === 'all' ? '' : value});
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Todos os modelos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os modelos</SelectItem>
-                  {availableModels.map(modelo => (
-                    <SelectItem key={modelo} value={modelo}>{modelo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="estadoFilter" className="text-sm">Estado</Label>
-              <Select value={filters.estado || 'all'} onValueChange={(value) => {
-                setFilters({...filters, estado: value === 'all' ? '' : value});
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Todos os estados" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os estados</SelectItem>
-                  {availableStates.map(estado => (
-                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="statusFilter" className="text-sm">Status</Label>
-              <Select value={filters.status || 'all'} onValueChange={(value) => {
-                setFilters({...filters, status: value === 'all' ? '' : value});
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Todos os status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="disponivel">Disponível</SelectItem>
-                  <SelectItem value="recuperados">Recuperados</SelectItem>
-                  <SelectItem value="aguardando_despacho_contagem">Aguardando Despacho</SelectItem>
-                  <SelectItem value="enviados_manutencao_contagem">Enviados Manutenção</SelectItem>
-                  <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
-                  <SelectItem value="em_uso">Em Uso</SelectItem>
-                  <SelectItem value="danificado">Danificado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <EquipmentFilters
+        onFiltersChange={handleFiltersChange}
+        onClearFilters={handleClearFilters}
+      />
 
       {/* Equipment List */}
       <Card>
@@ -568,7 +452,6 @@ const EquipmentList: React.FC = () => {
                     />
                   </PaginationItem>
                   
-                  {/* Show page numbers with ellipsis for mobile */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
                     if (totalPages <= 5) {

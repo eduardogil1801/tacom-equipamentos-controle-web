@@ -114,46 +114,30 @@ const Dashboard: React.FC = () => {
   const inStockEquipments = equipments.filter(eq => !eq.data_saida).length;
   const outEquipments = equipments.filter(eq => eq.data_saida).length;
   const totalCompanies = companies.length;
-  const equipmentsInMaintenance = equipments.filter(eq => eq.em_manutencao === true).length;
+  const equipmentsInMaintenance = equipments.filter(eq => 
+    eq.em_manutencao === true || 
+    eq.status === 'aguardando_manutencao' || 
+    eq.status === 'em_manutencao'
+  ).length;
 
   console.log('Equipment stats:', { totalEquipments, inStockEquipments, outEquipments, equipmentsInMaintenance });
-
-  // Data for equipment by state
-  const stateData = equipments.reduce((acc: any[], equipment) => {
-    const estado = equipment.estado || equipment.empresas?.estado || 'Não informado';
-    const existing = acc.find(item => item.estado === estado);
-    const inStock = !equipment.data_saida;
-    
-    if (existing) {
-      existing.total += 1;
-      if (inStock) existing.emEstoque += 1;
-      else existing.retirados += 1;
-    } else {
-      acc.push({ 
-        estado, 
-        total: 1, 
-        emEstoque: inStock ? 1 : 0,
-        retirados: inStock ? 0 : 1
-      });
-    }
-    return acc;
-  }, []).sort((a, b) => b.total - a.total);
 
   // Data for company equipment chart - ALL companies, sorted by total (descending)
   const companyData = companies.map(company => {
     const companyEquipments = equipments.filter(eq => eq.id_empresa === company.id);
     const total = companyEquipments.length;
-    const inStock = companyEquipments.filter(eq => !eq.data_saida).length;
-    const retirados = total - inStock;
+    const emEstoque = companyEquipments.filter(eq => !eq.data_saida).length;
+    const retirados = total - emEstoque;
     
     return {
-      name: company.name,
+      name: company.name.length > 25 ? company.name.substring(0, 25) + '...' : company.name,
+      fullName: company.name,
       total,
-      inStock,
+      emEstoque,
       retirados
     };
   }).filter(item => item.total > 0)
-    .sort((a, b) => b.total - a.total); // Sort by total descending for Y axis
+    .sort((a, b) => b.total - a.total); // Sort by total descending
 
   // Data for pie chart
   const pieData = [
@@ -206,7 +190,7 @@ const Dashboard: React.FC = () => {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalEquipments}</div>
+            <div className="text-2xl font-bold text-primary">{totalEquipments.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">Equipamentos cadastrados</p>
           </CardContent>
         </Card>
@@ -217,7 +201,7 @@ const Dashboard: React.FC = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{inStockEquipments}</div>
+            <div className="text-2xl font-bold text-green-600">{inStockEquipments.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">Disponíveis</p>
           </CardContent>
         </Card>
@@ -228,7 +212,7 @@ const Dashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{outEquipments}</div>
+            <div className="text-2xl font-bold text-red-600">{outEquipments.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">Fora do estoque</p>
           </CardContent>
         </Card>
@@ -239,7 +223,7 @@ const Dashboard: React.FC = () => {
             <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalCompanies}</div>
+            <div className="text-2xl font-bold text-primary">{totalCompanies.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">Empresas cadastradas</p>
           </CardContent>
         </Card>
@@ -250,7 +234,7 @@ const Dashboard: React.FC = () => {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenance}</div>
+            <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenance.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">Equipamentos em manutenção</p>
           </CardContent>
         </Card>
@@ -273,13 +257,13 @@ const Dashboard: React.FC = () => {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
+                  label={({ name, value }) => `${name}: ${value.toLocaleString('pt-BR')}`}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), '']} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -326,26 +310,32 @@ const Dashboard: React.FC = () => {
       {companyData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Equipamentos por Empresa (Todas as Empresas)</CardTitle>
+            <CardTitle>Equipamentos por Empresa</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={Math.max(400, companyData.length * 25)}>
+            <ResponsiveContainer width="100%" height={Math.max(500, companyData.length * 30)}>
               <BarChart 
                 data={companyData} 
                 layout="horizontal"
-                margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
+                margin={{ top: 20, right: 30, left: 200, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis 
                   dataKey="name" 
                   type="category" 
-                  width={140}
-                  fontSize={10}
+                  width={190}
+                  fontSize={11}
                   interval={0}
                 />
-                <Tooltip />
-                <Bar dataKey="inStock" stackId="a" fill="#16A34A" name="Em Estoque" />
+                <Tooltip 
+                  labelFormatter={(label) => {
+                    const item = companyData.find(d => d.name === label);
+                    return item ? item.fullName : label;
+                  }}
+                  formatter={(value, name) => [Number(value).toLocaleString('pt-BR'), name]}
+                />
+                <Bar dataKey="emEstoque" stackId="a" fill="#16A34A" name="Em Estoque" />
                 <Bar dataKey="retirados" stackId="a" fill="#DC2626" name="Retirados" />
               </BarChart>
             </ResponsiveContainer>
@@ -365,7 +355,7 @@ const Dashboard: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis dataKey="type" type="category" width={100} />
-                <Tooltip />
+                <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), 'Quantidade']} />
                 <Bar dataKey="count" fill="#DC2626" />
               </BarChart>
             </ResponsiveContainer>

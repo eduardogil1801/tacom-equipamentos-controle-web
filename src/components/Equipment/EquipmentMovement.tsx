@@ -77,11 +77,28 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   const loadCurrentUser = async () => {
     try {
-      if (user) {
-        setResponsibleUser(`${user.name || ''} ${user.surname || ''}`.trim());
+      if (user?.email) {
+        // Get user name from profiles table or use email
+        const { data: profiles, error } = await supabase
+          .from('usuarios')
+          .select('nome, sobrenome')
+          .eq('email', user.email)
+          .single();
+
+        if (!error && profiles) {
+          setResponsibleUser(`${profiles.nome} ${profiles.sobrenome}`.trim());
+        } else {
+          // Fallback to user email or metadata
+          const userName = user.user_metadata?.name || user.email?.split('@')[0] || '';
+          setResponsibleUser(userName);
+        }
       }
     } catch (error) {
       console.error('Error loading current user:', error);
+      // Fallback to email if available
+      if (user?.email) {
+        setResponsibleUser(user.email.split('@')[0]);
+      }
     }
   };
 
@@ -159,31 +176,60 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
 
   const handleMultipleSelectionChange = (checked: boolean | "indeterminate") => {
     setEnableMultipleSelection(checked === true);
+    if (checked !== true) {
+      // Se desabilitar seleção múltipla, manter apenas o primeiro equipamento selecionado
+      if (selectedEquipments.length > 1) {
+        setSelectedEquipments([selectedEquipments[0]]);
+      }
+    }
   };
 
   const handleEquipmentSelect = (equipment: Equipment, checked: boolean) => {
     if (checked) {
       if (!selectedEquipments.find(item => item.id === equipment.id)) {
-        setSelectedEquipments(prev => [...prev, equipment]);
+        if (enableMultipleSelection) {
+          setSelectedEquipments(prev => [...prev, equipment]);
+        } else {
+          setSelectedEquipments([equipment]);
+        }
       }
     } else {
       setSelectedEquipments(prev => prev.filter(item => item.id !== equipment.id));
     }
   };
 
-  const handleSelectEquipments = () => {
-    if (selectedEquipments.length === 0) {
+  const handleAddToSelection = () => {
+    if (filteredEquipments.length === 0) {
       toast({
         title: "Aviso",
-        description: "Selecione pelo menos um equipamento",
+        description: "Nenhum equipamento encontrado para adicionar",
         variant: "destructive",
       });
       return;
     }
 
+    // Adicionar todos os equipamentos filtrados que não estão selecionados
+    const newEquipments = filteredEquipments.filter(eq => 
+      !selectedEquipments.find(selected => selected.id === eq.id)
+    );
+
+    if (newEquipments.length === 0) {
+      toast({
+        title: "Aviso",
+        description: "Todos os equipamentos encontrados já estão selecionados",
+      });
+      return;
+    }
+
+    if (enableMultipleSelection) {
+      setSelectedEquipments(prev => [...prev, ...newEquipments]);
+    } else {
+      setSelectedEquipments([newEquipments[0]]);
+    }
+
     toast({
-      title: "Equipamentos selecionados",
-      description: `${selectedEquipments.length} equipamento(s) selecionado(s) para movimentação`,
+      title: "Sucesso",
+      description: `${newEquipments.length} equipamento(s) adicionado(s) à seleção`,
     });
   };
 
@@ -362,17 +408,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                     <div key={equipment.id} className="flex items-center space-x-3 p-2 bg-white rounded border">
                       <Checkbox
                         checked={selectedEquipments.some(item => item.id === equipment.id)}
-                        onCheckedChange={(checked) => {
-                          if (enableMultipleSelection) {
-                            handleEquipmentSelect(equipment, checked === true);
-                          } else {
-                            if (checked) {
-                              setSelectedEquipments([equipment]);
-                            } else {
-                              setSelectedEquipments([]);
-                            }
-                          }
-                        }}
+                        onCheckedChange={(checked) => handleEquipmentSelect(equipment, checked === true)}
                       />
                       <div className="flex-1">
                         <div className="font-semibold">{equipment.numero_serie}</div>
@@ -384,24 +420,25 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
                   ))}
                 </div>
                 
-                {enableMultipleSelection && (
+                <div className="flex gap-2 mt-3">
                   <Button 
-                    onClick={handleSelectEquipments}
-                    className="w-full mt-3"
+                    onClick={handleAddToSelection}
+                    className="flex-1"
                     variant="outline"
                   >
-                    Selecionar Equipamentos ({selectedEquipments.length})
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar à Seleção ({filteredEquipments.length})
                   </Button>
-                )}
+                </div>
               </div>
             )}
 
             {selectedEquipments.length > 0 && (
               <div className="mt-4 p-3 bg-blue-50 rounded-md">
                 <h4 className="font-medium mb-2">Equipamentos Selecionados ({selectedEquipments.length}):</h4>
-                <div className="space-y-1">
+                <div className="space-y-1 max-h-32 overflow-y-auto">
                   {selectedEquipments.map(equipment => (
-                    <div key={equipment.id} className="flex items-center justify-between text-sm">
+                    <div key={equipment.id} className="flex items-center justify-between text-sm bg-white p-2 rounded">
                       <span>{equipment.numero_serie} - {equipment.tipo}</span>
                       <Button
                         size="sm"
