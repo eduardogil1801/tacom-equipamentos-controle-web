@@ -31,6 +31,8 @@ interface MaintenanceMovement {
   id: string;
   tipo_movimento: string;
   detalhes_manutencao?: string;
+  id_equipamento?: string;
+  data_criacao?: string;
   tipos_manutencao?: {
     codigo: string;
     descricao: string;
