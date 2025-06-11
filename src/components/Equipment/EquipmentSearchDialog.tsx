@@ -40,6 +40,8 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadEquipments();
+      setSelectedEquipments([]);
+      setSearchTerm('');
     }
   }, [isOpen]);
 
@@ -104,16 +106,17 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   };
 
   const handleConfirm = () => {
-    onConfirm(selectedEquipments);
-    onClose();
-    setSelectedEquipments([]);
-    setSearchTerm('');
+    if (selectedEquipments.length > 0) {
+      onConfirm(selectedEquipments);
+      handleClose();
+    }
   };
 
   const handleClose = () => {
     onClose();
     setSelectedEquipments([]);
     setSearchTerm('');
+    setMultipleSelection(false);
   };
 
   return (
@@ -195,7 +198,10 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeSelectedEquipment(equipment.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSelectedEquipment(equipment.id);
+                        }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -213,6 +219,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             <Button
               onClick={handleConfirm}
               disabled={selectedEquipments.length === 0}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Confirmar Seleção
             </Button>

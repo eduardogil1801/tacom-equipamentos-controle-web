@@ -181,24 +181,24 @@ const MovementPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Mostrar campo empresa destino apenas se for transferência */}
-          {movementType === 'transferencia' && (
-            <div>
-              <Label htmlFor="destinationCompany">Empresa Destino *</Label>
-              <Select value={destinationCompany} onValueChange={setDestinationCompany}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa destino" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map(company => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {/* Campo empresa destino para todos os tipos de movimentação */}
+          <div>
+            <Label htmlFor="destinationCompany">
+              Empresa Destino {movementType === 'transferencia' ? '*' : ''}
+            </Label>
+            <Select value={destinationCompany} onValueChange={setDestinationCompany}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a empresa destino" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map(company => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div>
             <Label>Equipamentos Selecionados</Label>
