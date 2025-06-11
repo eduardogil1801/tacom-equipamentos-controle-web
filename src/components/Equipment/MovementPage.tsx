@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,11 +22,18 @@ interface Equipment {
   };
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 const MovementPage: React.FC = () => {
   const { user } = useAuth();
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [movementType, setMovementType] = useState('');
+  const [destinationCompany, setDestinationCompany] = useState('');
   const [movementDate, setMovementDate] = useState(new Date().toISOString().split('T')[0]);
   const [observations, setObservations] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,6 +45,24 @@ const MovementPage: React.FC = () => {
     { value: 'manutencao', label: 'Manutenção' }
   ];
 
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  const loadCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar empresas:', error);
+    }
+  };
+
   const handleEquipmentSelection = (equipments: Equipment[]) => {
     setSelectedEquipments(equipments);
   };
@@ -47,6 +72,16 @@ const MovementPage: React.FC = () => {
       toast({
         title: "Erro",
         description: "Por favor, selecione o tipo de movimentação e pelo menos um equipamento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar se é transferência e se tem empresa destino
+    if (movementType === 'transferencia' && !destinationCompany) {
+      toast({
+        title: "Erro",
+        description: "Para transferência, é obrigatório selecionar a empresa destino.",
         variant: "destructive",
       });
       return;
@@ -76,6 +111,14 @@ const MovementPage: React.FC = () => {
           .in('id', selectedEquipments.map(eq => eq.id));
       }
 
+      // Se for transferência, atualizar a empresa do equipamento
+      if (movementType === 'transferencia' && destinationCompany) {
+        await supabase
+          .from('equipamentos')
+          .update({ id_empresa: destinationCompany })
+          .in('id', selectedEquipments.map(eq => eq.id));
+      }
+
       toast({
         title: "Sucesso",
         description: `Movimentação de ${selectedEquipments.length} equipamento(s) registrada com sucesso!`,
@@ -84,6 +127,7 @@ const MovementPage: React.FC = () => {
       // Limpar formulário
       setSelectedEquipments([]);
       setMovementType('');
+      setDestinationCompany('');
       setObservations('');
       
     } catch (error) {
@@ -136,6 +180,25 @@ const MovementPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Mostrar campo empresa destino apenas se for transferência */}
+          {movementType === 'transferencia' && (
+            <div>
+              <Label htmlFor="destinationCompany">Empresa Destino *</Label>
+              <Select value={destinationCompany} onValueChange={setDestinationCompany}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label>Equipamentos Selecionados</Label>

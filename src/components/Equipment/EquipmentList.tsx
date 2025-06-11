@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -179,6 +178,17 @@ const EquipmentList: React.FC = () => {
     return <Badge variant="default">Disponível</Badge>;
   };
 
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingEquipment(null);
+  };
+
+  const handleFormSave = () => {
+    setShowForm(false);
+    setEditingEquipment(null);
+    loadData();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -281,15 +291,8 @@ const EquipmentList: React.FC = () => {
         <EquipmentForm
           equipment={editingEquipment}
           companies={companies}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingEquipment(null);
-          }}
-          onSave={() => {
-            setShowForm(false);
-            setEditingEquipment(null);
-            loadData();
-          }}
+          onCancel={handleFormClose}
+          onSave={handleFormSave}
         />
       )}
 
