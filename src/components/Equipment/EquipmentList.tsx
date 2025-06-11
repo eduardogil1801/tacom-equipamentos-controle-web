@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,16 +143,19 @@ const EquipmentList: React.FC = () => {
   };
 
   const handleAddNew = () => {
+    console.log('handleAddNew called');
     setEditingEquipment(null);
     setShowForm(true);
   };
 
   const handleEdit = (equipment: Equipment) => {
+    console.log('handleEdit called with equipment:', equipment);
     setEditingEquipment(equipment);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
+    console.log('handleDelete called with id:', id);
     if (confirm('Tem certeza que deseja excluir este equipamento?')) {
       try {
         const { error } = await supabase
@@ -179,11 +183,13 @@ const EquipmentList: React.FC = () => {
   };
 
   const handleFormClose = () => {
+    console.log('handleFormClose called');
     setShowForm(false);
     setEditingEquipment(null);
   };
 
   const handleFormSave = () => {
+    console.log('handleFormSave called');
     setShowForm(false);
     setEditingEquipment(null);
     loadData();
@@ -194,6 +200,18 @@ const EquipmentList: React.FC = () => {
       <div className="flex items-center justify-center min-h-64">
         <div className="text-lg">Carregando...</div>
       </div>
+    );
+  }
+
+  // If showing form, render the form component
+  if (showForm) {
+    return (
+      <EquipmentForm
+        equipment={editingEquipment}
+        companies={companies}
+        onCancel={handleFormClose}
+        onSave={handleFormSave}
+      />
     );
   }
 
@@ -218,7 +236,10 @@ const EquipmentList: React.FC = () => {
             <Upload className="h-4 w-4" />
             Importar Lote
           </Button>
-          <Button onClick={handleAddNew} className="flex items-center gap-2">
+          <Button 
+            onClick={handleAddNew} 
+            className="flex items-center gap-2"
+          >
             <Plus className="h-4 w-4" />
             Novo Equipamento
           </Button>
@@ -286,15 +307,6 @@ const EquipmentList: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
-
-      {showForm && (
-        <EquipmentForm
-          equipment={editingEquipment}
-          companies={companies}
-          onCancel={handleFormClose}
-          onSave={handleFormSave}
-        />
-      )}
 
       {showBulkImport && (
         <BulkImportDialog
