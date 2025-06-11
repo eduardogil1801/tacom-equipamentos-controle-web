@@ -9,6 +9,7 @@ import ReportPermissionManagement from '@/components/Users/ReportPermissionManag
 import StateManager from '@/components/Settings/StateManager';
 import MovementTypeManager from '@/components/Settings/MovementTypeManager';
 import MaintenanceRulesManager from '@/components/Settings/MaintenanceRulesManager';
+import MaintenanceTypeManager from '@/components/Maintenance/MaintenanceTypeManager';
 import { useAuth } from '@/hooks/useAuth';
 
 const SettingsPage: React.FC = () => {
@@ -44,7 +45,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="states" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Estados
@@ -56,6 +57,10 @@ const SettingsPage: React.FC = () => {
           <TabsTrigger value="maintenance-rules" className="flex items-center gap-2">
             <Cog className="h-4 w-4" />
             Regras de Manutenção
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Manutenção
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -81,6 +86,10 @@ const SettingsPage: React.FC = () => {
 
         <TabsContent value="maintenance-rules">
           <MaintenanceRulesManager />
+        </TabsContent>
+
+        <TabsContent value="maintenance">
+          <MaintenanceTypeManager />
         </TabsContent>
 
         <TabsContent value="users">
