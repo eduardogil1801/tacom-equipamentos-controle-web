@@ -121,12 +121,12 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Buscar e Selecionar Equipamentos</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 flex flex-col space-y-4 min-h-0">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="multiple"
@@ -146,42 +146,44 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 max-h-60 overflow-y-auto">
-            {loading ? (
-              <div className="text-center py-4">Carregando equipamentos...</div>
-            ) : filteredEquipments.length === 0 ? (
-              <div className="text-center py-4 text-gray-500">
-                Nenhum equipamento encontrado
-              </div>
-            ) : (
-              filteredEquipments.map((equipment) => {
-                const isSelected = selectedEquipments.some(eq => eq.id === equipment.id);
-                return (
-                  <div
-                    key={equipment.id}
-                    className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                      isSelected ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
-                    }`}
-                    onClick={() => handleEquipmentSelect(equipment, !isSelected)}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleEquipmentSelect(equipment, !!checked)}
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium">{equipment.numero_serie}</div>
-                      <div className="text-sm text-gray-600">
-                        {equipment.tipo} - {equipment.empresas?.name || 'N/A'}
+          <div className="flex-1 min-h-0">
+            <div className="grid grid-cols-1 gap-4 max-h-60 overflow-y-auto">
+              {loading ? (
+                <div className="text-center py-4">Carregando equipamentos...</div>
+              ) : filteredEquipments.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  Nenhum equipamento encontrado
+                </div>
+              ) : (
+                filteredEquipments.map((equipment) => {
+                  const isSelected = selectedEquipments.some(eq => eq.id === equipment.id);
+                  return (
+                    <div
+                      key={equipment.id}
+                      className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                        isSelected ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
+                      }`}
+                      onClick={() => handleEquipmentSelect(equipment, !isSelected)}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleEquipmentSelect(equipment, !!checked)}
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">{equipment.numero_serie}</div>
+                        <div className="text-sm text-gray-600">
+                          {equipment.tipo} - {equipment.empresas?.name || 'N/A'}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {selectedEquipments.length > 0 && (
-            <Card>
+            <Card className="flex-shrink-0">
               <CardHeader>
                 <CardTitle>Equipamentos Selecionados ({selectedEquipments.length}):</CardTitle>
               </CardHeader>
@@ -211,19 +213,19 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
               </CardContent>
             </Card>
           )}
+        </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={handleClose}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={selectedEquipments.length === 0}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Confirmar Seleção
-            </Button>
-          </div>
+        <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
+          <Button variant="outline" onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={selectedEquipments.length === 0}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            Confirmar Seleção
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

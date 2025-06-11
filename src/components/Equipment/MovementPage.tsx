@@ -38,6 +38,9 @@ const MovementPage: React.FC = () => {
   const [observations, setObservations] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Campo do usuário responsável preenchido automaticamente
+  const responsibleUser = user?.name || user?.username || 'Sistema';
+
   const movementTypes = [
     { value: 'entrada', label: 'Entrada' },
     { value: 'saida', label: 'Saída' },
@@ -94,7 +97,7 @@ const MovementPage: React.FC = () => {
         tipo_movimento: movementType,
         data_movimento: movementDate,
         observacoes: observations || null,
-        usuario_responsavel: user?.name || user?.username || 'Sistema'
+        usuario_responsavel: responsibleUser
       }));
 
       const { error } = await supabase
@@ -198,6 +201,17 @@ const MovementPage: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Campo do usuário responsável (somente leitura) */}
+          <div>
+            <Label htmlFor="responsibleUser">Usuário Responsável</Label>
+            <Input
+              id="responsibleUser"
+              value={responsibleUser}
+              readOnly
+              className="bg-gray-100 cursor-not-allowed"
+            />
           </div>
 
           <div>
