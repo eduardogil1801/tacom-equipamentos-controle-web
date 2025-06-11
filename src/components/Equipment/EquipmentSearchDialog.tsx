@@ -32,79 +32,36 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   equipmentType
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [selectedEquipments, setSelectedEquipments] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [isMultipleSearch, setIsMultipleSearch] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      loadEquipments();
+      setSearchTerm('');
+      setFilteredEquipments([]);
+      setSelectedEquipments(new Set());
     }
-  }, [isOpen, equipmentType]);
+  }, [isOpen]);
 
   useEffect(() => {
-    // Verificar se é busca múltipla (contém vírgulas)
-    const hasComma = searchTerm.includes(',');
-    setIsMultipleSearch(hasComma);
-    
-    if (hasComma) {
-      handleMultipleSearch();
+    if (searchTerm.trim()) {
+      searchEquipments();
     } else {
-      filterEquipments();
+      setFilteredEquipments([]);
     }
-  }, [searchTerm, equipments]);
+  }, [searchTerm, equipmentType]);
 
-  const loadEquipments = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (
-            name
-          )
-        `)
-        .order('numero_serie');
-
-      // Filtrar por tipo se especificado
-      if (equipmentType) {
-        query = query.eq('tipo', equipmentType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setEquipments(data || []);
-      setFilteredEquipments(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar equipamentos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleMultipleSearch = async () => {
+  const searchEquipments = async () => {
     if (!searchTerm.trim()) {
-      setFilteredEquipments(equipments);
-      return;
-    }
-
-    // Extrair números de série separados por vírgula
-    const serialNumbers = searchTerm
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    if (serialNumbers.length === 0) {
       setFilteredEquipments([]);
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
+      // Check if it's a comma-separated search
+      const isMultipleSearch = searchTerm.includes(',');
       
       let query = supabase
         .from('equipamentos')
@@ -114,10 +71,24 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             name
           )
         `)
-        .in('numero_serie', serialNumbers)
         .order('numero_serie');
 
-      // Filtrar por tipo se especificado
+      if (isMultipleSearch) {
+        // Handle comma-separated search
+        const serialNumbers = searchTerm
+          .split(',')
+          .map(s => s.trim())
+          .filter(Boolean);
+
+        if (serialNumbers.length > 0) {
+          query = query.in('numero_serie', serialNumbers);
+        }
+      } else {
+        // Handle single search term
+        query = query.or(`numero_serie.ilike.%${searchTerm}%,tipo.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`);
+      }
+
+      // Filter by equipment type if specified
       if (equipmentType) {
         query = query.eq('tipo', equipmentType);
       }
@@ -132,21 +103,6 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterEquipments = () => {
-    if (!searchTerm.trim()) {
-      setFilteredEquipments(equipments);
-      return;
-    }
-
-    const filtered = equipments.filter(equipment =>
-      equipment.numero_serie.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      equipment.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (equipment.modelo && equipment.modelo.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-
-    setFilteredEquipments(filtered);
   };
 
   const handleEquipmentToggle = (equipmentId: string) => {
@@ -192,14 +148,11 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
           <div className="space-y-2">
             <Label htmlFor="search">
               Buscar por número de série, tipo ou modelo
-              {isMultipleSearch && (
-                <span className="text-blue-600 font-medium"> (Busca múltipla ativa)</span>
-              )}
             </Label>
             <div className="flex gap-2">
               <Input
                 id="search"
-                placeholder="Digite um número ou múltiplos separados por vírgula (ex: 41341,40001,50002)"
+                placeholder="Digite um número ou múltiplos separados por vírgula (ex: 41341,40013,50002)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
@@ -213,36 +166,36 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
                 Filtrando por tipo: <strong>{equipmentType}</strong>
               </p>
             )}
-            {isMultipleSearch && (
-              <p className="text-sm text-blue-600">
-                Buscando por múltiplos números de série...
-              </p>
-            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="selectAll"
-              checked={selectedEquipments.size === filteredEquipments.length && filteredEquipments.length > 0}
-              onCheckedChange={handleSelectAll}
-            />
-            <Label htmlFor="selectAll">
-              Selecionar todos ({filteredEquipments.length} equipamentos)
-            </Label>
-          </div>
+          {filteredEquipments.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="selectAll"
+                checked={selectedEquipments.size === filteredEquipments.length && filteredEquipments.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+              <Label htmlFor="selectAll">
+                Selecionar todos ({filteredEquipments.length} equipamentos)
+              </Label>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto border rounded-lg">
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-sm text-gray-500">Carregando equipamentos...</div>
+                <div className="text-sm text-gray-500">Buscando equipamentos...</div>
               </div>
-            ) : filteredEquipments.length === 0 ? (
+            ) : filteredEquipments.length === 0 && searchTerm ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-sm text-gray-500">
-                  {isMultipleSearch 
-                    ? 'Nenhum equipamento encontrado com os números informados' 
-                    : 'Nenhum equipamento encontrado'
-                  }
+                  Nenhum equipamento encontrado
+                </div>
+              </div>
+            ) : filteredEquipments.length === 0 && !searchTerm ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-sm text-gray-500">
+                  Digite no campo de busca para encontrar equipamentos
                 </div>
               </div>
             ) : (

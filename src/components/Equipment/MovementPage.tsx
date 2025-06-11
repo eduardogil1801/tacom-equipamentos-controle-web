@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +45,6 @@ const MovementPage: React.FC = () => {
   const [selectedEquipmentType, setSelectedEquipmentType] = useState('');
   const [selectedMaintenanceType, setSelectedMaintenanceType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
-  const [bulkSerialNumbers, setBulkSerialNumbers] = useState('');
   const [loading, setLoading] = useState(false);
 
   const movementTypes = [
@@ -118,48 +116,6 @@ const MovementPage: React.FC = () => {
 
   const handleEquipmentSelection = (equipments: Equipment[]) => {
     setSelectedEquipments(equipments);
-  };
-
-  const handleBulkSerialSearch = async () => {
-    if (!bulkSerialNumbers.trim()) return;
-
-    const serialNumbers = bulkSerialNumbers.split(',').map(s => s.trim()).filter(Boolean);
-    
-    try {
-      let query = supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (
-            name
-          )
-        `)
-        .in('numero_serie', serialNumbers);
-
-      // Filtrar por tipo se selecionado
-      if (selectedEquipmentType) {
-        query = query.eq('tipo', selectedEquipmentType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setSelectedEquipments(data || []);
-      setBulkSerialNumbers('');
-
-      toast({
-        title: "Sucesso",
-        description: `${data?.length || 0} equipamento(s) encontrado(s)`,
-      });
-    } catch (error) {
-      console.error('Erro ao buscar equipamentos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao buscar equipamentos",
-        variant: "destructive",
-      });
-    }
   };
 
   const handleSaveMovement = async () => {
@@ -305,6 +261,22 @@ const MovementPage: React.FC = () => {
             </Select>
           </div>
 
+          <div>
+            <Label htmlFor="maintenanceType">Tipo de Manutenção</Label>
+            <Select value={selectedMaintenanceType} onValueChange={setSelectedMaintenanceType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo de manutenção" />
+              </SelectTrigger>
+              <SelectContent>
+                {maintenanceTypes.map(type => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.descricao}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="equipmentType">Tipo de Equipamento</Label>
@@ -322,59 +294,23 @@ const MovementPage: React.FC = () => {
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="maintenanceType">Tipo de Manutenção</Label>
-              <Select value={selectedMaintenanceType} onValueChange={setSelectedMaintenanceType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo de manutenção" />
-                </SelectTrigger>
-                <SelectContent>
-                  {maintenanceTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.descricao}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {selectedMaintenanceType && (
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div>
-            <Label>Busca em Lote por Número de Série</Label>
-            <div className="flex gap-2 mt-2">
-              <Input
-                placeholder="Digite os números de série separados por vírgula (ex: 0001,0005,0006,0080)"
-                value={bulkSerialNumbers}
-                onChange={(e) => setBulkSerialNumbers(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                onClick={handleBulkSerialSearch}
-                className="flex items-center gap-2"
-              >
-                <Search className="h-4 w-4" />
-                Buscar Lote
-              </Button>
-            </div>
+            {selectedMaintenanceType && (
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div>
