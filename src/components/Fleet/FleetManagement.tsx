@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -354,7 +353,7 @@ const FleetManagement: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
+                  <Label htmlFor="simples_com_imagem">Simples C/Image</Label>
                   <Input
                     id="simples_com_imagem"
                     type="number"
@@ -364,7 +363,7 @@ const FleetManagement: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="simples_sem_imagem">Simples S/Imagem</Label>
+                  <Label htmlFor="simples_sem_imagem">Simples S/Image</Label>
                   <Input
                     id="simples_sem_imagem"
                     type="number"
@@ -390,7 +389,7 @@ const FleetManagement: React.FC = () => {
                   Total da Frota: {formatNumber(formData.total)} equipamentos
                 </div>
                 <div className="text-sm text-blue-600 mt-1">
-                  (Simples C/Imagem + Simples S/Imagem + Seção)
+                  (Simples C/Image + Simples S/Image + Seção)
                 </div>
               </div>
 
@@ -527,3 +526,5 @@ const FleetManagement: React.FC = () => {
 };
 
 export default FleetManagement;
+
+}
