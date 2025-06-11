@@ -192,7 +192,6 @@ const MovementPage: React.FC = () => {
       setSelectedEquipmentType('');
       setSelectedMaintenanceType('');
       setSelectedStatus('');
-      setBulkSerialNumbers('');
       
     } catch (error) {
       console.error('Erro ao salvar movimentação:', error);
