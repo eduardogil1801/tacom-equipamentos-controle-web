@@ -26,10 +26,11 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'equipment', label: 'Equipamentos', icon: Laptop },
+    { id: 'new-movement', label: 'Movimentações', icon: ArrowUpDown },
     { id: 'fleet', label: 'Frota', icon: Truck },
     { id: 'companies', label: 'Empresas', icon: Building },
     { id: 'maintenance', label: 'Manutenção', icon: Wrench },
-    { id: 'movements', label: 'Movimentações', icon: ArrowUpDown },
+    { id: 'movements', label: 'Histórico', icon: FileText },
     { id: 'protocol', label: 'Protocolo', icon: FileText },
     { id: 'reports', label: 'Relatórios', icon: FileText },
     { id: 'settings', label: 'Configurações', icon: Settings },

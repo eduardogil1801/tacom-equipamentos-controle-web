@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,6 +141,11 @@ const EquipmentList: React.FC = () => {
     setFilteredEquipments(equipments);
   };
 
+  const handleAddNew = () => {
+    setEditingEquipment(null);
+    setShowForm(true);
+  };
+
   const handleEdit = (equipment: Equipment) => {
     setEditingEquipment(equipment);
     setShowForm(true);
@@ -203,7 +207,7 @@ const EquipmentList: React.FC = () => {
             <Upload className="h-4 w-4" />
             Importar Lote
           </Button>
-          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+          <Button onClick={handleAddNew} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Novo Equipamento
           </Button>
@@ -303,3 +307,5 @@ const EquipmentList: React.FC = () => {
 };
 
 export default EquipmentList;
+
+}
