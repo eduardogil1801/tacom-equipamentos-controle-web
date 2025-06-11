@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Save, Trash, Edit } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, Save, Trash, Edit, Download, FileSpreadsheet, FileText, File } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface FleetData {
   id?: string;
@@ -143,6 +147,105 @@ const FleetManagement: React.FC = () => {
       total: totalFleet,
       nuvem: totalFleet // Nuvem = Total da Frota automaticamente
     }));
+  };
+
+  // Export functions
+  const exportToXLSX = () => {
+    const exportData = fleetData.map(fleet => ({
+      'Código': fleet.cod_operadora,
+      'Operadora': fleet.nome_empresa,
+      'Mês': new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
+      'Simples C/Img': fleet.simples_com_imagem || 0,
+      'Simples S/Img': fleet.simples_sem_imagem || 0,
+      'Seção': fleet.secao || 0,
+      'Total Frota': fleet.total || 0,
+      'Nuvem': fleet.nuvem || 0,
+      'CITGIS': fleet.citgis || 0,
+      'BUSZOOM': fleet.buszoom || 0,
+      'Telemetria': fleet.telemetria || 0,
+      'Responsável': fleet.usuario_responsavel || '-'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Dados da Frota');
+    XLSX.writeFile(wb, `dados_frota_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({
+      title: "Exportação XLSX",
+      description: "Arquivo Excel exportado com sucesso!",
+    });
+  };
+
+  const exportToCSV = () => {
+    const exportData = fleetData.map(fleet => ({
+      'Código': fleet.cod_operadora,
+      'Operadora': fleet.nome_empresa,
+      'Mês': new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
+      'Simples C/Img': fleet.simples_com_imagem || 0,
+      'Simples S/Img': fleet.simples_sem_imagem || 0,
+      'Seção': fleet.secao || 0,
+      'Total Frota': fleet.total || 0,
+      'Nuvem': fleet.nuvem || 0,
+      'CITGIS': fleet.citgis || 0,
+      'BUSZOOM': fleet.buszoom || 0,
+      'Telemetria': fleet.telemetria || 0,
+      'Responsável': fleet.usuario_responsavel || '-'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `dados_frota_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Exportação CSV",
+      description: "Arquivo CSV exportado com sucesso!",
+    });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF('landscape');
+    
+    doc.setFontSize(16);
+    doc.text('Dados da Frota', 14, 22);
+    
+    const tableData = fleetData.map(fleet => [
+      fleet.cod_operadora,
+      fleet.nome_empresa,
+      new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
+      (fleet.simples_com_imagem || 0).toString(),
+      (fleet.simples_sem_imagem || 0).toString(),
+      (fleet.secao || 0).toString(),
+      (fleet.total || 0).toString(),
+      (fleet.nuvem || 0).toString(),
+      (fleet.citgis || 0).toString(),
+      (fleet.buszoom || 0).toString(),
+      (fleet.telemetria || 0).toString(),
+      fleet.usuario_responsavel || '-'
+    ]);
+
+    (doc as any).autoTable({
+      head: [['Código', 'Operadora', 'Mês', 'Simples C/Img', 'Simples S/Img', 'Seção', 'Total Frota', 'Nuvem', 'CITGIS', 'BUSZOOM', 'Telemetria', 'Responsável']],
+      body: tableData,
+      startY: 30,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [66, 139, 202] }
+    });
+
+    doc.save(`dados_frota_${new Date().toISOString().split('T')[0]}.pdf`);
+
+    toast({
+      title: "Exportação PDF",
+      description: "Arquivo PDF exportado com sucesso!",
+    });
   };
 
   const handleInputChange = (field: keyof FleetData, value: string | number) => {
@@ -292,13 +395,37 @@ const FleetManagement: React.FC = () => {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Cadastro de Frota</h1>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar Frota
-        </Button>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={exportToXLSX} className="flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Exportar XLSX
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2">
+                <File className="h-4 w-4" />
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar Frota
+          </Button>
+        </div>
       </div>
 
       {showForm && (

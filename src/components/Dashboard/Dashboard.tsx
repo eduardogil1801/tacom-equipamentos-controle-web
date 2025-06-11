@@ -41,6 +41,7 @@ const Dashboard: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [maintenanceMovements, setMaintenanceMovements] = useState<MaintenanceMovement[]>([]);
+  const [tacomCompany, setTacomCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,6 +65,14 @@ const Dashboard: React.FC = () => {
       }
       console.log('Companies loaded:', companiesData?.length);
       setCompanies(companiesData || []);
+
+      // Find Tacom company
+      const tacom = companiesData?.find(company => 
+        company.name.toLowerCase().includes('tacom') && 
+        company.name.toLowerCase().includes('sistemas') && 
+        company.name.toLowerCase().includes('poa')
+      );
+      setTacomCompany(tacom || null);
 
       // Load ALL equipments with company data - NO LIMITS
       const { data: equipmentsData, error: equipmentsError } = await supabase
@@ -112,15 +121,20 @@ const Dashboard: React.FC = () => {
   // Calculate statistics
   const totalEquipments = equipments.length;
   const inStockEquipments = equipments.filter(eq => !eq.data_saida).length;
-  const outEquipments = equipments.filter(eq => eq.data_saida).length;
-  const totalCompanies = companies.length;
+  
+  // Equipamentos da Tacom apenas
+  const tacomEquipments = tacomCompany 
+    ? equipments.filter(eq => eq.id_empresa === tacomCompany.id && !eq.data_saida)
+    : [];
+  const tacomInStockCount = tacomEquipments.length;
+
   const equipmentsInMaintenance = equipments.filter(eq => 
     eq.em_manutencao === true || 
     eq.status === 'aguardando_manutencao' || 
     eq.status === 'em_manutencao'
   ).length;
 
-  console.log('Equipment stats:', { totalEquipments, inStockEquipments, outEquipments, equipmentsInMaintenance });
+  console.log('Equipment stats:', { totalEquipments, inStockEquipments, tacomInStockCount, equipmentsInMaintenance });
 
   // Data for company equipment chart - Horizontal stacked bar (like the image)
   const companyData = companies.map(company => {
@@ -140,11 +154,22 @@ const Dashboard: React.FC = () => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10); // Top 10 companies
 
-  // Data for pie chart
-  const pieData = [
-    { name: 'Em Estoque', value: inStockEquipments, color: '#3B82F6' },
-    { name: 'Retirados', value: outEquipments, color: '#EF4444' }
-  ];
+  // Data for pie chart - Status por tipo de equipamento
+  const equipmentTypeData = equipments.reduce((acc: any[], equipment) => {
+    if (!equipment.data_saida) { // Apenas equipamentos em estoque
+      const existing = acc.find(item => item.name === equipment.tipo);
+      if (existing) {
+        existing.value += 1;
+      } else {
+        acc.push({ 
+          name: equipment.tipo, 
+          value: 1, 
+          color: `hsl(${acc.length * 45}, 70%, 50%)` 
+        });
+      }
+    }
+    return acc;
+  }, []).sort((a, b) => b.value - a.value);
 
   // Maintenance types data
   const maintenanceTypesData = maintenanceMovements.reduce((acc: any[], movement) => {
@@ -184,7 +209,7 @@ const Dashboard: React.FC = () => {
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Equipamentos</CardTitle>
@@ -198,34 +223,12 @@ const Dashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Estoque</CardTitle>
+            <CardTitle className="text-sm font-medium">Tacom Sistemas POA</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{inStockEquipments.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Disponíveis</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Retirados</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{outEquipments.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Fora do estoque</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Empresas</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalCompanies.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Empresas cadastradas</p>
+            <div className="text-2xl font-bold text-green-600">{tacomInStockCount.toLocaleString('pt-BR')}</div>
+            <p className="text-xs text-muted-foreground">Equipamentos em estoque</p>
           </CardContent>
         </Card>
 
@@ -243,30 +246,39 @@ const Dashboard: React.FC = () => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock Status Pie Chart */}
+        {/* Equipment Types in Stock Pie Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Status do Estoque</CardTitle>
+            <CardTitle>Estoque por Tipo de Equipamento</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value.toLocaleString('pt-BR')}`}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), '']} />
-              </PieChart>
-            </ResponsiveContainer>
+            {equipmentTypeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={equipmentTypeData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value.toLocaleString('pt-BR')}`}
+                  >
+                    {equipmentTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), '']} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-gray-500">
+                <div className="text-center">
+                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Nenhum equipamento em estoque</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

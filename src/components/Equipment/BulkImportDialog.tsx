@@ -18,6 +18,9 @@ interface BulkImportDialogProps {
 interface EquipmentRow {
   numero_serie: string;
   tipo: string;
+  empresa: string;
+  status: string;
+  modelo: string;
 }
 
 const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, onSuccess }) => {
@@ -27,8 +30,20 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
 
   const downloadTemplate = () => {
     const templateData = [
-      { numero_serie: '12345', tipo: 'DVR' },
-      { numero_serie: '67890', tipo: 'CAMERA' },
+      { 
+        numero_serie: '12345', 
+        tipo: 'DVR', 
+        empresa: 'TACOM SISTEMAS POA',
+        status: 'disponivel',
+        modelo: 'DVR-H264'
+      },
+      { 
+        numero_serie: '67890', 
+        tipo: 'CAMERA', 
+        empresa: 'TACOM SISTEMAS POA',
+        status: 'disponivel',
+        modelo: 'CAM-HD1080'
+      },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
@@ -42,16 +57,31 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
     });
   };
 
-  const validateEquipmentData = (data: any[]): { valid: EquipmentRow[], errors: string[] } => {
+  const validateEquipmentData = async (data: any[]): Promise<{ valid: EquipmentRow[], errors: string[] }> => {
     const valid: EquipmentRow[] = [];
     const errors: string[] = [];
+
+    // Carregar empresas para validação
+    const { data: empresas, error: empresasError } = await supabase
+      .from('empresas')
+      .select('id, name');
+
+    if (empresasError) {
+      errors.push('Erro ao carregar empresas para validação');
+      return { valid, errors };
+    }
+
+    const empresasMap = new Map(empresas.map(emp => [emp.name.toLowerCase(), emp.id]));
 
     data.forEach((row, index) => {
       const rowNumber = index + 2; // +2 porque começa na linha 2 (header na linha 1)
       
-      // Converter numero_serie para string, independente do tipo
+      // Converter campos para string, independente do tipo
       const numero_serie = row.numero_serie ? String(row.numero_serie).trim() : '';
       const tipo = row.tipo ? String(row.tipo).trim().toUpperCase() : '';
+      const empresa = row.empresa ? String(row.empresa).trim() : '';
+      const status = row.status ? String(row.status).trim().toLowerCase() : 'disponivel';
+      const modelo = row.modelo ? String(row.modelo).trim() : '';
 
       if (!numero_serie) {
         errors.push(`Linha ${rowNumber}: Número de série é obrigatório`);
@@ -63,9 +93,31 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
         return;
       }
 
+      if (!empresa) {
+        errors.push(`Linha ${rowNumber}: Empresa é obrigatória`);
+        return;
+      }
+
+      // Verificar se a empresa existe
+      const empresaId = empresasMap.get(empresa.toLowerCase());
+      if (!empresaId) {
+        errors.push(`Linha ${rowNumber}: Empresa "${empresa}" não encontrada no sistema`);
+        return;
+      }
+
+      // Validar status
+      const statusValidos = ['disponivel', 'manutencao', 'em_uso', 'aguardando_manutencao', 'danificado', 'indisponivel'];
+      if (!statusValidos.includes(status)) {
+        errors.push(`Linha ${rowNumber}: Status "${status}" inválido. Use: ${statusValidos.join(', ')}`);
+        return;
+      }
+
       valid.push({
         numero_serie,
-        tipo
+        tipo,
+        empresa,
+        status,
+        modelo
       });
     });
 
@@ -94,21 +146,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
     setErrors([]);
 
     try {
-      // Verificar se empresa TACOM existe
-      const { data: empresas, error: empresaError } = await supabase
-        .from('empresas')
-        .select('id')
-        .ilike('name', '%tacom%sistema%poa%')
-        .limit(1);
-
-      if (empresaError) throw empresaError;
-
-      if (!empresas || empresas.length === 0) {
-        throw new Error('Empresa TACOM SISTEMAS POA não encontrada. Por favor, cadastre a empresa primeiro.');
-      }
-
-      const empresaId = empresas[0].id;
-
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
@@ -121,7 +158,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
           console.log('Dados lidos do Excel:', jsonData);
           console.log('Total de linhas:', jsonData.length);
 
-          const { valid, errors: validationErrors } = validateEquipmentData(jsonData);
+          const { valid, errors: validationErrors } = await validateEquipmentData(jsonData);
           
           if (validationErrors.length > 0) {
             setErrors(validationErrors);
@@ -134,6 +171,15 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
           }
 
           console.log('Equipamentos válidos para importação:', valid.length);
+
+          // Carregar empresas para obter IDs
+          const { data: empresas, error: empresasError } = await supabase
+            .from('empresas')
+            .select('id, name');
+
+          if (empresasError) throw empresasError;
+
+          const empresasMap = new Map(empresas.map(emp => [emp.name.toLowerCase(), emp.id]));
 
           // Verificar duplicatas no banco
           const numerosSerieExistentes = valid.map(eq => eq.numero_serie);
@@ -155,15 +201,18 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
 
           // Preparar dados para inserção
           const dataAtual = new Date().toISOString().split('T')[0];
-          const equipamentosParaInserir = equipamentosNovos.map(eq => ({
-            numero_serie: eq.numero_serie,
-            tipo: eq.tipo,
-            id_empresa: empresaId,
-            data_entrada: dataAtual,
-            modelo: '',
-            status: 'disponivel',
-            em_manutencao: false
-          }));
+          const equipamentosParaInserir = equipamentosNovos.map(eq => {
+            const empresaId = empresasMap.get(eq.empresa.toLowerCase());
+            return {
+              numero_serie: eq.numero_serie,
+              tipo: eq.tipo,
+              id_empresa: empresaId!,
+              data_entrada: dataAtual,
+              modelo: eq.modelo,
+              status: eq.status,
+              em_manutencao: eq.status === 'manutencao' || eq.status === 'em_manutencao' || eq.status === 'aguardando_manutencao'
+            };
+          });
 
           console.log('Equipamentos para inserir:', equipamentosParaInserir.length);
 
@@ -239,6 +288,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
               <Download className="h-4 w-4" />
               Baixar Template Excel
             </Button>
+            <p className="text-xs text-gray-600 mt-2">
+              Template: Nº Série | Tipo | Empresa | Status | Modelo
+            </p>
           </div>
 
           <div>
@@ -258,7 +310,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
                 <AlertCircle className="h-4 w-4" />
                 Erros encontrados:
               </div>
-              <ul className="text-sm text-red-700 space-y-1">
+              <ul className="text-sm text-red-700 space-y-1 max-h-40 overflow-y-auto">
                 {errors.map((error, index) => (
                   <li key={index}>• {error}</li>
                 ))}
