@@ -9,7 +9,7 @@ interface MaskedInputProps extends React.ComponentProps<typeof Input> {
 }
 
 const MaskedInput = forwardRef<HTMLInputElement, MaskedInputProps>(
-  ({ mask, onValueChange, onChange, value, ...props }, ref) => {
+  ({ mask, onValueChange, onChange, onFocus, value, ...props }, ref) => {
     const { formatCNPJ, formatPhone, removeMask } = useMask();
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,12 +41,23 @@ const MaskedInput = forwardRef<HTMLInputElement, MaskedInputProps>(
       }
     }, [mask, formatCNPJ, formatPhone, removeMask, onChange, onValueChange]);
 
+    const handleFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+      // Auto-selecionar conteúdo
+      e.target.select();
+      
+      // Chamar onFocus original se existir
+      if (onFocus) {
+        onFocus(e);
+      }
+    }, [onFocus]);
+
     return (
       <Input
         {...props}
         ref={ref}
         value={value}
         onChange={handleChange}
+        onFocus={handleFocus}
       />
     );
   }
