@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -164,7 +163,7 @@ const EquipmentDistributionReport: React.FC = () => {
                   <SelectItem value="PM (Painel de Motorista)">PM (Painel de Motorista)</SelectItem>
                   <SelectItem value="UPEX">UPEX</SelectItem>
                   <SelectItem value="Connections 4.0">Connections 4.0</SelectItem>
-                  <SelectItem value="Connections 5.0">Connections 5.0</SelectItem>
+                  <SelectItem value="CONNECTION 5.0">CONNECTION 5.0</SelectItem>
                 </SelectContent>
               </Select>
             </div>
