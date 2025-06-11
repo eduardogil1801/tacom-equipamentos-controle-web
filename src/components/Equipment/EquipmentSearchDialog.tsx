@@ -36,6 +36,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [selectedEquipments, setSelectedEquipments] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [isMultipleSearch, setIsMultipleSearch] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -44,7 +45,15 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   }, [isOpen, equipmentType]);
 
   useEffect(() => {
-    filterEquipments();
+    // Verificar se é busca múltipla (contém vírgulas)
+    const hasComma = searchTerm.includes(',');
+    setIsMultipleSearch(hasComma);
+    
+    if (hasComma) {
+      handleMultipleSearch();
+    } else {
+      filterEquipments();
+    }
   }, [searchTerm, equipments]);
 
   const loadEquipments = async () => {
@@ -72,6 +81,54 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
       setFilteredEquipments(data || []);
     } catch (error) {
       console.error('Erro ao carregar equipamentos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMultipleSearch = async () => {
+    if (!searchTerm.trim()) {
+      setFilteredEquipments(equipments);
+      return;
+    }
+
+    // Extrair números de série separados por vírgula
+    const serialNumbers = searchTerm
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (serialNumbers.length === 0) {
+      setFilteredEquipments([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('equipamentos')
+        .select(`
+          *,
+          empresas (
+            name
+          )
+        `)
+        .in('numero_serie', serialNumbers)
+        .order('numero_serie');
+
+      // Filtrar por tipo se especificado
+      if (equipmentType) {
+        query = query.eq('tipo', equipmentType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setFilteredEquipments(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar equipamentos:', error);
+      setFilteredEquipments([]);
     } finally {
       setLoading(false);
     }
@@ -111,7 +168,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   };
 
   const handleConfirm = () => {
-    const selectedEquipmentsList = equipments.filter(eq => selectedEquipments.has(eq.id));
+    const selectedEquipmentsList = filteredEquipments.filter(eq => selectedEquipments.has(eq.id));
     onConfirm(selectedEquipmentsList);
     setSelectedEquipments(new Set());
     setSearchTerm('');
@@ -133,11 +190,16 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
 
         <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
           <div className="space-y-2">
-            <Label htmlFor="search">Buscar por número de série, tipo ou modelo</Label>
+            <Label htmlFor="search">
+              Buscar por número de série, tipo ou modelo
+              {isMultipleSearch && (
+                <span className="text-blue-600 font-medium"> (Busca múltipla ativa)</span>
+              )}
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="search"
-                placeholder="Digite para buscar..."
+                placeholder="Digite um número ou múltiplos separados por vírgula (ex: 41341,40001,50002)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
@@ -149,6 +211,11 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             {equipmentType && (
               <p className="text-sm text-gray-600">
                 Filtrando por tipo: <strong>{equipmentType}</strong>
+              </p>
+            )}
+            {isMultipleSearch && (
+              <p className="text-sm text-blue-600">
+                Buscando por múltiplos números de série...
               </p>
             )}
           </div>
@@ -171,7 +238,12 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
               </div>
             ) : filteredEquipments.length === 0 ? (
               <div className="flex items-center justify-center py-8">
-                <div className="text-sm text-gray-500">Nenhum equipamento encontrado</div>
+                <div className="text-sm text-gray-500">
+                  {isMultipleSearch 
+                    ? 'Nenhum equipamento encontrado com os números informados' 
+                    : 'Nenhum equipamento encontrado'
+                  }
+                </div>
               </div>
             ) : (
               <div className="space-y-2 p-4">
@@ -188,7 +260,9 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
                     <div className="flex-1">
                       <div className="font-medium">{equipment.numero_serie}</div>
                       <div className="text-sm text-gray-600">
-                        {equipment.tipo} - {equipment.modelo || 'Sem modelo'} - {equipment.empresas?.name || 'N/A'}
+                        <span className="font-medium">{equipment.tipo}</span>
+                        {equipment.modelo && ` - ${equipment.modelo}`}
+                        {equipment.empresas?.name && ` - ${equipment.empresas.name}`}
                       </div>
                     </div>
                   </div>
