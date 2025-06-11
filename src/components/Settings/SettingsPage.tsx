@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Users, Shield, FileText, Package, Wrench, Cog } from 'lucide-react';
+import { Settings, Users, Shield, FileText, Package, Wrench, Cog, Monitor } from 'lucide-react';
 import UserManagement from '@/components/Users/UserManagement';
 import PermissionManagement from '@/components/Users/PermissionManagement';
 import ReportPermissionManagement from '@/components/Users/ReportPermissionManagement';
@@ -10,6 +10,7 @@ import StateManager from '@/components/Settings/StateManager';
 import MovementTypeManager from '@/components/Settings/MovementTypeManager';
 import MaintenanceRulesManager from '@/components/Settings/MaintenanceRulesManager';
 import MaintenanceTypeManager from '@/components/Maintenance/MaintenanceTypeManager';
+import EquipmentTypeManager from '@/components/Settings/EquipmentTypeManager';
 import { useAuth } from '@/hooks/useAuth';
 
 const SettingsPage: React.FC = () => {
@@ -45,10 +46,14 @@ const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="states" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Estados
+          </TabsTrigger>
+          <TabsTrigger value="equipment-types" className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            Tipos de Equipamento
           </TabsTrigger>
           <TabsTrigger value="movement-types" className="flex items-center gap-2">
             <Wrench className="h-4 w-4" />
@@ -78,6 +83,10 @@ const SettingsPage: React.FC = () => {
 
         <TabsContent value="states">
           <StateManager />
+        </TabsContent>
+
+        <TabsContent value="equipment-types">
+          <EquipmentTypeManager />
         </TabsContent>
 
         <TabsContent value="movement-types">
