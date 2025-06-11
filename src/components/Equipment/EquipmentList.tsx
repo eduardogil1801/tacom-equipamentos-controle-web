@@ -265,11 +265,12 @@ const EquipmentList: React.FC = () => {
       {showForm && (
         <EquipmentForm
           equipment={editingEquipment}
+          companies={companies}
           onCancel={() => {
             setShowForm(false);
             setEditingEquipment(null);
           }}
-          onSuccess={() => {
+          onSave={() => {
             setShowForm(false);
             setEditingEquipment(null);
             loadData();
