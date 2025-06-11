@@ -408,6 +408,27 @@ export type Database = {
           },
         ]
       }
+      tipos_equipamento: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       tipos_manutencao: {
         Row: {
           ativo: boolean | null
