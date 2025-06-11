@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
       console.log('Companies loaded:', companiesData?.length);
       setCompanies(companiesData || []);
 
-      // Load ALL equipments with company data - removed any limits
+      // Load ALL equipments with company data - NO LIMITS
       const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
@@ -139,14 +139,21 @@ const Dashboard: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.total - a.total);
 
-  // Data for company equipment chart - take top 15 companies for better visualization
-  const companyData = companies.map(company => ({
-    name: company.name,
-    total: equipments.filter(eq => eq.id_empresa === company.id).length,
-    inStock: equipments.filter(eq => eq.id_empresa === company.id && !eq.data_saida).length
-  })).filter(item => item.total > 0)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 15); // Show top 15 companies for better chart readability
+  // Data for company equipment chart - ALL companies, sorted by total (descending)
+  const companyData = companies.map(company => {
+    const companyEquipments = equipments.filter(eq => eq.id_empresa === company.id);
+    const total = companyEquipments.length;
+    const inStock = companyEquipments.filter(eq => !eq.data_saida).length;
+    const retirados = total - inStock;
+    
+    return {
+      name: company.name,
+      total,
+      inStock,
+      retirados
+    };
+  }).filter(item => item.total > 0)
+    .sort((a, b) => b.total - a.total); // Sort by total descending for Y axis
 
   // Data for pie chart
   const pieData = [
@@ -315,27 +322,31 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Equipment by Company - Changed to stacked bar chart as requested */}
+      {/* Equipment by Company - Horizontal stacked bar chart with companies on Y axis */}
       {companyData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Equipamentos por Empresa (Top 15)</CardTitle>
+            <CardTitle>Equipamentos por Empresa (Todas as Empresas)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={companyData}>
+            <ResponsiveContainer width="100%" height={Math.max(400, companyData.length * 25)}>
+              <BarChart 
+                data={companyData} 
+                layout="horizontal"
+                margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
+                <XAxis type="number" />
+                <YAxis 
                   dataKey="name" 
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
+                  type="category" 
+                  width={140}
                   fontSize={10}
+                  interval={0}
                 />
-                <YAxis />
                 <Tooltip />
                 <Bar dataKey="inStock" stackId="a" fill="#16A34A" name="Em Estoque" />
-                <Bar dataKey="total" stackId="a" fill="#DC2626" name="Retirados" />
+                <Bar dataKey="retirados" stackId="a" fill="#DC2626" name="Retirados" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

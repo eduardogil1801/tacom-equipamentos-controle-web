@@ -78,7 +78,7 @@ const EquipmentMovement: React.FC<EquipmentMovementProps> = ({ onCancel, onSucce
   const loadCurrentUser = async () => {
     try {
       if (user) {
-        setResponsibleUser(`${user.name} ${user.surname}`);
+        setResponsibleUser(`${user.name || ''} ${user.surname || ''}`.trim());
       }
     } catch (error) {
       console.error('Error loading current user:', error);
