@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthContextType, User, UserPermission } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -276,27 +277,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const checkPermission = (module: string, action: 'view' | 'create' | 'edit' | 'delete'): boolean => {
+    console.log('Verificando permissão:', { module, action, userType: user?.userType });
+    
     // Administradores têm acesso total
     if (user?.userType === 'administrador') {
+      console.log('Usuário é administrador - acesso liberado');
       return true;
     }
 
     // Verificar permissão específica
     const permission = permissions.find(p => p.module_name === module);
-    if (!permission) return false;
+    console.log('Permissão encontrada:', permission);
+    
+    if (!permission) {
+      console.log('Nenhuma permissão encontrada para o módulo:', module);
+      return false;
+    }
 
+    let hasPermission = false;
     switch (action) {
       case 'view':
-        return permission.can_view;
+        hasPermission = permission.can_view;
+        break;
       case 'create':
-        return permission.can_create;
+        hasPermission = permission.can_create;
+        break;
       case 'edit':
-        return permission.can_edit;
+        hasPermission = permission.can_edit;
+        break;
       case 'delete':
-        return permission.can_delete;
+        hasPermission = permission.can_delete;
+        break;
       default:
-        return false;
+        hasPermission = false;
     }
+
+    console.log('Resultado da verificação de permissão:', hasPermission);
+    return hasPermission;
   };
 
   const logout = () => {

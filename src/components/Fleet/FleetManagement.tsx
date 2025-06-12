@@ -4,130 +4,95 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Save, Trash, Edit, Download, FileSpreadsheet, FileText, File } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Pencil, Trash2, Download, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 interface FleetData {
-  id?: string;
-  cod_operadora: string;
+  id: string;
   nome_empresa: string;
+  cod_operadora: string;
   mes_referencia: string;
-  simples_com_imagem: number;
   simples_sem_imagem: number;
+  simples_com_imagem: number;
   secao: number;
+  telemetria: number;
+  nuvem: number;
   citgis: number;
   buszoom: number;
-  nuvem: number;
-  telemetria: number;
   total: number;
-  usuario_responsavel?: string;
+  usuario_responsavel: string;
+  created_at: string;
+  updated_at: string;
 }
-
-interface Company {
-  id: string;
-  name: string;
-}
-
-// Função para formatar números com pontos
-const formatNumber = (num: number): string => {
-  return num.toLocaleString('pt-BR');
-};
-
-// Mapeamento de operadoras com código primeiro
-const operadoraMapping: { [key: string]: string } = {
-  '9': 'Guaíba',
-  '11': 'Itapuã',
-  '12': 'Sogal',
-  '13': 'Sogil',
-  '14': 'Soul',
-  '15': 'Transcal',
-  '16': 'Viamão',
-  '20': 'Sti',
-  '21': 'Transbus',
-  '23': 'Tc_Sapi',
-  '26': 'Sapucaia',
-  '27': 'Cmt',
-  '29': 'Central',
-  '32': 'Catsul',
-  '34': 'Trensurb',
-  '41': 'Nova Santa Rita',
-  '42': 'Hamburguesa',
-  '46': 'Parobe',
-  '47': 'Soul Municipal'
-};
 
 const FleetManagement: React.FC = () => {
-  const { user } = useAuth();
+  const { user, checkPermission } = useAuth();
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFleet, setEditingFleet] = useState<FleetData | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [formData, setFormData] = useState<FleetData>({
-    cod_operadora: '',
-    nome_empresa: '',
-    mes_referencia: '',
-    simples_com_imagem: 0,
-    simples_sem_imagem: 0,
-    secao: 0,
-    citgis: 0,
-    buszoom: 0,
-    nuvem: 0,
-    telemetria: 0,
-    total: 0
-  });
+  const [nomeEmpresa, setNomeEmpresa] = useState('');
+  const [codOperadora, setCodOperadora] = useState('');
+  const [mesReferencia, setMesReferencia] = useState('');
+  const [simplesSemImagem, setSimplesSemImagem] = useState(0);
+  const [simplesComImagem, setSimplesComImagem] = useState(0);
+  const [secao, setSecao] = useState(0);
+  const [telemetria, setTelemetria] = useState(0);
+  const [nuvem, setNuvem] = useState(0);
+  const [citgis, setCitgis] = useState(0);
+  const [buszoom, setBuszoom] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [usuarioResponsavel, setUsuarioResponsavel] = useState('');
+
+  // Verificar permissões
+  const canView = user?.userType === 'administrador' || checkPermission('fleet', 'view');
+  const canCreate = user?.userType === 'administrador' || checkPermission('fleet', 'create');
+  const canEdit = user?.userType === 'administrador' || checkPermission('fleet', 'edit');
+  const canDelete = user?.userType === 'administrador' || checkPermission('fleet', 'delete');
+
+  // Se não tem permissão para visualizar, mostrar mensagem de acesso negado
+  if (!canView) {
+    return (
+      <div className="flex items-center justify-center min-h-96 p-6">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+            <Shield className="h-16 w-16 text-gray-400 mb-4" />
+            <h2 className="text-xl font-semibold text-gray-600 mb-2">
+              Acesso Negado
+            </h2>
+            <p className="text-gray-500">
+              Você não possui permissão para acessar o módulo de frota. 
+              Entre em contato com o administrador do sistema.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   useEffect(() => {
     loadFleetData();
-    loadCompanies();
   }, []);
-
-  useEffect(() => {
-    calculateTotalFleet();
-  }, [formData.simples_com_imagem, formData.simples_sem_imagem, formData.secao]);
-
-  const loadCompanies = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('empresas')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
-      setCompanies(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar operadoras:', error);
-    }
-  };
 
   const loadFleetData = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('frota')
+        .from('fleet_data')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('mes_referencia', { ascending: false });
 
       if (error) throw error;
-      
-      // Ensure telemetria field exists with default value
-      const formattedData = (data || []).map(item => ({
-        ...item,
-        telemetria: item.telemetria || 0
-      }));
-      
-      setFleetData(formattedData);
+      setFleetData(data || []);
     } catch (error) {
-      console.error('Erro ao carregar dados da frota:', error);
+      console.error('Error loading fleet data:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar dados da frota",
+        description: "Erro ao carregar dados da frota.",
         variant: "destructive",
       });
     } finally {
@@ -135,517 +100,369 @@ const FleetManagement: React.FC = () => {
     }
   };
 
-  const calculateTotalFleet = () => {
-    // Total da frota = apenas Simples C/Imagem + Simples S/Imagem + Seção
-    const totalFleet = 
-      formData.simples_com_imagem +
-      formData.simples_sem_imagem +
-      formData.secao;
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      total: totalFleet,
-      nuvem: totalFleet // Nuvem = Total da Frota automaticamente
-    }));
-  };
-
-  // Export functions
-  const exportToXLSX = () => {
-    const exportData = fleetData.map(fleet => ({
-      'Código': fleet.cod_operadora,
-      'Operadora': fleet.nome_empresa,
-      'Mês': new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
-      'Simples C/Img': fleet.simples_com_imagem || 0,
-      'Simples S/Img': fleet.simples_sem_imagem || 0,
-      'Seção': fleet.secao || 0,
-      'Total Frota': fleet.total || 0,
-      'Nuvem': fleet.nuvem || 0,
-      'CITGIS': fleet.citgis || 0,
-      'BUSZOOM': fleet.buszoom || 0,
-      'Telemetria': fleet.telemetria || 0,
-      'Responsável': fleet.usuario_responsavel || '-'
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Dados da Frota');
-    XLSX.writeFile(wb, `dados_frota_${new Date().toISOString().split('T')[0]}.xlsx`);
-    
-    toast({
-      title: "Exportação XLSX",
-      description: "Arquivo Excel exportado com sucesso!",
-    });
-  };
-
-  const exportToCSV = () => {
-    const exportData = fleetData.map(fleet => ({
-      'Código': fleet.cod_operadora,
-      'Operadora': fleet.nome_empresa,
-      'Mês': new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
-      'Simples C/Img': fleet.simples_com_imagem || 0,
-      'Simples S/Img': fleet.simples_sem_imagem || 0,
-      'Seção': fleet.secao || 0,
-      'Total Frota': fleet.total || 0,
-      'Nuvem': fleet.nuvem || 0,
-      'CITGIS': fleet.citgis || 0,
-      'BUSZOOM': fleet.buszoom || 0,
-      'Telemetria': fleet.telemetria || 0,
-      'Responsável': fleet.usuario_responsavel || '-'
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const csv = XLSX.utils.sheet_to_csv(ws);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `dados_frota_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Exportação CSV",
-      description: "Arquivo CSV exportado com sucesso!",
-    });
-  };
-
-  const exportToPDF = () => {
-    const doc = new jsPDF('landscape');
-    
-    doc.setFontSize(16);
-    doc.text('Dados da Frota', 14, 22);
-    
-    const tableData = fleetData.map(fleet => [
-      fleet.cod_operadora,
-      fleet.nome_empresa,
-      new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
-      (fleet.simples_com_imagem || 0).toString(),
-      (fleet.simples_sem_imagem || 0).toString(),
-      (fleet.secao || 0).toString(),
-      (fleet.total || 0).toString(),
-      (fleet.nuvem || 0).toString(),
-      (fleet.citgis || 0).toString(),
-      (fleet.buszoom || 0).toString(),
-      (fleet.telemetria || 0).toString(),
-      fleet.usuario_responsavel || '-'
-    ]);
-
-    (doc as any).autoTable({
-      head: [['Código', 'Operadora', 'Mês', 'Simples C/Img', 'Simples S/Img', 'Seção', 'Total Frota', 'Nuvem', 'CITGIS', 'BUSZOOM', 'Telemetria', 'Responsável']],
-      body: tableData,
-      startY: 30,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] }
-    });
-
-    doc.save(`dados_frota_${new Date().toISOString().split('T')[0]}.pdf`);
-
-    toast({
-      title: "Exportação PDF",
-      description: "Arquivo PDF exportado com sucesso!",
-    });
-  };
-
-  const handleInputChange = (field: keyof FleetData, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: typeof value === 'string' && field !== 'cod_operadora' && field !== 'nome_empresa' && field !== 'mes_referencia' 
-        ? parseInt(value) || 0 
-        : value
-    }));
-  };
-
-  const handleOperadoraChange = (codigo: string) => {
-    const nomeOperadora = operadoraMapping[codigo] || '';
-    setFormData(prev => ({ 
-      ...prev, 
-      cod_operadora: codigo,
-      nome_empresa: nomeOperadora
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.cod_operadora || !formData.nome_empresa || !formData.mes_referencia) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Converter YYYY-MM para YYYY-MM-01 para formato DATE
-      const mesReferenciaFormatted = formData.mes_referencia + '-01';
-      
-      const fleetDataWithUser = {
-        ...formData,
-        mes_referencia: mesReferenciaFormatted,
-        usuario_responsavel: user?.username || user?.name || 'Sistema'
-      };
-
-      if (editingFleet && editingFleet.id) {
-        const { error } = await supabase
-          .from('frota')
-          .update(fleetDataWithUser)
-          .eq('id', editingFleet.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Dados da frota atualizados com sucesso!",
-        });
-      } else {
-        const { error } = await supabase
-          .from('frota')
-          .insert([fleetDataWithUser]);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Dados da frota cadastrados com sucesso!",
-        });
-      }
-
-      resetForm();
-      loadFleetData();
-    } catch (error) {
-      console.error('Erro ao salvar dados da frota:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar dados da frota",
-        variant: "destructive",
-      });
-    }
+  const handleAddNew = () => {
+    setEditingFleet(null);
+    setShowForm(true);
   };
 
   const handleEdit = (fleet: FleetData) => {
     setEditingFleet(fleet);
-    // Converter YYYY-MM-DD de volta para YYYY-MM para o input
-    const mesReferencia = fleet.mes_referencia ? fleet.mes_referencia.substring(0, 7) : '';
-    setFormData({
-      ...fleet,
-      mes_referencia: mesReferencia
-    });
+    setNomeEmpresa(fleet.nome_empresa);
+    setCodOperadora(fleet.cod_operadora);
+    setMesReferencia(fleet.mes_referencia);
+    setSimplesSemImagem(fleet.simples_sem_imagem);
+    setSimplesComImagem(fleet.simples_com_imagem);
+    setSecao(fleet.secao);
+    setTelemetria(fleet.telemetria);
+    setNuvem(fleet.nuvem);
+    setCitgis(fleet.citgis);
+    setBuszoom(fleet.buszoom);
+    setTotal(fleet.total);
+    setUsuarioResponsavel(fleet.usuario_responsavel);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir estes dados da frota?')) {
-      return;
-    }
+    if (confirm('Tem certeza que deseja excluir este registro de frota?')) {
+      try {
+        const { error } = await supabase
+          .from('fleet_data')
+          .delete()
+          .eq('id', id);
 
-    try {
-      const { error } = await supabase
-        .from('frota')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Dados da frota excluídos com sucesso!",
-      });
-      
-      loadFleetData();
-    } catch (error) {
-      console.error('Erro ao excluir dados da frota:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir dados da frota",
-        variant: "destructive",
-      });
+        if (error) throw error;
+        loadFleetData();
+        toast({
+          title: "Sucesso",
+          description: "Registro de frota excluído com sucesso!",
+        });
+      } catch (error) {
+        console.error('Error deleting fleet data:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir registro de frota.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      cod_operadora: '',
-      nome_empresa: '',
-      mes_referencia: '',
-      simples_com_imagem: 0,
-      simples_sem_imagem: 0,
-      secao: 0,
-      citgis: 0,
-      buszoom: 0,
-      nuvem: 0,
-      telemetria: 0,
-      total: 0
-    });
-    setEditingFleet(null);
+  const handleFormClose = () => {
     setShowForm(false);
+    setEditingFleet(null);
+    clearFormFields();
+  };
+
+  const clearFormFields = () => {
+    setNomeEmpresa('');
+    setCodOperadora('');
+    setMesReferencia('');
+    setSimplesSemImagem(0);
+    setSimplesComImagem(0);
+    setSecao(0);
+    setTelemetria(0);
+    setNuvem(0);
+    setCitgis(0);
+    setBuszoom(0);
+    setTotal(0);
+    setUsuarioResponsavel('');
+  };
+
+  const handleFormSave = async () => {
+    try {
+      setLoading(true);
+      const fleetDataToSave = {
+        nome_empresa: nomeEmpresa,
+        cod_operadora: codOperadora,
+        mes_referencia: mesReferencia,
+        simples_sem_imagem: simplesSemImagem,
+        simples_com_imagem: simplesComImagem,
+        secao: secao,
+        telemetria: telemetria,
+        nuvem: nuvem,
+        citgis: citgis,
+        buszoom: buszoom,
+        total: total,
+        usuario_responsavel: usuarioResponsavel,
+      };
+
+      if (editingFleet) {
+        // Update existing fleet data
+        const { error } = await supabase
+          .from('fleet_data')
+          .update(fleetDataToSave)
+          .eq('id', editingFleet.id);
+
+        if (error) throw error;
+        toast({
+          title: "Sucesso",
+          description: "Registro de frota atualizado com sucesso!",
+        });
+      } else {
+        // Insert new fleet data
+        const { error } = await supabase
+          .from('fleet_data')
+          .insert([fleetDataToSave]);
+
+        if (error) throw error;
+        toast({
+          title: "Sucesso",
+          description: "Registro de frota criado com sucesso!",
+        });
+      }
+
+      loadFleetData();
+      handleFormClose();
+    } catch (error) {
+      console.error('Error saving fleet data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar registro de frota.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(fleetData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Frota');
+    XLSX.writeFile(wb, 'frota.xlsx');
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando dados da frota...</div>
+        <div className="text-lg">Carregando...</div>
       </div>
     );
   }
 
+  if (showForm) {
+    return (
+      <div className="space-y-6 p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>{editingFleet ? 'Editar Frota' : 'Nova Frota'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="nome_empresa">Nome da Empresa</Label>
+                <Input
+                  id="nome_empresa"
+                  type="text"
+                  value={nomeEmpresa}
+                  onChange={(e) => setNomeEmpresa(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="cod_operadora">Código da Operadora</Label>
+                <Input
+                  id="cod_operadora"
+                  type="text"
+                  value={codOperadora}
+                  onChange={(e) => setCodOperadora(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="mes_referencia">Mês de Referência</Label>
+                <Input
+                  id="mes_referencia"
+                  type="text"
+                  value={mesReferencia}
+                  onChange={(e) => setMesReferencia(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="simples_sem_imagem">Simples Sem Imagem</Label>
+                <Input
+                  id="simples_sem_imagem"
+                  type="number"
+                  value={simplesSemImagem}
+                  onChange={(e) => setSimplesSemImagem(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="simples_com_imagem">Simples Com Imagem</Label>
+                <Input
+                  id="simples_com_imagem"
+                  type="number"
+                  value={simplesComImagem}
+                  onChange={(e) => setSimplesComImagem(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="secao">Seção</Label>
+                <Input
+                  id="secao"
+                  type="number"
+                  value={secao}
+                  onChange={(e) => setSecao(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="telemetria">Telemetria</Label>
+                <Input
+                  id="telemetria"
+                  type="number"
+                  value={telemetria}
+                  onChange={(e) => setTelemetria(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="nuvem">Nuvem</Label>
+                <Input
+                  id="nuvem"
+                  type="number"
+                  value={nuvem}
+                  onChange={(e) => setNuvem(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="citgis">Citgis</Label>
+                <Input
+                  id="citgis"
+                  type="number"
+                  value={citgis}
+                  onChange={(e) => setCitgis(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="buszoom">Buszoom</Label>
+                <Input
+                  id="buszoom"
+                  type="number"
+                  value={buszoom}
+                  onChange={(e) => setBuszoom(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="total">Total</Label>
+                <Input
+                  id="total"
+                  type="number"
+                  value={total}
+                  onChange={(e) => setTotal(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
+                <Input
+                  id="usuario_responsavel"
+                  type="text"
+                  value={usuarioResponsavel}
+                  onChange={(e) => setUsuarioResponsavel(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="ghost" onClick={handleFormClose}>
+                Cancelar
+              </Button>
+              <Button onClick={handleFormSave} disabled={loading}>
+                {loading ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Cadastro de Frota</h1>
+        <h1 className="text-2xl font-bold">Gestão de Frota</h1>
         <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={exportToXLSX} className="flex items-center gap-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                Exportar XLSX
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2">
-                <File className="h-4 w-4" />
-                Exportar CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Exportar PDF
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            onClick={() => setShowForm(true)}
+          <Button 
+            onClick={exportToExcel}
+            variant="outline"
             className="flex items-center gap-2"
           >
-            <Plus className="h-4 w-4" />
-            Adicionar Frota
+            <Download className="h-4 w-4" />
+            Exportar
           </Button>
+          {canCreate && (
+            <Button 
+              onClick={handleAddNew}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Nova Frota
+            </Button>
+          )}
         </div>
       </div>
 
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingFleet ? 'Editar' : 'Adicionar'} Dados da Frota</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="cod_operadora">Código da Operadora *</Label>
-                  <Select 
-                    value={formData.cod_operadora || undefined} 
-                    onValueChange={(value) => {
-                      handleOperadoraChange(value);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o código" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(operadoraMapping).map(([codigo, nome]) => (
-                        <SelectItem key={codigo} value={codigo}>
-                          {codigo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="nome_empresa">Operadora *</Label>
-                  <Input
-                    id="nome_empresa"
-                    value={formData.nome_empresa}
-                    readOnly
-                    className="bg-gray-100"
-                    placeholder="Operadora automática"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="mes_referencia">Mês de Referência *</Label>
-                  <Input
-                    id="mes_referencia"
-                    type="month"
-                    value={formData.mes_referencia}
-                    onChange={(e) => handleInputChange('mes_referencia', e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="simples_com_imagem">Simples C/Image</Label>
-                  <Input
-                    id="simples_com_imagem"
-                    type="number"
-                    min="0"
-                    value={formData.simples_com_imagem}
-                    onChange={(e) => handleInputChange('simples_com_imagem', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="simples_sem_imagem">Simples S/Image</Label>
-                  <Input
-                    id="simples_sem_imagem"
-                    type="number"
-                    min="0"
-                    value={formData.simples_sem_imagem}
-                    onChange={(e) => handleInputChange('simples_sem_imagem', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="secao">Seção</Label>
-                  <Input
-                    id="secao"
-                    type="number"
-                    min="0"
-                    value={formData.secao}
-                    onChange={(e) => handleInputChange('secao', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-lg font-semibold text-blue-800">
-                  Total da Frota: {formatNumber(formData.total)} equipamentos
-                </div>
-                <div className="text-sm text-blue-600 mt-1">
-                  (Simples C/Image + Simples S/Image + Seção)
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="nuvem">Nuvem (Automático)</Label>
-                  <Input
-                    id="nuvem"
-                    type="number"
-                    value={formData.nuvem}
-                    readOnly
-                    className="bg-gray-100"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="citgis">CITGIS</Label>
-                  <Input
-                    id="citgis"
-                    type="number"
-                    min="0"
-                    value={formData.citgis}
-                    onChange={(e) => handleInputChange('citgis', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="buszoom">BUSZOOM</Label>
-                  <Input
-                    id="buszoom"
-                    type="number"
-                    min="0"
-                    value={formData.buszoom}
-                    onChange={(e) => handleInputChange('buszoom', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="telemetria">Telemetria</Label>
-                  <Input
-                    id="telemetria"
-                    type="number"
-                    min="0"
-                    value={formData.telemetria}
-                    onChange={(e) => handleInputChange('telemetria', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <Button type="submit" className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  {editingFleet ? 'Atualizar' : 'Salvar'}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Lista de Frotas */}
       <Card>
         <CardHeader>
-          <CardTitle>Dados da Frota Cadastrados</CardTitle>
+          <CardTitle>Dados da Frota</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Código</th>
-                  <th className="text-left p-3">Operadora</th>
-                  <th className="text-left p-3">Mês</th>
-                  <th className="text-left p-3">Simples C/Img</th>
-                  <th className="text-left p-3">Simples S/Img</th>
-                  <th className="text-left p-3">Seção</th>
-                  <th className="text-left p-3">Total Frota</th>
-                  <th className="text-left p-3">Nuvem</th>
-                  <th className="text-left p-3">CITGIS</th>
-                  <th className="text-left p-3">BUSZOOM</th>
-                  <th className="text-left p-3">Telemetria</th>
-                  <th className="text-left p-3">Responsável</th>
-                  <th className="text-left p-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fleetData.map(fleet => (
-                  <tr key={fleet.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{fleet.cod_operadora}</td>
-                    <td className="p-3">{fleet.nome_empresa}</td>
-                    <td className="p-3">{new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}</td>
-                    <td className="p-3">{formatNumber(fleet.simples_com_imagem || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.secao || 0)}</td>
-                    <td className="p-3 font-bold text-blue-600">{formatNumber(fleet.total || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.nuvem || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.citgis || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.buszoom || 0)}</td>
-                    <td className="p-3">{formatNumber(fleet.telemetria || 0)}</td>
-                    <td className="p-3">{fleet.usuario_responsavel || '-'}</td>
-                    <td className="p-3">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Empresa</TableHead>
+                <TableHead>Operadora</TableHead>
+                <TableHead>Mês</TableHead>
+                <TableHead>Simples s/ Imagem</TableHead>
+                <TableHead>Simples c/ Imagem</TableHead>
+                <TableHead>Seção</TableHead>
+                <TableHead>Telemetria</TableHead>
+                <TableHead>Nuvem</TableHead>
+                <TableHead>Citgis</TableHead>
+                <TableHead>Buszoom</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Responsável</TableHead>
+                {canEdit || canDelete ? <TableHead>Ações</TableHead> : null}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {fleetData.map((fleet) => (
+                <TableRow key={fleet.id}>
+                  <TableCell>{fleet.nome_empresa}</TableCell>
+                  <TableCell>{fleet.cod_operadora}</TableCell>
+                  <TableCell>{fleet.mes_referencia}</TableCell>
+                  <TableCell>{fleet.simples_sem_imagem}</TableCell>
+                  <TableCell>{fleet.simples_com_imagem}</TableCell>
+                  <TableCell>{fleet.secao}</TableCell>
+                  <TableCell>{fleet.telemetria}</TableCell>
+                  <TableCell>{fleet.nuvem}</TableCell>
+                  <TableCell>{fleet.citgis}</TableCell>
+                  <TableCell>{fleet.buszoom}</TableCell>
+                  <TableCell>{fleet.total}</TableCell>
+                  <TableCell>{fleet.usuario_responsavel}</TableCell>
+                  {canEdit || canDelete ? (
+                    <TableCell>
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(fleet)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => fleet.id && handleDelete(fleet.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash className="h-3 w-3" />
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(fleet)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(fleet.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {fleetData.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Nenhum dado de frota cadastrado
-              </div>
-            )}
-          </div>
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
