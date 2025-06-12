@@ -27,6 +27,12 @@ interface Company {
   name: string;
 }
 
+interface EquipmentType {
+  id: string;
+  nome: string;
+  ativo: boolean;
+}
+
 interface EquipmentFormProps {
   equipment?: Equipment | null;
   companies: Company[];
@@ -51,15 +57,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [duplicateAlert, setDuplicateAlert] = useState<string | null>(null);
-
-  const equipmentTypes = [
-    'CCIT 4.0',
-    'CCIT 5.0',
-    'PM (Painel de Motorista)',
-    'UPEX',
-    'Connections 4.0',
-    'Connections 5.0'
-  ];
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
 
   const statusOptions = [
     { value: 'disponivel', label: 'Disponível' },
@@ -70,6 +68,30 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   ];
 
   const isOperational = user?.userType === 'operacional';
+
+  useEffect(() => {
+    fetchEquipmentTypes();
+  }, []);
+
+  const fetchEquipmentTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_equipamento')
+        .select('*')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (error) throw error;
+      setEquipmentTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de equipamento:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar tipos de equipamento",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (equipment) {
@@ -327,8 +349,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       {equipmentTypes.map(tipo => (
-                        <SelectItem key={tipo} value={tipo}>
-                          {tipo}
+                        <SelectItem key={tipo.id} value={tipo.nome}>
+                          {tipo.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>

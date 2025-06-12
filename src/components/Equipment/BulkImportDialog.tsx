@@ -57,6 +57,40 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
     });
   };
 
+  const ensureEquipmentTypeExists = async (tipoNome: string): Promise<void> => {
+    try {
+      // Verificar se o tipo já existe
+      const { data: existingType, error: checkError } = await supabase
+        .from('tipos_equipamento')
+        .select('id')
+        .eq('nome', tipoNome)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      // Se não existe, criar o tipo
+      if (!existingType) {
+        const { error: insertError } = await supabase
+          .from('tipos_equipamento')
+          .insert([{
+            nome: tipoNome,
+            ativo: true
+          }]);
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        console.log(`Tipo de equipamento criado: ${tipoNome}`);
+      }
+    } catch (error) {
+      console.error(`Erro ao verificar/criar tipo de equipamento ${tipoNome}:`, error);
+      throw error;
+    }
+  };
+
   const validateEquipmentData = async (data: any[]): Promise<{ valid: EquipmentRow[], errors: string[] }> => {
     const valid: EquipmentRow[] = [];
     const errors: string[] = [];
@@ -172,6 +206,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
 
           console.log('Equipamentos válidos para importação:', valid.length);
 
+          // Garantir que todos os tipos de equipamento existam na tabela tipos_equipamento
+          const tiposUnicos = [...new Set(valid.map(eq => eq.tipo))];
+          for (const tipo of tiposUnicos) {
+            await ensureEquipmentTypeExists(tipo);
+          }
+
           // Carregar empresas para obter IDs
           const { data: empresas, error: empresasError } = await supabase
             .from('empresas')
@@ -239,10 +279,11 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
           }
 
           const duplicatas = valid.length - equipamentosNovos.length;
+          const tiposAdicionados = tiposUnicos.length;
           
           toast({
             title: "Importação concluída",
-            description: `${totalInseridos} equipamentos importados com sucesso${duplicatas > 0 ? `. ${duplicatas} duplicatas ignoradas` : ''}.`,
+            description: `${totalInseridos} equipamentos importados com sucesso${duplicatas > 0 ? `. ${duplicatas} duplicatas ignoradas` : ''}. ${tiposAdicionados} tipos de equipamento adicionados/verificados.`,
           });
 
           onSuccess();
