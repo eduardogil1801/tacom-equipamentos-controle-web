@@ -1,9 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Building, Database, TrendingUp, Package, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import DashboardFilters from './DashboardFilters';
+import EquipmentByCompanyChart from './EquipmentByCompanyChart';
+import EquipmentTypesByCompanyChart from './EquipmentTypesByCompanyChart';
 
 interface Equipment {
   id: string;
@@ -27,6 +30,12 @@ interface Company {
   estado?: string;
 }
 
+interface EquipmentType {
+  id: string;
+  nome: string;
+  ativo: boolean;
+}
+
 interface MaintenanceMovement {
   id: string;
   tipo_movimento: string;
@@ -41,14 +50,24 @@ interface MaintenanceMovement {
 
 const Dashboard: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [maintenanceMovements, setMaintenanceMovements] = useState<MaintenanceMovement[]>([]);
   const [tacomCompany, setTacomCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Filtros
+  const [selectedCompany, setSelectedCompany] = useState('all');
+  const [selectedEquipmentType, setSelectedEquipmentType] = useState('all');
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [selectedCompany, selectedEquipmentType, allEquipments]);
 
   const loadData = async () => {
     try {
@@ -68,6 +87,19 @@ const Dashboard: React.FC = () => {
       console.log('Companies loaded:', companiesData?.length);
       setCompanies(companiesData || []);
 
+      // Load equipment types
+      const { data: equipmentTypesData, error: equipmentTypesError } = await supabase
+        .from('tipos_equipamento')
+        .select('id, nome, ativo')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (equipmentTypesError) {
+        console.error('Error loading equipment types:', equipmentTypesError);
+        throw equipmentTypesError;
+      }
+      setEquipmentTypes(equipmentTypesData || []);
+
       // Find Tacom company
       const tacom = companiesData?.find(company => 
         company.name.toLowerCase().includes('tacom') && 
@@ -76,7 +108,7 @@ const Dashboard: React.FC = () => {
       );
       setTacomCompany(tacom || null);
 
-      // Load ALL equipments with company data - NO LIMITS
+      // Load ALL equipments with company data
       const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
@@ -93,6 +125,7 @@ const Dashboard: React.FC = () => {
         throw equipmentsError;
       }
       console.log('Equipments loaded:', equipmentsData?.length);
+      setAllEquipments(equipmentsData || []);
       setEquipments(equipmentsData || []);
 
       // Load maintenance movements
@@ -120,6 +153,22 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const applyFilters = () => {
+    let filteredEquipments = [...allEquipments];
+
+    // Filtrar por empresa
+    if (selectedCompany !== 'all') {
+      filteredEquipments = filteredEquipments.filter(eq => eq.id_empresa === selectedCompany);
+    }
+
+    // Filtrar por tipo de equipamento
+    if (selectedEquipmentType !== 'all') {
+      filteredEquipments = filteredEquipments.filter(eq => eq.tipo === selectedEquipmentType);
+    }
+
+    setEquipments(filteredEquipments);
+  };
+
   // Calculate statistics
   const totalEquipments = equipments.length;
   const inStockEquipments = equipments.filter(eq => !eq.data_saida).length;
@@ -138,29 +187,48 @@ const Dashboard: React.FC = () => {
   );
   const equipmentsInMaintenanceCount = equipmentsInMaintenance.length;
 
-  console.log('Equipment stats:', { totalEquipments, inStockEquipments, tacomInStockCount, equipmentsInMaintenanceCount });
-
-  // Data for company equipment chart - Horizontal stacked bar (like the image)
-  const companyData = companies.map(company => {
-    const companyEquipments = equipments.filter(eq => eq.id_empresa === company.id);
-    const total = companyEquipments.length;
-    const emEstoque = companyEquipments.filter(eq => !eq.data_saida).length;
-    const retirados = total - emEstoque;
-    
-    return {
-      name: company.name.length > 20 ? company.name.substring(0, 20) + '...' : company.name,
-      fullName: company.name,
-      'Em Estoque': emEstoque,
-      'Retirados': retirados,
-      total
-    };
-  }).filter(item => item.total > 0)
+  // Data for company equipment chart
+  const companyData = companies
+    .map(company => {
+      const companyEquipments = equipments.filter(eq => eq.id_empresa === company.id);
+      const total = companyEquipments.length;
+      const emEstoque = companyEquipments.filter(eq => !eq.data_saida).length;
+      const retirados = total - emEstoque;
+      
+      return {
+        name: company.name.length > 25 ? company.name.substring(0, 25) + '...' : company.name,
+        fullName: company.name,
+        'Em Estoque': emEstoque,
+        'Retirados': retirados,
+        total
+      };
+    })
+    .filter(item => item.total > 0)
     .sort((a, b) => b.total - a.total)
-    .slice(0, 10); // Top 10 companies
+    .slice(0, 15); // Top 15 companies
+
+  // Data for equipment types chart (filtered by company if selected)
+  const equipmentTypeData = equipments
+    .filter(eq => !eq.data_saida) // Apenas equipamentos em estoque
+    .reduce((acc: any[], equipment) => {
+      const existing = acc.find(item => item.tipo === equipment.tipo);
+      if (existing) {
+        existing.quantidade += 1;
+      } else {
+        acc.push({ 
+          tipo: equipment.tipo, 
+          quantidade: 1,
+          empresa: equipment.empresas?.name
+        });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => b.quantidade - a.quantidade);
 
   // Data for pie chart - Status por tipo de equipamento
-  const equipmentTypeData = equipments.reduce((acc: any[], equipment) => {
-    if (!equipment.data_saida) { // Apenas equipamentos em estoque
+  const pieChartData = equipments
+    .filter(eq => !eq.data_saida) // Apenas equipamentos em estoque
+    .reduce((acc: any[], equipment) => {
       const existing = acc.find(item => item.name === equipment.tipo);
       if (existing) {
         existing.value += 1;
@@ -171,13 +239,12 @@ const Dashboard: React.FC = () => {
           color: `hsl(${acc.length * 45}, 70%, 50%)` 
         });
       }
-    }
-    return acc;
-  }, []).sort((a, b) => b.value - a.value);
+      return acc;
+    }, [])
+    .sort((a, b) => b.value - a.value);
 
-  // Maintenance types data - Agora baseado nos equipamentos atualmente em manutenção
+  // Maintenance types data
   const maintenanceTypesData = equipmentsInMaintenance.reduce((acc: any[], equipment) => {
-    // Buscar o tipo de manutenção mais recente deste equipamento
     const recentMaintenance = maintenanceMovements
       .filter(mov => mov.id_equipamento === equipment.id)
       .sort((a, b) => new Date(b.data_criacao || '').getTime() - new Date(a.data_criacao || '').getTime())[0];
@@ -195,18 +262,7 @@ const Dashboard: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.value - a.value);
 
-  console.log('Maintenance types data:', maintenanceTypesData);
-
-  // Equipment types data
-  const typeData = equipments.reduce((acc: any[], equipment) => {
-    const existing = acc.find(item => item.type === equipment.tipo);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      acc.push({ type: equipment.tipo, count: 1 });
-    }
-    return acc;
-  }, []).sort((a, b) => b.count - a.count);
+  const selectedCompanyName = companies.find(c => c.id === selectedCompany)?.name;
 
   if (loading) {
     return (
@@ -220,6 +276,18 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6 p-6">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
+      {/* Filtros */}
+      <DashboardFilters
+        companies={companies}
+        equipmentTypes={equipmentTypes}
+        selectedCompany={selectedCompany}
+        selectedEquipmentType={selectedEquipmentType}
+        onCompanyChange={setSelectedCompany}
+        onEquipmentTypeChange={setSelectedEquipmentType}
+        onRefresh={loadData}
+        loading={loading}
+      />
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
@@ -229,18 +297,20 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{totalEquipments.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Equipamentos cadastrados</p>
+            <p className="text-xs text-muted-foreground">
+              {selectedCompany === 'all' ? 'Equipamentos cadastrados' : 'Equipamentos da empresa selecionada'}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tacom Sistemas POA</CardTitle>
+            <CardTitle className="text-sm font-medium">Em Estoque</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{tacomInStockCount.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Equipamentos em estoque</p>
+            <div className="text-2xl font-bold text-green-600">{inStockEquipments.toLocaleString('pt-BR')}</div>
+            <p className="text-xs text-muted-foreground">Equipamentos disponíveis</p>
           </CardContent>
         </Card>
 
@@ -256,19 +326,19 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Equipment Types in Stock Pie Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Estoque por Tipo de Equipamento</CardTitle>
+            <CardTitle>Distribuição por Tipo</CardTitle>
           </CardHeader>
           <CardContent>
-            {equipmentTypeData.length > 0 ? (
+            {pieChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={equipmentTypeData}
+                    data={pieChartData}
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
@@ -276,7 +346,7 @@ const Dashboard: React.FC = () => {
                     dataKey="value"
                     label={({ name, value }) => `${name}: ${value.toLocaleString('pt-BR')}`}
                   >
-                    {equipmentTypeData.map((entry, index) => (
+                    {pieChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -287,7 +357,7 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center justify-center h-[300px] text-gray-500">
                 <div className="text-center">
                   <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum equipamento em estoque</p>
+                  <p>Nenhum equipamento encontrado</p>
                 </div>
               </div>
             )}
@@ -331,75 +401,17 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Equipment by Company - Horizontal stacked bar chart exactly like the image */}
-      {companyData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Equipamentos por Empresa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={Math.max(400, companyData.length * 40)}>
-              <BarChart 
-                data={companyData} 
-                layout="horizontal"
-                margin={{ top: 20, right: 30, left: 180, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis 
-                  type="number" 
-                  tickFormatter={(value) => value.toLocaleString('pt-BR')}
-                />
-                <YAxis 
-                  dataKey="name" 
-                  type="category" 
-                  width={170}
-                  fontSize={12}
-                  interval={0}
-                />
-                <Tooltip 
-                  labelFormatter={(label) => {
-                    const item = companyData.find(d => d.name === label);
-                    return item ? item.fullName : label;
-                  }}
-                  formatter={(value, name) => [Number(value).toLocaleString('pt-BR'), name]}
-                />
-                <Bar 
-                  dataKey="Em Estoque" 
-                  stackId="a" 
-                  fill="#3B82F6" 
-                  name="Em Estoque" 
-                />
-                <Bar 
-                  dataKey="Retirados" 
-                  stackId="a" 
-                  fill="#EF4444" 
-                  name="Retirados" 
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Equipment by Company Chart */}
+      {selectedCompany === 'all' && (
+        <EquipmentByCompanyChart data={companyData} />
       )}
 
-      {/* Equipment Types */}
-      {typeData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Tipos de Equipamentos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={typeData} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="type" type="category" width={100} />
-                <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), 'Quantidade']} />
-                <Bar dataKey="count" fill="#3B82F6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+      {/* Equipment Types by Company Chart */}
+      <EquipmentTypesByCompanyChart 
+        data={equipmentTypeData}
+        selectedCompany={selectedCompany}
+        companyName={selectedCompanyName}
+      />
     </div>
   );
 };
