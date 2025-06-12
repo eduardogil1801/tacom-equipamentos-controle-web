@@ -32,12 +32,19 @@ interface MaintenanceType {
   descricao: string;
 }
 
+interface EquipmentType {
+  id: string;
+  nome: string;
+  ativo: boolean;
+}
+
 const MovementPage: React.FC = () => {
   const { user } = useAuth();
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [movementType, setMovementType] = useState('');
   const [destinationCompany, setDestinationCompany] = useState('');
   const [movementDate, setMovementDate] = useState(new Date().toISOString().split('T')[0]);
@@ -54,15 +61,6 @@ const MovementPage: React.FC = () => {
     { value: 'manutencao', label: 'Manutenção' }
   ];
 
-  const equipmentTypes = [
-    'CCIT 4.0',
-    'CCIT 5.0',
-    'PM (Painel de Motorista)',
-    'UPEX',
-    'Connections 4.0',
-    'Connections 5.0'
-  ];
-
   const statusOptions = [
     { value: 'disponivel', label: 'Disponível' },
     { value: 'manutencao', label: 'Manutenção' },
@@ -75,6 +73,7 @@ const MovementPage: React.FC = () => {
   useEffect(() => {
     loadCompanies();
     loadMaintenanceTypes();
+    loadEquipmentTypes();
   }, []);
 
   // Auto-definir status quando selecionar tipo de manutenção
@@ -111,6 +110,21 @@ const MovementPage: React.FC = () => {
       setMaintenanceTypes(data || []);
     } catch (error) {
       console.error('Erro ao carregar tipos de manutenção:', error);
+    }
+  };
+
+  const loadEquipmentTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_equipamento')
+        .select('id, nome, ativo')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (error) throw error;
+      setEquipmentTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de equipamento:', error);
     }
   };
 
@@ -285,8 +299,8 @@ const MovementPage: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {equipmentTypes.map(type => (
-                    <SelectItem key={type} value={type}>
-                      {type}
+                    <SelectItem key={type.id} value={type.nome}>
+                      {type.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
