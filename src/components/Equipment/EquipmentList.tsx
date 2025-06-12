@@ -310,7 +310,7 @@ const EquipmentList: React.FC = () => {
         <BulkImportDialog
           isOpen={showBulkImport}
           onClose={() => setShowBulkImport(false)}
-          onSuccess={() => {
+          onImportComplete={() => {
             setShowBulkImport(false);
             loadData();
           }}
