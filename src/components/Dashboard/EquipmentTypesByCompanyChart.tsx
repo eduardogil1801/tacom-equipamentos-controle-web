@@ -20,6 +20,8 @@ const EquipmentTypesByCompanyChart: React.FC<EquipmentTypesByCompanyChartProps> 
   selectedCompany, 
   companyName 
 }) => {
+  console.log('EquipmentTypesByCompanyChart data:', data);
+
   const title = selectedCompany === 'all' 
     ? 'Tipos de Equipamentos (Geral)' 
     : `Tipos de Equipamentos - ${companyName || 'Empresa Selecionada'}`;
@@ -70,8 +72,7 @@ const EquipmentTypesByCompanyChart: React.FC<EquipmentTypesByCompanyChartProps> 
             />
             <Bar 
               dataKey="quantidade" 
-              fill="#3B82F6" 
-              radius={[0, 4, 4, 0]}
+              fill="#3B82F6"
             />
           </BarChart>
         </ResponsiveContainer>

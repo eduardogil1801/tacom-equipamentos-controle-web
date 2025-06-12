@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface ChartData {
   name: string;
@@ -16,6 +16,8 @@ interface EquipmentByCompanyChartProps {
 }
 
 const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data }) => {
+  console.log('EquipmentByCompanyChart data:', data);
+
   if (data.length === 0) {
     return (
       <Card>
@@ -64,19 +66,18 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
               }}
               formatter={(value, name) => [Number(value).toLocaleString('pt-BR'), name]}
             />
+            <Legend />
             <Bar 
               dataKey="Em Estoque" 
               stackId="a" 
               fill="#16A34A" 
-              name="Em Estoque" 
-              radius={[0, 0, 0, 0]}
+              name="Em Estoque"
             />
             <Bar 
               dataKey="Retirados" 
               stackId="a" 
               fill="#DC2626" 
-              name="Retirados" 
-              radius={[0, 4, 4, 0]}
+              name="Retirados"
             />
           </BarChart>
         </ResponsiveContainer>

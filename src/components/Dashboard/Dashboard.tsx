@@ -166,6 +166,7 @@ const Dashboard: React.FC = () => {
       filteredEquipments = filteredEquipments.filter(eq => eq.tipo === selectedEquipmentType);
     }
 
+    console.log('Filtered equipments:', filteredEquipments.length);
     setEquipments(filteredEquipments);
   };
 
@@ -190,7 +191,7 @@ const Dashboard: React.FC = () => {
   // Data for company equipment chart
   const companyData = companies
     .map(company => {
-      const companyEquipments = equipments.filter(eq => eq.id_empresa === company.id);
+      const companyEquipments = allEquipments.filter(eq => eq.id_empresa === company.id);
       const total = companyEquipments.length;
       const emEstoque = companyEquipments.filter(eq => !eq.data_saida).length;
       const retirados = total - emEstoque;
@@ -206,6 +207,8 @@ const Dashboard: React.FC = () => {
     .filter(item => item.total > 0)
     .sort((a, b) => b.total - a.total)
     .slice(0, 15); // Top 15 companies
+
+  console.log('Company chart data:', companyData);
 
   // Data for equipment types chart (filtered by company if selected)
   const equipmentTypeData = equipments
@@ -224,6 +227,8 @@ const Dashboard: React.FC = () => {
       return acc;
     }, [])
     .sort((a, b) => b.quantidade - a.quantidade);
+
+  console.log('Equipment type chart data:', equipmentTypeData);
 
   // Data for pie chart - Status por tipo de equipamento
   const pieChartData = equipments
