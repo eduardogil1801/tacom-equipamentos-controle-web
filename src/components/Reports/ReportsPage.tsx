@@ -16,6 +16,7 @@ import {
   Truck,
   Calendar
 } from 'lucide-react';
+import { useReportPermissions } from '@/hooks/useReportPermissions';
 
 // Import all report components
 import CompaniesReport from './CompaniesReport';
@@ -38,79 +39,79 @@ interface ReportItem {
   component: React.ComponentType;
 }
 
-const reports: ReportItem[] = [
+const allReports: ReportItem[] = [
   {
-    key: 'companies',
+    key: 'companies-report',
     title: 'Empresas',
     description: 'Relatório detalhado das empresas cadastradas no sistema',
     icon: <Building2 className="h-6 w-6" />,
     component: CompaniesReport
   },
   {
-    key: 'equipment-status',
+    key: 'equipment-status-report',
     title: 'Status dos Equipamentos',
     description: 'Visualização do status atual de todos os equipamentos',
     icon: <Package className="h-6 w-6" />,
     component: EquipmentStatusReport
   },
   {
-    key: 'equipment-distribution',
+    key: 'equipment-distribution-report',
     title: 'Distribuição de Equipamentos',
     description: 'Análise da distribuição de equipamentos por empresa e região',
     icon: <BarChart3 className="h-6 w-6" />,
     component: EquipmentDistributionReport
   },
   {
-    key: 'movements',
+    key: 'movements-report',
     title: 'Movimentações',
     description: 'Histórico completo de movimentações de equipamentos',
     icon: <Activity className="h-6 w-6" />,
     component: MovementsReport
   },
   {
-    key: 'inventory',
+    key: 'inventory-report',
     title: 'Inventário',
     description: 'Controle de estoque e disponibilidade de equipamentos',
     icon: <Archive className="h-6 w-6" />,
     component: InventoryReport
   },
   {
-    key: 'equipment-history',
+    key: 'equipment-history-report',
     title: 'Histórico de Equipamentos',
     description: 'Rastreamento detalhado do histórico de cada equipamento',
     icon: <Clock className="h-6 w-6" />,
     component: EquipmentHistoryReport
   },
   {
-    key: 'fleet',
+    key: 'fleet-report',
     title: 'Frota',
     description: 'Relatório consolidado da frota de equipamentos por operadora',
     icon: <Truck className="h-6 w-6" />,
     component: FleetReport
   },
   {
-    key: 'maintenance',
+    key: 'maintenance-report',
     title: 'Manutenções',
     description: 'Controle e acompanhamento das manutenções realizadas',
     icon: <Wrench className="h-6 w-6" />,
     component: MaintenanceReport
   },
   {
-    key: 'monthly',
+    key: 'monthly-report',
     title: 'Relatório Mensal',
     description: 'Consolidação mensal de dados e estatísticas do sistema',
     icon: <Calendar className="h-6 w-6" />,
     component: MonthlyReport
   },
   {
-    key: 'inventory-stock',
+    key: 'inventory-stock-report',
     title: 'Estoque Detalhado',
     description: 'Análise detalhada do estoque com níveis críticos',
     icon: <TrendingUp className="h-6 w-6" />,
     component: InventoryStockReport
   },
   {
-    key: 'equipment-history-detail',
+    key: 'equipment-history-detail-report',
     title: 'Histórico Detalhado',
     description: 'Análise aprofundada do histórico de equipamentos específicos',
     icon: <FileText className="h-6 w-6" />,
@@ -120,6 +121,10 @@ const reports: ReportItem[] = [
 
 const ReportsPage: React.FC = () => {
   const [activeReport, setActiveReport] = useState<string | null>(null);
+  const { hasReportPermission, loading } = useReportPermissions();
+
+  // Filtrar relatórios baseado nas permissões do usuário
+  const availableReports = allReports.filter(report => hasReportPermission(report.key));
 
   const handleReportSelect = (reportKey: string) => {
     setActiveReport(reportKey);
@@ -129,9 +134,18 @@ const ReportsPage: React.FC = () => {
     setActiveReport(null);
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
+        <span className="ml-2">Carregando permissões...</span>
+      </div>
+    );
+  }
+
   if (activeReport) {
-    const report = reports.find(r => r.key === activeReport);
-    if (report) {
+    const report = allReports.find(r => r.key === activeReport);
+    if (report && hasReportPermission(report.key)) {
       const ReportComponent = report.component;
       return (
         <div className="space-y-4">
@@ -148,6 +162,19 @@ const ReportsPage: React.FC = () => {
     }
   }
 
+  if (availableReports.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-gray-600 mb-2">Nenhum Relatório Disponível</h2>
+        <p className="text-gray-500">
+          Você não possui permissão para acessar nenhum relatório. 
+          Entre em contato com o administrador do sistema.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -156,7 +183,7 @@ const ReportsPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reports.map((report) => (
+        {availableReports.map((report) => (
           <Card 
             key={report.key} 
             className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 hover:border-blue-300"

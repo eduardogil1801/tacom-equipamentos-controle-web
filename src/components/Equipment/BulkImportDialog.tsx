@@ -1,234 +1,215 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, Download, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Upload, Download, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface BulkImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onImportComplete: () => void;
 }
 
-interface EquipmentRow {
-  numero_serie: string;
+interface EquipmentData {
   tipo: string;
+  numero_serie: string;
+  modelo?: string;
   empresa: string;
-  status: string;
-  modelo: string;
+  estado: string;
 }
 
-const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, onSuccess }) => {
+const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
+  isOpen,
+  onClose,
+  onImportComplete
+}) => {
   const [file, setFile] = useState<File | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [previewData, setPreviewData] = useState<EquipmentData[]>([]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      previewFile(selectedFile);
+    }
+  };
+
+  const previewFile = async (file: File) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+      // Mapear dados para o formato esperado
+      const mappedData: EquipmentData[] = jsonData.slice(0, 5).map((row: any) => ({
+        tipo: row['Tipo'] || row['tipo'] || '',
+        numero_serie: row['Número de Série'] || row['numero_serie'] || row['Serial'] || '',
+        modelo: row['Modelo'] || row['modelo'] || '',
+        empresa: row['Empresa'] || row['empresa'] || '',
+        estado: row['Estado'] || row['estado'] || ''
+      }));
+
+      setPreviewData(mappedData);
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar arquivo. Verifique se é um arquivo Excel válido.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const downloadTemplate = () => {
     const templateData = [
-      { 
-        numero_serie: '12345', 
-        tipo: 'DVR', 
-        empresa: 'TACOM SISTEMAS POA',
-        status: 'disponivel',
-        modelo: 'DVR-H264'
+      {
+        'Tipo': 'Tablet',
+        'Número de Série': 'TAB001',
+        'Modelo': 'Samsung Galaxy Tab A',
+        'Empresa': 'Empresa Exemplo',
+        'Estado': 'RS'
       },
-      { 
-        numero_serie: '67890', 
-        tipo: 'CAMERA', 
-        empresa: 'TACOM SISTEMAS POA',
-        status: 'disponivel',
-        modelo: 'CAM-HD1080'
-      },
+      {
+        'Tipo': 'Smartphone',
+        'Número de Série': 'PHONE001',
+        'Modelo': 'iPhone 13',
+        'Empresa': 'Outra Empresa',
+        'Estado': 'SP'
+      }
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Equipamentos');
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
     XLSX.writeFile(wb, 'template_equipamentos.xlsx');
-    
-    toast({
-      title: "Template baixado",
-      description: "Template de importação baixado com sucesso!",
-    });
   };
 
-  const ensureEquipmentTypeExists = async (tipoNome: string): Promise<void> => {
-    try {
-      // Verificar se o tipo já existe
-      const { data: existingType, error: checkError } = await supabase
-        .from('tipos_equipamento')
-        .select('id')
-        .eq('nome', tipoNome)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
-      }
-
-      // Se não existe, criar o tipo
-      if (!existingType) {
-        const { error: insertError } = await supabase
-          .from('tipos_equipamento')
-          .insert([{
-            nome: tipoNome,
-            ativo: true
-          }]);
-
-        if (insertError) {
-          throw insertError;
-        }
-
-        console.log(`Tipo de equipamento criado: ${tipoNome}`);
-      }
-    } catch (error) {
-      console.error(`Erro ao verificar/criar tipo de equipamento ${tipoNome}:`, error);
-      throw error;
-    }
-  };
-
-  const validateEquipmentData = async (data: any[]): Promise<{ valid: EquipmentRow[], errors: string[] }> => {
-    const valid: EquipmentRow[] = [];
+  const validateData = (data: any[]): { valid: EquipmentData[], errors: string[] } => {
+    const valid: EquipmentData[] = [];
     const errors: string[] = [];
 
-    // Carregar empresas para validação
-    const { data: empresas, error: empresasError } = await supabase
-      .from('empresas')
-      .select('id, name');
-
-    if (empresasError) {
-      errors.push('Erro ao carregar empresas para validação');
-      return { valid, errors };
-    }
-
-    const empresasMap = new Map(empresas.map(emp => [emp.name.toLowerCase(), emp.id]));
-
     data.forEach((row, index) => {
-      const rowNumber = index + 2; // +2 porque começa na linha 2 (header na linha 1)
+      const rowNumber = index + 2; // +2 porque começamos da linha 2 no Excel (linha 1 é cabeçalho)
       
-      // Converter campos para string, independente do tipo
-      const numero_serie = row.numero_serie ? String(row.numero_serie).trim() : '';
-      const tipo = row.tipo ? String(row.tipo).trim().toUpperCase() : '';
-      const empresa = row.empresa ? String(row.empresa).trim() : '';
-      const status = row.status ? String(row.status).trim().toLowerCase() : 'disponivel';
-      const modelo = row.modelo ? String(row.modelo).trim() : '';
+      // Mapear diferentes possíveis nomes de colunas
+      const tipo = row['Tipo'] || row['tipo'] || '';
+      const numero_serie = row['Número de Série'] || row['numero_serie'] || row['Serial'] || '';
+      const modelo = row['Modelo'] || row['modelo'] || '';
+      const empresa = row['Empresa'] || row['empresa'] || '';
+      const estado = row['Estado'] || row['estado'] || '';
 
-      if (!numero_serie) {
-        errors.push(`Linha ${rowNumber}: Número de série é obrigatório`);
-        return;
-      }
-
-      if (!tipo) {
-        errors.push(`Linha ${rowNumber}: Tipo é obrigatório`);
-        return;
-      }
-
-      if (!empresa) {
-        errors.push(`Linha ${rowNumber}: Empresa é obrigatória`);
-        return;
-      }
-
-      // Verificar se a empresa existe
-      const empresaId = empresasMap.get(empresa.toLowerCase());
-      if (!empresaId) {
-        errors.push(`Linha ${rowNumber}: Empresa "${empresa}" não encontrada no sistema`);
-        return;
-      }
-
-      // Validar status
-      const statusValidos = ['disponivel', 'manutencao', 'em_uso', 'aguardando_manutencao', 'danificado', 'indisponivel'];
-      if (!statusValidos.includes(status)) {
-        errors.push(`Linha ${rowNumber}: Status "${status}" inválido. Use: ${statusValidos.join(', ')}`);
+      // Validações obrigatórias
+      if (!tipo || !numero_serie || !empresa) {
+        errors.push(`Linha ${rowNumber}: Campos obrigatórios faltando (Tipo, Número de Série, Empresa)`);
         return;
       }
 
       valid.push({
-        numero_serie,
-        tipo,
-        empresa,
-        status,
-        modelo
+        tipo: tipo.toString().trim(),
+        numero_serie: numero_serie.toString().trim(),
+        modelo: modelo ? modelo.toString().trim() : undefined,
+        empresa: empresa.toString().trim(),
+        estado: estado ? estado.toString().trim() : ''
       });
     });
 
     return { valid, errors };
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setErrors([]);
-    }
-  };
-
-  const handleImport = async () => {
+  const processImport = async () => {
     if (!file) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione um arquivo Excel",
+        description: "Por favor, selecione um arquivo.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsImporting(true);
-    setErrors([]);
+    setIsProcessing(true);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'binary' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      console.log('Iniciando processamento do arquivo:', file.name);
+      
+      // Ler arquivo Excel
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-          console.log('Dados lidos do Excel:', jsonData);
-          console.log('Total de linhas:', jsonData.length);
+      console.log('Dados brutos do Excel:', jsonData.length, 'linhas');
 
-          const { valid, errors: validationErrors } = await validateEquipmentData(jsonData);
-          
-          if (validationErrors.length > 0) {
-            setErrors(validationErrors);
-            setIsImporting(false);
-            return;
-          }
+      if (jsonData.length === 0) {
+        throw new Error('Arquivo está vazio ou não possui dados válidos');
+      }
 
-          if (valid.length === 0) {
-            throw new Error('Nenhum equipamento válido encontrado no arquivo');
-          }
+      // Validar dados
+      const { valid, errors } = validateData(jsonData);
 
-          console.log('Equipamentos válidos para importação:', valid.length);
+      if (errors.length > 0) {
+        console.error('Erros de validação:', errors);
+        toast({
+          title: "Erros de Validação",
+          description: `${errors.length} erro(s) encontrado(s). Verifique o console para detalhes.`,
+          variant: "destructive",
+        });
+        errors.forEach(error => console.error(error));
+        setIsProcessing(false);
+        return;
+      }
 
-          // Garantir que todos os tipos de equipamento existam na tabela tipos_equipamento
-          const tiposUnicos = [...new Set(valid.map(eq => eq.tipo))];
-          for (const tipo of tiposUnicos) {
-            await ensureEquipmentTypeExists(tipo);
-          }
+      console.log('Dados válidos após validação:', valid.length);
 
-          // Carregar empresas para obter IDs
-          const { data: empresas, error: empresasError } = await supabase
-            .from('empresas')
-            .select('id, name');
+      // Carregar empresas para mapear nomes para IDs
+      const { data: empresas, error: empresasError } = await supabase
+        .from('empresas')
+        .select('id, name');
 
-          if (empresasError) throw empresasError;
+      if (empresasError) {
+        throw new Error(`Erro ao carregar empresas: ${empresasError.message}`);
+      }
 
-          const empresasMap = new Map(empresas.map(emp => [emp.name.toLowerCase(), emp.id]));
+      console.log('Empresas carregadas:', empresas?.length);
 
-          // Verificar duplicatas no banco
-          const numerosSerieExistentes = valid.map(eq => eq.numero_serie);
+      // Criar mapa de empresas (nome -> id)
+      const empresasMap = new Map<string, string>();
+      empresas?.forEach(empresa => {
+        empresasMap.set(empresa.name.toLowerCase(), empresa.id);
+      });
+
+      // Verificar se todas as empresas existem
+      const empresasNaoEncontradas = valid
+        .map(eq => eq.empresa.toLowerCase())
+        .filter(nomeEmpresa => !empresasMap.has(nomeEmpresa));
+
+      if (empresasNaoEncontradas.length > 0) {
+        const empresasUnicas = [...new Set(empresasNaoEncontradas)];
+        throw new Error(`Empresas não encontradas: ${empresasUnicas.join(', ')}`);
+      }
+
+          // Verificar equipamentos duplicados
+          const numerosExistentes = new Set<string>();
           const { data: equipamentosExistentes } = await supabase
             .from('equipamentos')
-            .select('numero_serie')
-            .in('numero_serie', numerosSerieExistentes);
+            .select('numero_serie');
 
-          const numerosExistentes = new Set(equipamentosExistentes?.map(eq => eq.numero_serie) || []);
-          const equipamentosNovos = valid.filter(eq => !numerosExistentes.has(eq.numero_serie));
+          equipamentosExistentes?.forEach(eq => {
+            numerosExistentes.add(eq.numero_serie.toLowerCase());
+          });
+
+          // Filtrar equipamentos que não são duplicados
+          const equipamentosNovos = valid.filter(eq => 
+            !numerosExistentes.has(eq.numero_serie.toLowerCase())
+          );
 
           if (equipamentosNovos.length === 0) {
             throw new Error('Todos os equipamentos já existem no sistema');
@@ -238,31 +219,27 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
             console.log(`${numerosExistentes.size} equipamentos duplicados serão ignorados`);
           }
 
-          // Obter a data atual local no formato YYYY-MM-DD
-          const hoje = new Date();
-          const ano = hoje.getFullYear();
-          const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-          const dia = String(hoje.getDate()).padStart(2, '0');
-          const dataAtual = `${ano}-${mes}-${dia}`;
+          // Usar data atual do sistema sem conversões de fuso horário
+          const dataAtual = new Date().toISOString().split('T')[0];
           
-          console.log('Data atual calculada:', dataAtual);
-          console.log('Data/hora atual completa:', hoje.toString());
+          console.log('Data de entrada definida para:', dataAtual);
+          console.log('Timestamp atual:', new Date().toISOString());
           
           const equipamentosParaInserir = equipamentosNovos.map(eq => {
             const empresaId = empresasMap.get(eq.empresa.toLowerCase());
             return {
-              numero_serie: eq.numero_serie,
               tipo: eq.tipo,
-              id_empresa: empresaId!,
+              numero_serie: eq.numero_serie,
+              modelo: eq.modelo || null,
+              id_empresa: empresaId,
+              estado: eq.estado || null,
               data_entrada: dataAtual,
-              modelo: eq.modelo,
-              status: eq.status,
-              em_manutencao: eq.status === 'manutencao' || eq.status === 'em_manutencao' || eq.status === 'aguardando_manutencao'
+              status: 'disponivel'
             };
           });
 
-          console.log('Equipamentos para inserir:', equipamentosParaInserir.length);
-          console.log('Primeira entrada com data atual:', equipamentosParaInserir[0]);
+          console.log('Equipamentos preparados para inserção:', equipamentosParaInserir.length);
+          console.log('Amostra do primeiro equipamento:', equipamentosParaInserir[0]);
 
           // Inserir em lotes de 500 para evitar limitações
           const batchSize = 500;
@@ -270,121 +247,169 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
 
           for (let i = 0; i < equipamentosParaInserir.length; i += batchSize) {
             const batch = equipamentosParaInserir.slice(i, i + batchSize);
-            console.log(`Inserindo lote ${Math.floor(i / batchSize) + 1}:`, batch.length, 'equipamentos');
             
-            const { error: insertError, data } = await supabase
+            console.log(`Inserindo lote ${Math.floor(i / batchSize) + 1}:`, batch.length, 'equipamentos');
+
+            const { data, error } = await supabase
               .from('equipamentos')
               .insert(batch)
-              .select('id, data_entrada');
+              .select('id, numero_serie, data_entrada');
 
-            if (insertError) {
-              console.error('Erro ao inserir lote:', insertError);
-              throw insertError;
+            if (error) {
+              console.error('Erro ao inserir lote:', error);
+              throw new Error(`Erro ao inserir lote: ${error.message}`);
             }
 
             totalInseridos += data?.length || 0;
             console.log(`Lote inserido com sucesso. Total inserido até agora: ${totalInseridos}`);
-            console.log('Dados inseridos com data atual:', data?.slice(0, 3)); // Log dos primeiros 3 para verificação
+            console.log('Dados inseridos com verificação de data:', data?.slice(0, 3));
           }
 
           const duplicatas = valid.length - equipamentosNovos.length;
-          const tiposAdicionados = tiposUnicos.length;
-          
+
           toast({
-            title: "Importação concluída",
-            description: `${totalInseridos} equipamentos importados com sucesso${duplicatas > 0 ? `. ${duplicatas} duplicatas ignoradas` : ''}. ${tiposAdicionados} tipos de equipamento adicionados/verificados.`,
+            title: "Importação Concluída",
+            description: `${totalInseridos} equipamentos importados com sucesso${duplicatas > 0 ? `. ${duplicatas} duplicatas ignoradas` : ''}.`,
           });
 
-          onSuccess();
+          console.log('Importação finalizada:', {
+            totalProcessados: valid.length,
+            totalInseridos,
+            duplicatasIgnoradas: duplicatas
+          });
+
+          onImportComplete();
           onClose();
         } catch (error) {
-          console.error('Erro durante importação:', error);
+          console.error('Erro na importação:', error);
           toast({
-            title: "Erro na importação",
-            description: error instanceof Error ? error.message : "Erro desconhecido durante a importação",
+            title: "Erro na Importação",
+            description: error instanceof Error ? error.message : "Erro desconhecido",
             variant: "destructive",
           });
         } finally {
-          setIsImporting(false);
+          setIsProcessing(false);
         }
       };
 
-      reader.readAsBinaryString(file);
-    } catch (error) {
-      console.error('Erro ao preparar importação:', error);
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao preparar importação",
-        variant: "destructive",
-      });
-      setIsImporting(false);
-    }
-  };
+      return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Importação em Lote de Equipamentos
+              </DialogTitle>
+            </DialogHeader>
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Importação em Lote</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div>
-            <Button
-              variant="outline"
-              onClick={downloadTemplate}
-              className="w-full flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Baixar Template Excel
-            </Button>
-            <p className="text-xs text-gray-600 mt-2">
-              Template: Nº Série | Tipo | Empresa | Status | Modelo
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="file">Arquivo Excel (.xlsx)</Label>
-            <Input
-              id="file"
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileChange}
-              disabled={isImporting}
-            />
-          </div>
-
-          {errors.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <div className="flex items-center gap-2 text-red-800 font-medium mb-2">
-                <AlertCircle className="h-4 w-4" />
-                Erros encontrados:
+            <div className="space-y-6">
+              {/* Seção de Template */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Template de Importação
+                </h3>
+                <p className="text-blue-700 text-sm mb-3">
+                  Baixe o template Excel com o formato correto para importação dos equipamentos.
+                </p>
+                <Button
+                  onClick={downloadTemplate}
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar Template
+                </Button>
               </div>
-              <ul className="text-sm text-red-700 space-y-1 max-h-40 overflow-y-auto">
-                {errors.map((error, index) => (
-                  <li key={index}>• {error}</li>
-                ))}
-              </ul>
+
+              {/* Seção de Upload */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="file-upload">Selecionar Arquivo Excel</Label>
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileChange}
+                    className="mt-2"
+                  />
+                </div>
+
+                {/* Preview dos dados */}
+                {previewData.length > 0 && (
+                  <div className="border rounded-lg p-4">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                      Preview dos Dados (primeiras 5 linhas)
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border p-2 text-left">Tipo</th>
+                            <th className="border p-2 text-left">Número de Série</th>
+                            <th className="border p-2 text-left">Modelo</th>
+                            <th className="border p-2 text-left">Empresa</th>
+                            <th className="border p-2 text-left">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewData.map((item, index) => (
+                            <tr key={index}>
+                              <td className="border p-2">{item.tipo}</td>
+                              <td className="border p-2">{item.numero_serie}</td>
+                              <td className="border p-2">{item.modelo || '-'}</td>
+                              <td className="border p-2">{item.empresa}</td>
+                              <td className="border p-2">{item.estado || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Instruções */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Instruções:</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• O arquivo deve estar no formato Excel (.xlsx ou .xls)</li>
+                  <li>• Campos obrigatórios: Tipo, Número de Série, Empresa</li>
+                  <li>• Campos opcionais: Modelo, Estado</li>
+                  <li>• Equipamentos duplicados (mesmo número de série) serão ignorados</li>
+                  <li>• A data de entrada será definida como a data atual</li>
+                </ul>
+              </div>
+
+              {/* Botões */}
+              <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={onClose} disabled={isProcessing}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={processImport}
+                  disabled={!file || isProcessing}
+                  className="flex items-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Importar Equipamentos
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          )}
+          </DialogContent>
+        </Dialog>
+      );
+    };
 
-          <div className="flex gap-2">
-            <Button
-              onClick={handleImport}
-              disabled={!file || isImporting}
-              className="flex-1 flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              {isImporting ? 'Importando...' : 'Importar'}
-            </Button>
-            <Button variant="outline" onClick={onClose} disabled={isImporting}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default BulkImportDialog;
+    export default BulkImportDialog;

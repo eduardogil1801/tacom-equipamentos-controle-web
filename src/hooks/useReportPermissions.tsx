@@ -36,6 +36,7 @@ export const useReportPermissions = () => {
     }
 
     try {
+      // Para usuários operacionais, carregar apenas as permissões específicas de relatórios
       const { data, error } = await supabase
         .from('user_permissions')
         .select('module_name')
