@@ -59,6 +59,7 @@ const EquipmentTypesByCompanyChart: React.FC<EquipmentTypesByCompanyChartProps> 
             <XAxis 
               type="number" 
               tickFormatter={(value) => value.toLocaleString('pt-BR')}
+              domain={[0, 'dataMax']}
             />
             <YAxis 
               dataKey="tipo" 

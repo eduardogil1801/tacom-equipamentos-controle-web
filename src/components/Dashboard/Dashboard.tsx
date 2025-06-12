@@ -188,7 +188,7 @@ const Dashboard: React.FC = () => {
   );
   const equipmentsInMaintenanceCount = equipmentsInMaintenance.length;
 
-  // Data for company equipment chart
+  // Data for company equipment chart - using allEquipments for complete view
   const companyData = companies
     .map(company => {
       const companyEquipments = allEquipments.filter(eq => eq.id_empresa === company.id);

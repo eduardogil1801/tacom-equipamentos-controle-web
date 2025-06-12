@@ -51,6 +51,7 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
             <XAxis 
               type="number" 
               tickFormatter={(value) => value.toLocaleString('pt-BR')}
+              domain={[0, 'dataMax']}
             />
             <YAxis 
               dataKey="name" 
