@@ -239,11 +239,19 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
             console.log(`${numerosExistentes.size} equipamentos duplicados serão ignorados`);
           }
 
-          // Preparar dados para inserção com data atual
+          // Preparar dados para inserção com data atual local (fuso horário brasileiro)
           const agora = new Date();
-          const dataAtual = agora.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+          // Ajustar para fuso horário brasileiro (UTC-3)
+          const offsetBrasil = -3 * 60; // -3 horas em minutos
+          const offsetLocal = agora.getTimezoneOffset(); // offset atual em minutos (negativo para UTC-)
+          const diferencaOffset = offsetBrasil - offsetLocal;
           
-          console.log('Data atual calculada:', dataAtual);
+          const dataAtualBrasil = new Date(agora.getTime() + (diferencaOffset * 60 * 1000));
+          const dataAtual = dataAtualBrasil.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+          
+          console.log('Data atual (fuso horário brasileiro):', dataAtual);
+          console.log('Data original:', agora.toISOString().split('T')[0]);
+          console.log('Diferença de offset aplicada:', diferencaOffset, 'minutos');
           
           const equipamentosParaInserir = equipamentosNovos.map(eq => {
             const empresaId = empresasMap.get(eq.empresa.toLowerCase());
@@ -258,7 +266,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
             };
           });
 
-          console.log('Equipamentos para inserir com data atual:', equipamentosParaInserir.length);
+          console.log('Equipamentos para inserir com data corrigida:', equipamentosParaInserir.length);
           console.log('Primeira entrada para verificar data:', equipamentosParaInserir[0]);
 
           // Inserir em lotes de 500 para evitar limitações
@@ -281,7 +289,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({ isOpen, onClose, on
 
             totalInseridos += data?.length || 0;
             console.log(`Lote inserido com sucesso. Total inserido até agora: ${totalInseridos}`);
-            console.log('Dados inseridos:', data?.slice(0, 3)); // Log dos primeiros 3 para verificação
+            console.log('Dados inseridos com data corrigida:', data?.slice(0, 3)); // Log dos primeiros 3 para verificação
           }
 
           const duplicatas = valid.length - equipamentosNovos.length;
