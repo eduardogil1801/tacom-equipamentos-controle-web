@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,11 +45,12 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
   useEffect(() => {
     loadCompanies();
-    // Definir data atual
+    // Definir data atual no formato local
     const hoje = new Date();
-    const dataFormatada = hoje.getFullYear() + '-' + 
-                        String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(hoje.getDate()).padStart(2, '0');
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const dataFormatada = `${ano}-${mes}-${dia}`;
     
     setMovementData(prev => ({
       ...prev,
@@ -77,8 +77,10 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     }
   };
 
-  const handleEquipmentSelect = (equipment: Equipment) => {
-    setSelectedEquipment(equipment);
+  const handleEquipmentSelect = (equipments: Equipment[]) => {
+    if (equipments.length > 0) {
+      setSelectedEquipment(equipments[0]);
+    }
     setShowSearch(false);
   };
 
@@ -327,7 +329,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         <EquipmentSearchDialog
           isOpen={showSearch}
           onClose={() => setShowSearch(false)}
-          onSelectEquipment={handleEquipmentSelect}
+          onConfirm={handleEquipmentSelect}
         />
       )}
     </div>

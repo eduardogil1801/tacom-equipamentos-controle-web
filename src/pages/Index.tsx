@@ -92,7 +92,7 @@ const Index = () => {
         if (!hasPermission('equipments')) {
           return renderNoPermission();
         }
-        return <MovementPage />;
+        return <MovementPage onBack={() => setCurrentPage('dashboard')} />;
       case 'fleet':
         if (!hasPermission('fleet')) {
           return renderNoPermission();
