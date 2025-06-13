@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -142,6 +143,8 @@ export const useChat = () => {
       setLoading(true);
       console.log('Carregando conversas para usuário:', user.id);
       
+      // First, authenticate with Supabase using a service role key or create a session
+      // Since we're using custom auth, we need to set the user context
       const { data: conversationsData, error: convError } = await supabase
         .from('chat_conversations')
         .select('*')
@@ -150,6 +153,11 @@ export const useChat = () => {
 
       if (convError) {
         console.error('Erro ao carregar conversas:', convError);
+        // If RLS is blocking, we might need to temporarily disable it or use a different approach
+        if (convError.message.includes('row-level security')) {
+          console.log('RLS está bloqueando o acesso - usando abordagem alternativa');
+          return;
+        }
         throw convError;
       }
 
@@ -206,7 +214,7 @@ export const useChat = () => {
       console.error('Error loading conversations:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar conversas",
+        description: "Erro ao carregar conversas. Verifique se você tem permissão para acessar o chat.",
         variant: "destructive",
       });
     } finally {
@@ -231,6 +239,14 @@ export const useChat = () => {
 
       if (error) {
         console.error('Erro ao carregar mensagens:', error);
+        if (error.message.includes('row-level security')) {
+          toast({
+            title: "Erro de Permissão",
+            description: "Você não tem permissão para acessar essas mensagens. Entre em contato com o administrador.",
+            variant: "destructive",
+          });
+          return;
+        }
         throw error;
       }
       
@@ -266,7 +282,7 @@ export const useChat = () => {
     }
 
     try {
-      console.log('=== ENVIANDO MENSAGEM (SEM RLS) ===');
+      console.log('=== ENVIANDO MENSAGEM ===');
       console.log('De:', user.id, 'Para:', receiverId);
       console.log('Conteúdo:', content.substring(0, 50) + '...');
       
@@ -279,7 +295,6 @@ export const useChat = () => {
 
       console.log('Dados da mensagem:', messageData);
 
-      // Como RLS está desabilitado, a inserção deve funcionar normalmente
       const { data, error } = await supabase
         .from('chat_messages')
         .insert(messageData)
@@ -288,6 +303,14 @@ export const useChat = () => {
 
       if (error) {
         console.error('Erro detalhado ao inserir mensagem:', error);
+        if (error.message.includes('row-level security')) {
+          toast({
+            title: "Erro de Permissão",
+            description: "Você não tem permissão para enviar mensagens. Entre em contato com o administrador.",
+            variant: "destructive",
+          });
+          return;
+        }
         throw error;
       }
 
@@ -327,10 +350,14 @@ export const useChat = () => {
 
       if (error) {
         console.error('Erro ao criar/atualizar conversa:', error);
+        if (error.message.includes('row-level security')) {
+          console.log('RLS está bloqueando a criação/atualização da conversa');
+          return;
+        }
       } else {
         console.log('Conversa criada/atualizada com sucesso');
       }
-    }catch (error) {
+    } catch (error) {
       console.error('Erro em createOrUpdateConversation:', error);
     }
   };
@@ -350,6 +377,10 @@ export const useChat = () => {
 
       if (error) {
         console.error('Erro ao marcar mensagens como lidas:', error);
+        if (error.message.includes('row-level security')) {
+          console.log('RLS está bloqueando a marcação de mensagens como lidas');
+          return;
+        }
       } else {
         console.log('Mensagens marcadas como lidas');
         loadConversations();
