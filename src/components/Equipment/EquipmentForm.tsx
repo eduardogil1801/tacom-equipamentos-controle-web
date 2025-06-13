@@ -70,13 +70,16 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função simplificada para obter a data atual
+  // Função corrigida para obter a data atual local
   const getCurrentDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const now = new Date();
+    // Obter componentes da data local
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    console.log('Data atual calculada:', dateString, 'Timezone offset:', now.getTimezoneOffset());
+    return dateString;
   };
 
   const loadCompanies = useCallback(async () => {
@@ -149,7 +152,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     } else {
       // Para novos equipamentos, definir data atual
       const todayDate = getCurrentDate();
-      console.log('Data atual definida para novo equipamento:', todayDate);
+      console.log('Definindo data atual para novo equipamento:', todayDate);
       setFormData(prev => ({ 
         ...prev, 
         data_entrada: todayDate,
