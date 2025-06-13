@@ -107,6 +107,7 @@ const Dashboard: React.FC = () => {
         company.name.toLowerCase().includes('poa')
       );
       setTacomCompany(tacom || null);
+      console.log('TACOM company found:', tacom);
 
       // Load ALL equipments with company data
       const { data: equipmentsData, error: equipmentsError } = await supabase
@@ -170,15 +171,14 @@ const Dashboard: React.FC = () => {
     setEquipments(filteredEquipments);
   };
 
-  // Calculate statistics
-  const totalEquipments = equipments.length;
-  const inStockEquipments = equipments.filter(eq => !eq.data_saida).length;
+  // Calculate statistics - CORRIGIDO
+  const totalEquipments = allEquipments.length; // Total de todos os equipamentos cadastrados
   
-  // Equipamentos da Tacom apenas
-  const tacomEquipments = tacomCompany 
-    ? equipments.filter(eq => eq.id_empresa === tacomCompany.id && !eq.data_saida)
+  // Em Estoque = equipamentos da TACOM que não saíram (sem data_saida)
+  const tacomEquipmentsInStock = tacomCompany 
+    ? allEquipments.filter(eq => eq.id_empresa === tacomCompany.id && !eq.data_saida)
     : [];
-  const tacomInStockCount = tacomEquipments.length;
+  const inStockEquipments = tacomEquipmentsInStock.length;
 
   // Equipamentos atualmente em manutenção
   const equipmentsInMaintenance = equipments.filter(eq => 
@@ -303,7 +303,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{totalEquipments.toLocaleString('pt-BR')}</div>
             <p className="text-xs text-muted-foreground">
-              {selectedCompany === 'all' ? 'Equipamentos cadastrados' : 'Equipamentos da empresa selecionada'}
+              Equipamentos cadastrados no sistema
             </p>
           </CardContent>
         </Card>
@@ -315,7 +315,9 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{inStockEquipments.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Equipamentos disponíveis</p>
+            <p className="text-xs text-muted-foreground">
+              Equipamentos na TACOM SISTEMAS POA
+            </p>
           </CardContent>
         </Card>
 
