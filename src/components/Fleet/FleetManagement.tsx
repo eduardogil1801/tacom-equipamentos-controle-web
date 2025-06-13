@@ -110,7 +110,10 @@ const FleetManagement: React.FC = () => {
     setEditingFleet(fleet);
     setNomeEmpresa(fleet.nome_empresa);
     setCodOperadora(fleet.cod_operadora);
-    setMesReferencia(fleet.mes_referencia);
+    // Converter data para MM/YYYY
+    const date = new Date(fleet.mes_referencia);
+    const formattedDate = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    setMesReferencia(formattedDate);
     setSimplesSemImagem(fleet.simples_sem_imagem);
     setSimplesComImagem(fleet.simples_com_imagem);
     setSecao(fleet.secao);
@@ -169,13 +172,22 @@ const FleetManagement: React.FC = () => {
     setUsuarioResponsavel('');
   };
 
+  const formatDateForDatabase = (mmYyyy: string) => {
+    const [month, year] = mmYyyy.split('/');
+    return `${year}-${month.padStart(2, '0')}-01`;
+  };
+
   const handleFormSave = async () => {
     try {
       setLoading(true);
+      
+      // Converter MM/YYYY para formato de data do banco
+      const databaseDate = formatDateForDatabase(mesReferencia);
+      
       const fleetDataToSave = {
         nome_empresa: nomeEmpresa,
         cod_operadora: codOperadora,
-        mes_referencia: mesReferencia,
+        mes_referencia: databaseDate,
         simples_sem_imagem: simplesSemImagem,
         simples_com_imagem: simplesComImagem,
         secao: secao,
@@ -233,6 +245,11 @@ const FleetManagement: React.FC = () => {
     XLSX.writeFile(wb, 'frota.xlsx');
   };
 
+  const formatMesReferenciaDisplay = (mesReferencia: string) => {
+    const date = new Date(mesReferencia);
+    return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -269,12 +286,21 @@ const FleetManagement: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="mes_referencia">Mês de Referência</Label>
+                <Label htmlFor="mes_referencia">Mês de Referência (MM/YYYY)</Label>
                 <Input
                   id="mes_referencia"
                   type="text"
+                  placeholder="MM/YYYY"
                   value={mesReferencia}
-                  onChange={(e) => setMesReferencia(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 2) {
+                      setMesReferencia(value);
+                    } else if (value.length <= 6) {
+                      setMesReferencia(value.slice(0, 2) + '/' + value.slice(2));
+                    }
+                  }}
+                  maxLength={7}
                 />
               </div>
               <div>
@@ -426,7 +452,7 @@ const FleetManagement: React.FC = () => {
                 <TableRow key={fleet.id}>
                   <TableCell>{fleet.nome_empresa}</TableCell>
                   <TableCell>{fleet.cod_operadora}</TableCell>
-                  <TableCell>{fleet.mes_referencia}</TableCell>
+                  <TableCell>{formatMesReferenciaDisplay(fleet.mes_referencia)}</TableCell>
                   <TableCell>{fleet.simples_sem_imagem}</TableCell>
                   <TableCell>{fleet.simples_com_imagem}</TableCell>
                   <TableCell>{fleet.secao}</TableCell>

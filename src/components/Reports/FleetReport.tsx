@@ -31,6 +31,12 @@ const formatNumber = (num: number): string => {
   return num.toLocaleString('pt-BR');
 };
 
+// Função para formatar data em MM/YYYY
+const formatMesReferenciaDisplay = (mesReferencia: string) => {
+  const date = new Date(mesReferencia);
+  return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+};
+
 const FleetReport: React.FC = () => {
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [filteredData, setFilteredData] = useState<FleetData[]>([]);
@@ -121,7 +127,7 @@ const FleetReport: React.FC = () => {
     const tableData = filteredData.map(item => [
       item.cod_operadora,
       item.nome_empresa,
-      new Date(item.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' }),
+      formatMesReferenciaDisplay(item.mes_referencia),
       formatNumber(item.simples_com_imagem || 0),
       formatNumber(item.simples_sem_imagem || 0),
       formatNumber(item.secao || 0),
@@ -239,7 +245,7 @@ const FleetReport: React.FC = () => {
                         <div className="text-right">
                           <p className="text-xs text-gray-500">Mês:</p>
                           <p className="text-sm font-medium">
-                            {new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}
+                            {formatMesReferenciaDisplay(fleet.mes_referencia)}
                           </p>
                         </div>
                       </div>
@@ -314,7 +320,7 @@ const FleetReport: React.FC = () => {
                   <tr key={fleet.id} className="border-b hover:bg-gray-50">
                     <td className="p-3 text-sm">{fleet.cod_operadora}</td>
                     <td className="p-3 text-sm">{fleet.nome_empresa}</td>
-                    <td className="p-3 text-sm">{new Date(fleet.mes_referencia).toLocaleDateString('pt-BR', { year: 'numeric', month: '2-digit' })}</td>
+                    <td className="p-3 text-sm">{formatMesReferenciaDisplay(fleet.mes_referencia)}</td>
                     <td className="p-3 text-sm">{formatNumber(fleet.simples_com_imagem || 0)}</td>
                     <td className="p-3 text-sm">{formatNumber(fleet.simples_sem_imagem || 0)}</td>
                     <td className="p-3 text-sm">{formatNumber(fleet.secao || 0)}</td>

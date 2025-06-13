@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,7 +48,14 @@ const MovementPage: React.FC = () => {
   const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [movementType, setMovementType] = useState('');
   const [destinationCompany, setDestinationCompany] = useState('');
-  const [movementDate, setMovementDate] = useState(new Date().toISOString().split('T')[0]);
+  // Corrigir problema de data - usar data local atual
+  const [movementDate, setMovementDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [observations, setObservations] = useState('');
   const [selectedEquipmentType, setSelectedEquipmentType] = useState('');
   const [selectedMaintenanceType, setSelectedMaintenanceType] = useState('');
@@ -86,15 +94,34 @@ const MovementPage: React.FC = () => {
 
   const loadCompanies = async () => {
     try {
+      console.log('Carregando empresas...');
       const { data, error } = await supabase
         .from('empresas')
         .select('id, name')
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar empresas:', error);
+        throw error;
+      }
+      
+      console.log('Empresas carregadas:', data);
       setCompanies(data || []);
+      
+      // Verificar se as empresas específicas estão na lista
+      const catsul = data?.find(c => c.name.toLowerCase().includes('catsul'));
+      const central = data?.find(c => c.name.toLowerCase().includes('central'));
+      
+      if (!catsul) console.log('Empresa Catsul não encontrada');
+      if (!central) console.log('Empresa Central não encontrada');
+      
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar empresas. Verifique se elas estão cadastradas.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -207,6 +234,13 @@ const MovementPage: React.FC = () => {
       setSelectedMaintenanceType('');
       setSelectedStatus('');
       
+      // Resetar data para hoje
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      setMovementDate(`${year}-${month}-${day}`);
+      
     } catch (error) {
       console.error('Erro ao salvar movimentação:', error);
       toast({
@@ -272,6 +306,11 @@ const MovementPage: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+            {companies.length === 0 && (
+              <p className="text-sm text-red-500 mt-1">
+                Nenhuma empresa encontrada. Verifique se as empresas Catsul e Central estão cadastradas.
+              </p>
+            )}
           </div>
 
           <div>
