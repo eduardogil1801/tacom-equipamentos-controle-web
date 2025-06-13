@@ -8,7 +8,6 @@ import { ArrowLeft, AlertTriangle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { format } from 'date-fns';
 
 interface Equipment {
   id: string;
@@ -72,11 +71,19 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const isOperational = user?.userType === 'operacional';
 
   const getTodayBrazilDate = () => {
-    const today = new Date();
-    const todayString = format(today, 'yyyy-MM-dd');
+    // Criar data atual no fuso horário do Brasil (UTC-3)
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const brazilTime = new Date(utc + (-3 * 3600000)); // UTC-3
+    
+    const year = brazilTime.getFullYear();
+    const month = String(brazilTime.getMonth() + 1).padStart(2, '0');
+    const day = String(brazilTime.getDate()).padStart(2, '0');
+    
+    const todayString = `${year}-${month}-${day}`;
     
     console.log('=== DATA BRASIL FINAL ===');
-    console.log('Data atual:', today.toISOString());
+    console.log('Data Brasil:', brazilTime.toISOString());
     console.log('Data formatada para input:', todayString);
     console.log('========================');
     
