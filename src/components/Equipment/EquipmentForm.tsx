@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,15 +71,18 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função corrigida para obter a data atual local no formato correto
+  // Função CORRIGIDA para obter a data atual no fuso horário brasileiro
   const getCurrentDate = () => {
+    // Criar data com fuso horário brasileiro
     const now = new Date();
-    // Usar os métodos locais para obter a data correta
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const brazilTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    
+    const year = brazilTime.getFullYear();
+    const month = String(brazilTime.getMonth() + 1).padStart(2, '0');
+    const day = String(brazilTime.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
-    console.log('Data atual local:', dateString, 'Data completa:', now.toString());
+    
+    console.log('Data atual Brasil:', dateString, 'Hora completa Brasil:', brazilTime.toString());
     return dateString;
   };
 
@@ -150,9 +154,9 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, definir data atual local
+      // Para novos equipamentos, definir data atual do Brasil
       const todayDate = getCurrentDate();
-      console.log('Definindo data atual para novo equipamento:', todayDate);
+      console.log('Definindo data atual brasileira para novo equipamento:', todayDate);
       setFormData(prev => ({ 
         ...prev, 
         data_entrada: todayDate,
