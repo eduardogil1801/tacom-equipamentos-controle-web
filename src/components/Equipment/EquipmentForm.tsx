@@ -71,21 +71,18 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   const isOperational = user?.userType === 'operacional';
 
   const getTodayBrazilDate = () => {
-    // Criar data atual no fuso horário do Brasil (UTC-3)
-    const now = new Date();
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const brazilTime = new Date(utc + (-3 * 3600000)); // UTC-3
-    
-    const year = brazilTime.getFullYear();
-    const month = String(brazilTime.getMonth() + 1).padStart(2, '0');
-    const day = String(brazilTime.getDate()).padStart(2, '0');
+    // Usar a data local do sistema e formatá-la corretamente
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
     
     const todayString = `${year}-${month}-${day}`;
     
-    console.log('=== DATA BRASIL FINAL ===');
-    console.log('Data Brasil:', brazilTime.toISOString());
+    console.log('=== DATA CORRIGIDA ===');
+    console.log('Data atual:', today.toString());
     console.log('Data formatada para input:', todayString);
-    console.log('========================');
+    console.log('=====================');
     
     return todayString;
   };
@@ -158,11 +155,11 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      const todayBrazil = getTodayBrazilDate();
-      console.log('Definindo data para novo equipamento:', todayBrazil);
+      const todayDate = getTodayBrazilDate();
+      console.log('Definindo data para novo equipamento:', todayDate);
       setFormData(prev => ({ 
         ...prev, 
-        data_entrada: todayBrazil,
+        data_entrada: todayDate,
         status: 'disponivel'
       }));
     }

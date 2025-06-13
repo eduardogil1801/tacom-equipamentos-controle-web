@@ -268,12 +268,26 @@ export const useChat = () => {
     try {
       console.log('Enviando mensagem:', { sender: user.id, receiver: receiverId, content: content.substring(0, 50) + '...' });
       
+      // Verificar se o usuário está autenticado no Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('Sessão não encontrada');
+        toast({
+          title: "Erro",
+          description: "Sessão expirada. Faça login novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const messageData = {
         sender_id: user.id,
         receiver_id: receiverId,
         content: content.trim(),
         is_read: false
       };
+
+      console.log('Dados da mensagem a serem inseridos:', messageData);
 
       const { data, error } = await supabase
         .from('chat_messages')
@@ -282,7 +296,7 @@ export const useChat = () => {
         .single();
 
       if (error) {
-        console.error('Erro ao inserir mensagem no banco:', error);
+        console.error('Erro detalhado ao inserir mensagem:', error);
         throw error;
       }
 
@@ -297,7 +311,7 @@ export const useChat = () => {
       console.error('Erro ao enviar mensagem:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível enviar a mensagem. Verifique sua conexão e tente novamente.",
+        description: "Não foi possível enviar a mensagem. Tente novamente.",
         variant: "destructive",
       });
     }
