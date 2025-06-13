@@ -1,11 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,11 +42,13 @@ interface EquipmentFormProps {
 
 const EquipmentForm: React.FC<EquipmentFormProps> = ({
   equipment,
-  companies,
+  companies: initialCompanies,
   onSave,
   onCancel
 }) => {
   const { user } = useAuth();
+  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
   const [formData, setFormData] = useState({
     numero_serie: '',
     tipo: '',
@@ -68,6 +70,39 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   ];
 
   const isOperational = user?.userType === 'operacional';
+
+  const loadCompanies = useCallback(async () => {
+    try {
+      console.log('Carregando empresas no formulário...');
+      setCompaniesLoading(true);
+      
+      const { data, error } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      
+      console.log('Empresas carregadas no formulário:', data?.length || 0);
+      setCompanies(data || []);
+      
+    } catch (error) {
+      console.error('Erro ao carregar empresas no formulário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar empresas",
+        variant: "destructive",
+      });
+    } finally {
+      setCompaniesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!companies || companies.length === 0) {
+      loadCompanies();
+    }
+  }, [companies, loadCompanies]);
 
   useEffect(() => {
     fetchEquipmentTypes();
@@ -359,22 +394,45 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
                 <div className="space-y-2">
                   <Label htmlFor="company">Empresa *</Label>
-                  <Select 
-                    value={formData.id_empresa || ''} 
-                    onValueChange={(value) => handleChange('id_empresa', value)}
-                    disabled={isOperational}
-                  >
-                    <SelectTrigger className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}>
-                      <SelectValue placeholder="Selecione uma empresa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map(company => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {companiesLoading ? (
+                    <div className="flex items-center gap-2 p-2 text-sm text-gray-500">
+                      <AlertCircle className="h-4 w-4 animate-spin" />
+                      Carregando empresas...
+                    </div>
+                  ) : companies.length === 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2 text-sm text-yellow-600 bg-yellow-50 rounded">
+                        <AlertCircle className="h-4 w-4" />
+                        Nenhuma empresa encontrada
+                      </div>
+                      <Button
+                        onClick={loadCompanies}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        type="button"
+                      >
+                        Carregar Empresas
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select 
+                      value={formData.id_empresa || ''} 
+                      onValueChange={(value) => handleChange('id_empresa', value)}
+                      disabled={isOperational}
+                    >
+                      <SelectTrigger className={isOperational ? "bg-gray-100 cursor-not-allowed" : ""}>
+                        <SelectValue placeholder={`Selecione uma empresa (${companies.length} disponíveis)`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map(company => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 {/* Campo Status para usuários operacionais */}

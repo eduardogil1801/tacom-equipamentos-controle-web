@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Save } from 'lucide-react';
+import { Search, Save, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +44,8 @@ const MovementPage: React.FC = () => {
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(true);
+  const [companiesError, setCompaniesError] = useState<string | null>(null);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [movementType, setMovementType] = useState('');
@@ -78,54 +80,55 @@ const MovementPage: React.FC = () => {
     { value: 'indisponivel', label: 'Indisponível' }
   ];
 
-  useEffect(() => {
-    loadCompanies();
-    loadMaintenanceTypes();
-    loadEquipmentTypes();
-  }, []);
-
-  // Auto-definir status quando selecionar tipo de manutenção
-  useEffect(() => {
-    const maintenanceType = maintenanceTypes.find(mt => mt.id === selectedMaintenanceType);
-    if (maintenanceType && maintenanceType.descricao.toLowerCase().includes('tela quebrada')) {
-      setSelectedStatus('indisponivel');
-    }
-  }, [selectedMaintenanceType, maintenanceTypes]);
-
-  const loadCompanies = async () => {
+  const loadCompanies = useCallback(async () => {
     try {
-      console.log('Carregando empresas...');
+      console.log('Iniciando carregamento de empresas...');
+      setCompaniesLoading(true);
+      setCompaniesError(null);
+      
       const { data, error } = await supabase
         .from('empresas')
         .select('id, name')
         .order('name');
 
       if (error) {
-        console.error('Erro ao carregar empresas:', error);
+        console.error('Erro na consulta de empresas:', error);
         throw error;
       }
       
-      console.log('Empresas carregadas:', data);
-      setCompanies(data || []);
+      console.log('Empresas recebidas:', data?.length || 0, 'empresas');
+      console.log('Lista de empresas:', data?.map(c => c.name));
       
-      // Verificar se as empresas específicas estão na lista
-      const catsul = data?.find(c => c.name.toLowerCase().includes('catsul'));
-      const central = data?.find(c => c.name.toLowerCase().includes('central'));
+      if (!data || data.length === 0) {
+        setCompaniesError('Nenhuma empresa encontrada no banco de dados');
+        setCompanies([]);
+        return;
+      }
       
-      if (!catsul) console.log('Empresa Catsul não encontrada');
-      if (!central) console.log('Empresa Central não encontrada');
+      setCompanies(data);
+      
+      // Verificar empresas específicas
+      const catsul = data.find(c => c.name.toLowerCase().includes('catsul'));
+      const central = data.find(c => c.name.toLowerCase().includes('central'));
+      
+      console.log('Empresa CATSUL encontrada:', catsul ? 'SIM' : 'NÃO');
+      console.log('Empresa CENTRAL encontrada:', central ? 'SIM' : 'NÃO');
       
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
+      setCompaniesError(`Erro ao carregar empresas: ${error.message}`);
+      setCompanies([]);
       toast({
         title: "Erro",
         description: "Erro ao carregar empresas. Verifique se elas estão cadastradas.",
         variant: "destructive",
       });
+    } finally {
+      setCompaniesLoading(false);
     }
-  };
+  }, []);
 
-  const loadMaintenanceTypes = async () => {
+  const loadMaintenanceTypes = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('tipos_manutencao')
@@ -138,9 +141,9 @@ const MovementPage: React.FC = () => {
     } catch (error) {
       console.error('Erro ao carregar tipos de manutenção:', error);
     }
-  };
+  }, []);
 
-  const loadEquipmentTypes = async () => {
+  const loadEquipmentTypes = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('tipos_equipamento')
@@ -153,7 +156,21 @@ const MovementPage: React.FC = () => {
     } catch (error) {
       console.error('Erro ao carregar tipos de equipamento:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadCompanies();
+    loadMaintenanceTypes();
+    loadEquipmentTypes();
+  }, [loadCompanies, loadMaintenanceTypes, loadEquipmentTypes]);
+
+  // Auto-definir status quando selecionar tipo de manutenção
+  useEffect(() => {
+    const maintenanceType = maintenanceTypes.find(mt => mt.id === selectedMaintenanceType);
+    if (maintenanceType && maintenanceType.descricao.toLowerCase().includes('tela quebrada')) {
+      setSelectedStatus('indisponivel');
+    }
+  }, [selectedMaintenanceType, maintenanceTypes]);
 
   const handleEquipmentSelection = (equipments: Equipment[]) => {
     setSelectedEquipments(equipments);
@@ -257,6 +274,15 @@ const MovementPage: React.FC = () => {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Movimentações de Equipamentos</h1>
+        <Button
+          onClick={loadCompanies}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <AlertCircle className="h-4 w-4" />
+          Recarregar Empresas
+        </Button>
       </div>
 
       <Card>
@@ -293,23 +319,47 @@ const MovementPage: React.FC = () => {
           </div>
 
           <div>
-            <Label htmlFor="destinationCompany">Empresa Destino {movementType === 'transferencia' ? '*' : ''}</Label>
-            <Select value={destinationCompany} onValueChange={setDestinationCompany}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a empresa destino" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map(company => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {companies.length === 0 && (
-              <p className="text-sm text-red-500 mt-1">
-                Nenhuma empresa encontrada. Verifique se as empresas Catsul e Central estão cadastradas.
-              </p>
+            <Label htmlFor="destinationCompany">
+              Empresa Destino {movementType === 'transferencia' ? '*' : ''}
+            </Label>
+            {companiesLoading ? (
+              <div className="flex items-center gap-2 p-2 text-sm text-gray-500">
+                <AlertCircle className="h-4 w-4 animate-spin" />
+                Carregando empresas...
+              </div>
+            ) : companiesError ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 text-sm text-red-600 bg-red-50 rounded">
+                  <AlertCircle className="h-4 w-4" />
+                  {companiesError}
+                </div>
+                <Button
+                  onClick={loadCompanies}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  Tentar Novamente
+                </Button>
+              </div>
+            ) : companies.length === 0 ? (
+              <div className="flex items-center gap-2 p-2 text-sm text-yellow-600 bg-yellow-50 rounded">
+                <AlertCircle className="h-4 w-4" />
+                Nenhuma empresa encontrada
+              </div>
+            ) : (
+              <Select value={destinationCompany} onValueChange={setDestinationCompany}>
+                <SelectTrigger>
+                  <SelectValue placeholder={`Selecione a empresa destino (${companies.length} disponíveis)`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map(company => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </div>
 
