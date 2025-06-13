@@ -8,13 +8,14 @@ import { ArrowLeft, AlertTriangle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
 
 interface Equipment {
   id: string;
   tipo: string;
   modelo?: string;
   numero_serie: string;
-  data_entrada: string;
+  data_entrance: string;
   data_saida?: string;
   id_empresa: string;
   estado?: string;
@@ -70,26 +71,18 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // FUNÇÃO CORRIGIDA para obter a data atual do Brasil
-  const getCurrentBrazilDate = () => {
-    // Criar nova data no fuso horário de Brasília (UTC-3)
-    const now = new Date();
-    const brazilOffset = -3; // UTC-3 para Brasília
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const brazilTime = new Date(utc + (brazilOffset * 3600000));
+  // FUNÇÃO CORRIGIDA DEFINITIVAMENTE para obter a data atual do Brasil
+  const getTodayBrazilDate = () => {
+    // Usar data atual simples - o navegador já está no fuso correto do usuário
+    const today = new Date();
+    const todayString = format(today, 'yyyy-MM-dd');
     
-    const year = brazilTime.getFullYear();
-    const month = String(brazilTime.getMonth() + 1).padStart(2, '0');
-    const day = String(brazilTime.getDate()).padStart(2, '0');
-    const dateString = `${year}-${month}-${day}`;
+    console.log('=== DATA BRASIL FINAL ===');
+    console.log('Data atual:', today.toISOString());
+    console.log('Data formatada para input:', todayString);
+    console.log('========================');
     
-    console.log('=== DATA BRASIL CORRIGIDA ===');
-    console.log('Data UTC original:', now.toISOString());
-    console.log('Data Brasil calculada:', brazilTime.toISOString());
-    console.log('String de data final:', dateString);
-    console.log('============================');
-    
-    return dateString;
+    return todayString;
   };
 
   const loadCompanies = useCallback(async () => {
@@ -160,8 +153,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, usar a data corrigida do Brasil
-      const todayBrazil = getCurrentBrazilDate();
+      // Para novos equipamentos, usar a data de hoje do Brasil
+      const todayBrazil = getTodayBrazilDate();
       console.log('Definindo data para novo equipamento:', todayBrazil);
       setFormData(prev => ({ 
         ...prev, 
@@ -245,7 +238,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     setLoading(true);
 
     try {
-      // Buscar dados da empresa para auto-preencher estado
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
         .select('name, estado')
@@ -256,7 +248,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
       let finalStatus = formData.status;
       
-      // Se não estamos editando (novo equipamento) ou não é usuário operacional, aplicar regras de status
       if (!equipment || !isOperational) {
         finalStatus = getStatusByCompany(formData.id_empresa);
       }
@@ -272,7 +263,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       };
 
       if (equipment) {
-        // Se é usuário operacional, só pode atualizar o status
         if (isOperational) {
           const { error } = await supabase
             .from('equipamentos')
@@ -289,7 +279,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
           if (error) throw error;
         }
 
-        // Registrar movimentação de atualização
         await supabase
           .from('movimentacoes')
           .insert([{
@@ -313,7 +302,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
         if (error) throw error;
 
-        // Registrar movimentação de entrada automática
         if (newEquipment) {
           await supabase
             .from('movimentacoes')
@@ -378,7 +366,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Primeira coluna */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="numero_serie">Número de Série *</Label>
@@ -456,7 +443,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                   )}
                 </div>
 
-                {/* Campo Status para usuários operacionais */}
                 {isOperational && equipment && (
                   <div className="space-y-2">
                     <Label htmlFor="status">Status *</Label>
@@ -479,7 +465,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                 )}
               </div>
 
-              {/* Segunda coluna */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="modelo">Modelo</Label>
