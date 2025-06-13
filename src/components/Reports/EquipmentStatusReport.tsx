@@ -16,11 +16,12 @@ interface Equipment {
   data_entrada: string;
   data_saida: string | null;
   estado: string | null;
+  status: string;
   empresas?: {
     name: string;
   };
   daysInStock: number;
-  status: 'available' | 'out' | 'long_term' | 'recent';
+  statusCategory: 'available' | 'out' | 'long_term' | 'recent' | 'maintenance' | 'unavailable';
 }
 
 const EquipmentStatusReport: React.FC = () => {
@@ -78,32 +79,41 @@ const EquipmentStatusReport: React.FC = () => {
         const today = new Date();
         
         let daysInStock: number;
-        let status: 'available' | 'out' | 'long_term' | 'recent';
+        let statusCategory: 'available' | 'out' | 'long_term' | 'recent' | 'maintenance' | 'unavailable';
 
         if (exitDate) {
           daysInStock = Math.floor((exitDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
-          status = 'out';
+          statusCategory = 'out';
         } else {
           daysInStock = Math.floor((today.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
-          if (daysInStock <= 7) {
-            status = 'recent';
+          
+          // Categorizar baseado no status atual do equipamento
+          const currentStatus = equipment.status || 'disponivel';
+          
+          if (currentStatus === 'indisponivel' || currentStatus === 'danificado') {
+            statusCategory = 'unavailable';
+          } else if (currentStatus === 'manutencao' || currentStatus === 'aguardando_manutencao') {
+            statusCategory = 'maintenance';
+          } else if (daysInStock <= 7) {
+            statusCategory = 'recent';
           } else if (daysInStock > 90) {
-            status = 'long_term';
+            statusCategory = 'long_term';
           } else {
-            status = 'available';
+            statusCategory = 'available';
           }
         }
 
         return {
           ...equipment,
+          status: equipment.status || 'disponivel',
           daysInStock,
-          status
+          statusCategory
         };
       });
 
       // Filtrar por status se especificado
       const filteredEquipments = (filters.status && filters.status !== 'all')
-        ? processedEquipments.filter(eq => eq.status === filters.status)
+        ? processedEquipments.filter(eq => eq.statusCategory === filters.status)
         : processedEquipments;
 
       setEquipments(filteredEquipments);
@@ -120,16 +130,15 @@ const EquipmentStatusReport: React.FC = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ['Tipo', 'Série', 'Empresa', 'Status', 'Dias em Estoque', 'Data Entrada', 'Data Saída', 'Estado'];
+    const headers = ['Tipo', 'Série', 'Empresa', 'Status Atual', 'Categoria', 'Dias em Estoque', 'Data Entrada', 'Data Saída', 'Estado'];
     const csvContent = [
       headers.join(','),
       ...equipments.map(equipment => [
         `"${equipment.tipo}"`,
         `"${equipment.numero_serie}"`,
         `"${equipment.empresas?.name || 'N/A'}"`,
-        equipment.status === 'available' ? 'Disponível' :
-        equipment.status === 'out' ? 'Retirado' :
-        equipment.status === 'long_term' ? 'Longo Prazo' : 'Recente',
+        `"${getStatusLabel(equipment.status)}"`,
+        `"${getCategoryLabel(equipment.statusCategory)}"`,
         equipment.daysInStock,
         new Date(equipment.data_entrada).toLocaleDateString('pt-BR'),
         equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '',
@@ -153,8 +162,8 @@ const EquipmentStatusReport: React.FC = () => {
     });
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (statusCategory: string) => {
+    switch (statusCategory) {
       case 'available':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'out':
@@ -163,13 +172,17 @@ const EquipmentStatusReport: React.FC = () => {
         return <AlertTriangle className="h-5 w-5 text-orange-600" />;
       case 'recent':
         return <Clock className="h-5 w-5 text-blue-600" />;
+      case 'maintenance':
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+      case 'unavailable':
+        return <XCircle className="h-5 w-5 text-red-700" />;
       default:
         return null;
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
+  const getCategoryLabel = (statusCategory: string) => {
+    switch (statusCategory) {
       case 'available':
         return 'Disponível';
       case 'out':
@@ -178,16 +191,41 @@ const EquipmentStatusReport: React.FC = () => {
         return 'Longo Prazo';
       case 'recent':
         return 'Recente';
+      case 'maintenance':
+        return 'Manutenção';
+      case 'unavailable':
+        return 'Indisponível';
+      default:
+        return 'Desconhecido';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'disponivel':
+        return 'Disponível';
+      case 'manutencao':
+        return 'Manutenção';
+      case 'em_uso':
+        return 'Em Uso';
+      case 'aguardando_manutencao':
+        return 'Aguardando Manutenção';
+      case 'danificado':
+        return 'Danificado';
+      case 'indisponivel':
+        return 'Indisponível';
       default:
         return 'Desconhecido';
     }
   };
 
   const statusCounts = {
-    available: equipments.filter(eq => eq.status === 'available').length,
-    out: equipments.filter(eq => eq.status === 'out').length,
-    long_term: equipments.filter(eq => eq.status === 'long_term').length,
-    recent: equipments.filter(eq => eq.status === 'recent').length,
+    available: equipments.filter(eq => eq.statusCategory === 'available').length,
+    out: equipments.filter(eq => eq.statusCategory === 'out').length,
+    long_term: equipments.filter(eq => eq.statusCategory === 'long_term').length,
+    recent: equipments.filter(eq => eq.statusCategory === 'recent').length,
+    maintenance: equipments.filter(eq => eq.statusCategory === 'maintenance').length,
+    unavailable: equipments.filter(eq => eq.statusCategory === 'unavailable').length,
   };
 
   if (loading) {
@@ -225,6 +263,8 @@ const EquipmentStatusReport: React.FC = () => {
                   <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="available">Disponível</SelectItem>
                   <SelectItem value="out">Retirado</SelectItem>
+                  <SelectItem value="maintenance">Manutenção</SelectItem>
+                  <SelectItem value="unavailable">Indisponível</SelectItem>
                   <SelectItem value="long_term">Longo Prazo ({'>'}90 dias)</SelectItem>
                   <SelectItem value="recent">Recente (≤7 dias)</SelectItem>
                 </SelectContent>
@@ -260,51 +300,75 @@ const EquipmentStatusReport: React.FC = () => {
       </Card>
 
       {/* Cards de Status */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Disponíveis</p>
-                <p className="text-2xl font-bold text-green-600">{statusCounts.available}</p>
+                <p className="text-xs font-medium text-gray-600">Disponíveis</p>
+                <p className="text-xl font-bold text-green-600">{statusCounts.available}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Retirados</p>
-                <p className="text-2xl font-bold text-red-600">{statusCounts.out}</p>
+                <p className="text-xs font-medium text-gray-600">Retirados</p>
+                <p className="text-xl font-bold text-red-600">{statusCounts.out}</p>
               </div>
-              <XCircle className="h-8 w-8 text-red-600" />
+              <XCircle className="h-6 w-6 text-red-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Longo Prazo</p>
-                <p className="text-2xl font-bold text-orange-600">{statusCounts.long_term}</p>
+                <p className="text-xs font-medium text-gray-600">Manutenção</p>
+                <p className="text-xl font-bold text-yellow-600">{statusCounts.maintenance}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-orange-600" />
+              <AlertTriangle className="h-6 w-6 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Recentes</p>
-                <p className="text-2xl font-bold text-blue-600">{statusCounts.recent}</p>
+                <p className="text-xs font-medium text-gray-600">Indisponíveis</p>
+                <p className="text-xl font-bold text-red-700">{statusCounts.unavailable}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-600" />
+              <XCircle className="h-6 w-6 text-red-700" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-600">Longo Prazo</p>
+                <p className="text-xl font-bold text-orange-600">{statusCounts.long_term}</p>
+              </div>
+              <AlertTriangle className="h-6 w-6 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-600">Recentes</p>
+                <p className="text-xl font-bold text-blue-600">{statusCounts.recent}</p>
+              </div>
+              <Clock className="h-6 w-6 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -320,7 +384,8 @@ const EquipmentStatusReport: React.FC = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Status Categoria</th>
+                  <th className="text-left p-3">Status Atual</th>
                   <th className="text-left p-3">Tipo</th>
                   <th className="text-left p-3">Série</th>
                   <th className="text-left p-3">Empresa</th>
@@ -334,9 +399,12 @@ const EquipmentStatusReport: React.FC = () => {
                   <tr key={equipment.id} className="border-b hover:bg-gray-50">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(equipment.status)}
-                        <span className="text-sm">{getStatusLabel(equipment.status)}</span>
+                        {getStatusIcon(equipment.statusCategory)}
+                        <span className="text-sm">{getCategoryLabel(equipment.statusCategory)}</span>
                       </div>
+                    </td>
+                    <td className="p-3">
+                      <span className="text-sm">{getStatusLabel(equipment.status)}</span>
                     </td>
                     <td className="p-3">{equipment.tipo}</td>
                     <td className="p-3 font-mono">{equipment.numero_serie}</td>

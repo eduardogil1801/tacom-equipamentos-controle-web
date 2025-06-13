@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,22 +170,27 @@ const EquipmentList: React.FC = () => {
     }
   };
 
+  // CORREÇÃO: Função melhorada para mostrar status correto com cores corretas
   const getStatusBadge = (equipment: Equipment) => {
     const status = equipment.status || 'disponivel';
     
+    console.log('Status do equipamento:', equipment.numero_serie, 'Status:', status);
+    
     switch (status) {
       case 'disponivel':
-        return <Badge className="bg-green-500 text-white">Disponível</Badge>;
+        return <Badge className="bg-green-500 text-white hover:bg-green-600">Disponível</Badge>;
       case 'manutencao':
-        return <Badge className="bg-yellow-500 text-white">Manutenção</Badge>;
+        return <Badge className="bg-yellow-500 text-white hover:bg-yellow-600">Manutenção</Badge>;
       case 'em_uso':
-        return <Badge className="bg-blue-500 text-white">Em Uso</Badge>;
+        return <Badge className="bg-blue-500 text-white hover:bg-blue-600">Em Uso</Badge>;
       case 'aguardando_manutencao':
-        return <Badge className="bg-orange-500 text-white">Aguardando Manutenção</Badge>;
+        return <Badge className="bg-orange-500 text-white hover:bg-orange-600">Aguardando Manutenção</Badge>;
       case 'danificado':
-        return <Badge className="bg-red-500 text-white">Danificado</Badge>;
+        return <Badge className="bg-red-500 text-white hover:bg-red-600">Danificado</Badge>;
+      case 'indisponivel':
+        return <Badge className="bg-red-700 text-white hover:bg-red-800">Indisponível</Badge>;
       default:
-        return <Badge variant="default">Disponível</Badge>;
+        return <Badge className="bg-gray-500 text-white hover:bg-gray-600">Status Desconhecido</Badge>;
     }
   };
 

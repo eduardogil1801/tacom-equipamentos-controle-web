@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,10 +52,9 @@ const MovementPage: React.FC = () => {
   // Corrigir problema de data - usar data local atual
   const [movementDate, setMovementDate] = useState(() => {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const timezoneOffset = today.getTimezoneOffset() * 60000;
+    const localDate = new Date(today.getTime() - timezoneOffset);
+    return localDate.toISOString().split('T')[0];
   });
   const [observations, setObservations] = useState('');
   const [selectedEquipmentType, setSelectedEquipmentType] = useState('');
@@ -198,6 +196,13 @@ const MovementPage: React.FC = () => {
 
     setLoading(true);
     try {
+      console.log('=== SALVANDO MOVIMENTAÇÃO ===');
+      console.log('Tipo:', movementType);
+      console.log('Empresa destino:', destinationCompany);
+      console.log('Equipamentos selecionados:', selectedEquipments.length);
+      console.log('Status selecionado:', selectedStatus);
+
+      // Registrar movimentações
       const movements = selectedEquipments.map(equipment => ({
         id_equipamento: equipment.id,
         tipo_movimento: movementType,
@@ -213,28 +218,37 @@ const MovementPage: React.FC = () => {
 
       if (error) throw error;
 
-      // Atualizar status dos equipamentos se necessário
+      // Atualizações no equipamento baseadas no tipo de movimentação
+      const equipmentUpdates: any = {};
+      
       if (movementType === 'saida') {
-        await supabase
-          .from('equipamentos')
-          .update({ data_saida: movementDate })
-          .in('id', selectedEquipments.map(eq => eq.id));
+        equipmentUpdates.data_saida = movementDate;
       }
 
-      // Se for transferência, atualizar a empresa do equipamento
+      // CORREÇÃO PRINCIPAL: Se for transferência, atualizar a empresa do equipamento
       if (movementType === 'transferencia' && destinationCompany) {
-        await supabase
-          .from('equipamentos')
-          .update({ id_empresa: destinationCompany })
-          .in('id', selectedEquipments.map(eq => eq.id));
+        console.log('Atualizando empresa dos equipamentos para:', destinationCompany);
+        equipmentUpdates.id_empresa = destinationCompany;
       }
 
       // Atualizar status se foi definido
       if (selectedStatus) {
-        await supabase
+        console.log('Atualizando status dos equipamentos para:', selectedStatus);
+        equipmentUpdates.status = selectedStatus;
+      }
+
+      // Aplicar atualizações se houver
+      if (Object.keys(equipmentUpdates).length > 0) {
+        console.log('Aplicando atualizações:', equipmentUpdates);
+        const { error: updateError } = await supabase
           .from('equipamentos')
-          .update({ status: selectedStatus })
+          .update(equipmentUpdates)
           .in('id', selectedEquipments.map(eq => eq.id));
+
+        if (updateError) {
+          console.error('Erro ao atualizar equipamentos:', updateError);
+          throw updateError;
+        }
       }
 
       toast({
@@ -253,10 +267,9 @@ const MovementPage: React.FC = () => {
       
       // Resetar data para hoje
       const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      setMovementDate(`${year}-${month}-${day}`);
+      const timezoneOffset = today.getTimezoneOffset() * 60000;
+      const localDate = new Date(today.getTime() - timezoneOffset);
+      setMovementDate(localDate.toISOString().split('T')[0]);
       
     } catch (error) {
       console.error('Erro ao salvar movimentação:', error);

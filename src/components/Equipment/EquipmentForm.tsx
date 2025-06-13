@@ -65,23 +65,24 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     { value: 'manutencao', label: 'Manutenção' },
     { value: 'em_uso', label: 'Em Uso' },
     { value: 'aguardando_manutencao', label: 'Aguardando Manutenção' },
-    { value: 'danificado', label: 'Danificado' }
+    { value: 'danificado', label: 'Danificado' },
+    { value: 'indisponivel', label: 'Indisponível' }
   ];
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função para obter data atual no formato YYYY-MM-DD usando Date nativo
+  // Função para obter data atual no formato correto
   const getCurrentDate = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const dateString = `${year}-${month}-${day}`;
+    // Ajustar para timezone local
+    const timezoneOffset = now.getTimezoneOffset() * 60000;
+    const localDate = new Date(now.getTime() - timezoneOffset);
+    const dateString = localDate.toISOString().split('T')[0];
     
-    console.log('=== DATA ATUAL ===');
-    console.log('Data objeto:', now);
+    console.log('=== DATA ATUAL CORRIGIDA ===');
+    console.log('Data local:', localDate);
     console.log('Data formatada:', dateString);
-    console.log('==================');
+    console.log('============================');
     
     return dateString;
   };

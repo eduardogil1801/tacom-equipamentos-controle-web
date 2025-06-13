@@ -266,7 +266,9 @@ export const useChat = () => {
     }
 
     try {
-      console.log('Enviando mensagem:', { sender: user.id, receiver: receiverId, content: content.substring(0, 50) + '...' });
+      console.log('=== ENVIANDO MENSAGEM (SEM RLS) ===');
+      console.log('De:', user.id, 'Para:', receiverId);
+      console.log('Conteúdo:', content.substring(0, 50) + '...');
       
       const messageData = {
         sender_id: user.id,
@@ -275,8 +277,9 @@ export const useChat = () => {
         is_read: false
       };
 
-      console.log('Dados da mensagem a serem inseridos:', messageData);
+      console.log('Dados da mensagem:', messageData);
 
+      // Como RLS está desabilitado, a inserção deve funcionar normalmente
       const { data, error } = await supabase
         .from('chat_messages')
         .insert(messageData)
@@ -299,7 +302,7 @@ export const useChat = () => {
       console.error('Erro ao enviar mensagem:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível enviar a mensagem. Tente novamente.",
+        description: `Não foi possível enviar a mensagem: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -327,7 +330,7 @@ export const useChat = () => {
       } else {
         console.log('Conversa criada/atualizada com sucesso');
       }
-    } catch (error) {
+    }catch (error) {
       console.error('Erro em createOrUpdateConversation:', error);
     }
   };
