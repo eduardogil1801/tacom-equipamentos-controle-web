@@ -70,14 +70,15 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função simples para obter a data atual no formato correto
+  // Função corrigida para obter a data atual local no formato correto
   const getCurrentDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+    const now = new Date();
+    // Usar os métodos locais para obter a data correta
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
-    console.log('Data atual:', dateString);
+    console.log('Data atual local:', dateString, 'Data completa:', now.toString());
     return dateString;
   };
 
@@ -149,7 +150,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, definir data atual
+      // Para novos equipamentos, definir data atual local
       const todayDate = getCurrentDate();
       console.log('Definindo data atual para novo equipamento:', todayDate);
       setFormData(prev => ({ 
