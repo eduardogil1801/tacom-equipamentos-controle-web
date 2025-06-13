@@ -13,7 +13,8 @@ import {
   Users, 
   Settings, 
   LogOut,
-  ArrowRightLeft
+  ArrowRightLeft,
+  History
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -40,7 +41,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
   const allModules = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, page: 'dashboard' },
     { key: 'equipments', label: 'Equipamentos', icon: Package, page: 'equipment' },
-    { key: 'movements', label: 'Movimentação', icon: ArrowRightLeft, page: 'movements' },
+    { key: 'movements', label: 'Movimentações', icon: ArrowRightLeft, page: 'movements' },
+    { key: 'history', label: 'Histórico', icon: History, page: 'history' },
     { key: 'companies', label: 'Empresas', icon: Building2, page: 'companies' },
     { key: 'reports', label: 'Relatórios', icon: FileText, page: 'reports' },
     { key: 'fleet', label: 'Frota', icon: Truck, page: 'fleet' },
@@ -57,8 +59,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
     }
     
     // Para usuários operacionais, verificar permissão de visualização
-    // Movimentação usa a mesma permissão de equipamentos
-    const moduleKey = module.key === 'movements' ? 'equipments' : module.key;
+    // Movimentação e Histórico usam a mesma permissão de equipamentos
+    const moduleKey = (module.key === 'movements' || module.key === 'history') ? 'equipments' : module.key;
     return checkPermission(moduleKey, 'view');
   });
 
