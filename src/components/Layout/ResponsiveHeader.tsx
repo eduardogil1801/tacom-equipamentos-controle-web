@@ -40,7 +40,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
   const allModules = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, page: 'dashboard' },
     { key: 'equipments', label: 'Equipamentos', icon: Package, page: 'equipment' },
-    { key: 'equipments', label: 'Movimentação', icon: ArrowRightLeft, page: 'movements' },
+    { key: 'movements', label: 'Movimentação', icon: ArrowRightLeft, page: 'movements' },
     { key: 'companies', label: 'Empresas', icon: Building2, page: 'companies' },
     { key: 'reports', label: 'Relatórios', icon: FileText, page: 'reports' },
     { key: 'fleet', label: 'Frota', icon: Truck, page: 'fleet' },
@@ -57,7 +57,9 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
     }
     
     // Para usuários operacionais, verificar permissão de visualização
-    return checkPermission(module.key, 'view');
+    // Movimentação usa a mesma permissão de equipamentos
+    const moduleKey = module.key === 'movements' ? 'equipments' : module.key;
+    return checkPermission(moduleKey, 'view');
   });
 
   const getPageTitle = (page: string) => {
