@@ -1,4 +1,5 @@
 
+
 -- Corrigir políticas RLS do chat definitivamente
 -- Remover todas as políticas existentes
 DROP POLICY IF EXISTS "Users can view their own messages" ON public.chat_messages;
@@ -35,3 +36,4 @@ CREATE POLICY "Allow all authenticated users to create conversations" ON public.
 
 CREATE POLICY "Allow all authenticated users to update conversations" ON public.chat_conversations
   FOR UPDATE USING (auth.role() = 'authenticated');
+
