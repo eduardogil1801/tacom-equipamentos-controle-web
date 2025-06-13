@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +40,60 @@ export const useChat = () => {
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const channelRef = useRef<any>(null);
+
+  // Função para tocar som de notificação
+  const playNotificationSound = () => {
+    try {
+      // Criar um som usando Web Audio API
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+      
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('Não foi possível reproduzir som de notificação:', error);
+    }
+  };
+
+  // Função para mostrar notificação na aba do navegador
+  const showBrowserNotification = (message: string) => {
+    // Alterar o título da aba
+    const originalTitle = document.title;
+    document.title = '💬 Nova mensagem - TACOM';
+    
+    // Restaurar título original após 5 segundos
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 5000);
+
+    // Tentar mostrar notificação do navegador se permitido
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Nova mensagem no chat', {
+        body: message,
+        icon: '/favicon.ico'
+      });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification('Nova mensagem no chat', {
+            body: message,
+            icon: '/favicon.ico'
+          });
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -276,6 +329,12 @@ export const useChat = () => {
         },
         (payload) => {
           console.log('New message received:', payload);
+          
+          // Tocar som de notificação
+          playNotificationSound();
+          
+          // Mostrar notificação na aba
+          showBrowserNotification(payload.new.content);
           
           // Se é para o usuário selecionado, adicionar à lista de mensagens
           if (selectedUser && payload.new.sender_id === selectedUser.id) {

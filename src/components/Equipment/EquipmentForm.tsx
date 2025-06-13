@@ -70,16 +70,14 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função para obter a data atual no fuso horário de Brasília
+  // Função simples para obter a data atual no formato correto
   const getCurrentDate = () => {
-    const now = new Date();
-    // Criar data no fuso horário de Brasília (UTC-3)
-    const brasiliaDate = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-    const year = brasiliaDate.getFullYear();
-    const month = String(brasiliaDate.getMonth() + 1).padStart(2, '0');
-    const day = String(brasiliaDate.getDate()).padStart(2, '0');
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
-    console.log('Data atual Brasil:', dateString, 'Data local:', now.toLocaleDateString('pt-BR'));
+    console.log('Data atual:', dateString);
     return dateString;
   };
 
@@ -151,7 +149,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, definir data atual do Brasil
+      // Para novos equipamentos, definir data atual
       const todayDate = getCurrentDate();
       console.log('Definindo data atual para novo equipamento:', todayDate);
       setFormData(prev => ({ 
