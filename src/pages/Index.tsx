@@ -43,8 +43,8 @@ const Index = () => {
     const modulePermissions = {
       'dashboard': 'dashboard',
       'equipment': 'equipments',
-      'movements': 'equipments',
-      'new-movement': 'equipments',
+      'movements': 'equipments', // Histórico - ver movimentações
+      'new-movement': 'equipments', // Movimentações - criar movimentações
       'fleet': 'fleet',
       'companies': 'companies',
       'protocol': 'protocol',
@@ -82,11 +82,13 @@ const Index = () => {
         }
         return <EquipmentList />;
       case 'movements':
+        // Histórico - mostrar todas as movimentações
         if (!hasPermission('equipments')) {
           return renderNoPermission();
         }
         return <EquipmentMovement />;
       case 'new-movement':
+        // Movimentações - fazer nova movimentação
         if (!hasPermission('equipments')) {
           return renderNoPermission();
         }

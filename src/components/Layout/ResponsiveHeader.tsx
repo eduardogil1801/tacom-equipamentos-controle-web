@@ -41,8 +41,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
   const allModules = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, page: 'dashboard' },
     { key: 'equipments', label: 'Equipamentos', icon: Package, page: 'equipment' },
-    { key: 'movements', label: 'Movimentações', icon: ArrowRightLeft, page: 'movements' },
-    { key: 'history', label: 'Histórico', icon: History, page: 'history' },
+    { key: 'movements', label: 'Movimentações', icon: ArrowRightLeft, page: 'new-movement' },
+    { key: 'history', label: 'Histórico', icon: History, page: 'movements' },
     { key: 'companies', label: 'Empresas', icon: Building2, page: 'companies' },
     { key: 'reports', label: 'Relatórios', icon: FileText, page: 'reports' },
     { key: 'fleet', label: 'Frota', icon: Truck, page: 'fleet' },
