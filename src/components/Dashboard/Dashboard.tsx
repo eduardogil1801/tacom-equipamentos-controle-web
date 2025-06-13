@@ -61,6 +61,12 @@ const Dashboard: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState('all');
   const [selectedEquipmentType, setSelectedEquipmentType] = useState('all');
 
+  // Helper function to ensure valid numbers for charts
+  const ensureValidNumber = (value: any): number => {
+    const num = Number(value);
+    return isNaN(num) || !isFinite(num) ? 0 : num;
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -192,9 +198,9 @@ const Dashboard: React.FC = () => {
   const companyData = companies
     .map(company => {
       const companyEquipments = allEquipments.filter(eq => eq.id_empresa === company.id);
-      const total = companyEquipments.length;
-      const emEstoque = companyEquipments.filter(eq => !eq.data_saida).length;
-      const retirados = total - emEstoque;
+      const total = ensureValidNumber(companyEquipments.length);
+      const emEstoque = ensureValidNumber(companyEquipments.filter(eq => !eq.data_saida).length);
+      const retirados = ensureValidNumber(total - emEstoque);
       
       return {
         name: company.name.length > 25 ? company.name.substring(0, 25) + '...' : company.name,
@@ -214,13 +220,15 @@ const Dashboard: React.FC = () => {
   const equipmentTypeData = equipments
     .filter(eq => !eq.data_saida) // Apenas equipamentos em estoque
     .reduce((acc: any[], equipment) => {
+      if (!equipment.tipo) return acc; // Skip if no tipo
+      
       const existing = acc.find(item => item.tipo === equipment.tipo);
       if (existing) {
-        existing.quantidade += 1;
+        existing.quantidade = ensureValidNumber(existing.quantidade + 1);
       } else {
         acc.push({ 
           tipo: equipment.tipo, 
-          quantidade: 1,
+          quantidade: ensureValidNumber(1),
           empresa: equipment.empresas?.name
         });
       }
@@ -232,20 +240,21 @@ const Dashboard: React.FC = () => {
 
   // Data for pie chart - Status por tipo de equipamento
   const pieChartData = equipments
-    .filter(eq => !eq.data_saida) // Apenas equipamentos em estoque
+    .filter(eq => !eq.data_saida && eq.tipo) // Apenas equipamentos em estoque com tipo válido
     .reduce((acc: any[], equipment) => {
       const existing = acc.find(item => item.name === equipment.tipo);
       if (existing) {
-        existing.value += 1;
+        existing.value = ensureValidNumber(existing.value + 1);
       } else {
         acc.push({ 
           name: equipment.tipo, 
-          value: 1, 
+          value: ensureValidNumber(1), 
           color: `hsl(${acc.length * 45}, 70%, 50%)` 
         });
       }
       return acc;
     }, [])
+    .filter(item => item.value > 0) // Remove items with 0 or invalid values
     .sort((a, b) => b.value - a.value);
 
   // Maintenance types data
@@ -260,12 +269,18 @@ const Dashboard: React.FC = () => {
     
     const existing = acc.find(item => item.name === tipo);
     if (existing) {
-      existing.value += 1;
+      existing.value = ensureValidNumber(existing.value + 1);
     } else {
-      acc.push({ name: tipo, value: 1, color: `hsl(${acc.length * 45}, 70%, 50%)` });
+      acc.push({ 
+        name: tipo, 
+        value: ensureValidNumber(1), 
+        color: `hsl(${acc.length * 45}, 70%, 50%)` 
+      });
     }
     return acc;
-  }, []).sort((a, b) => b.value - a.value);
+  }, [])
+  .filter(item => item.value > 0) // Remove items with 0 or invalid values
+  .sort((a, b) => b.value - a.value);
 
   const selectedCompanyName = companies.find(c => c.id === selectedCompany)?.name;
 
@@ -351,13 +366,13 @@ const Dashboard: React.FC = () => {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value.toLocaleString('pt-BR')}`}
+                    label={({ name, value }) => `${name}: ${ensureValidNumber(value).toLocaleString('pt-BR')}`}
                   >
                     {pieChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [Number(value).toLocaleString('pt-BR'), '']} />
+                  <Tooltip formatter={(value) => [ensureValidNumber(value).toLocaleString('pt-BR'), '']} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -387,13 +402,13 @@ const Dashboard: React.FC = () => {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
+                    label={({ name, value }) => `${name}: ${ensureValidNumber(value)}`}
                   >
                     {maintenanceTypesData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={(value) => [ensureValidNumber(value), '']} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
