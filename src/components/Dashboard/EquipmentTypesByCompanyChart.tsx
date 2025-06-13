@@ -22,11 +22,22 @@ const EquipmentTypesByCompanyChart: React.FC<EquipmentTypesByCompanyChartProps> 
 }) => {
   console.log('EquipmentTypesByCompanyChart data:', data);
 
+  // Ensure all data is valid
+  const validData = data.filter(item => 
+    item && 
+    typeof item === 'object' && 
+    typeof item.quantidade === 'number' && 
+    !isNaN(item.quantidade) && 
+    isFinite(item.quantidade) &&
+    item.quantidade > 0 &&
+    item.tipo
+  );
+
   const title = selectedCompany === 'all' 
     ? 'Tipos de Equipamentos (Geral)' 
     : `Tipos de Equipamentos - ${companyName || 'Empresa Selecionada'}`;
 
-  if (data.length === 0) {
+  if (validData.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -49,16 +60,16 @@ const EquipmentTypesByCompanyChart: React.FC<EquipmentTypesByCompanyChartProps> 
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={Math.max(300, data.length * 40)}>
+        <ResponsiveContainer width="100%" height={Math.max(300, validData.length * 40)}>
           <BarChart 
-            data={data} 
+            data={validData} 
             layout="horizontal"
             margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis 
               type="number" 
-              tickFormatter={(value) => value.toLocaleString('pt-BR')}
+              tickFormatter={(value) => Number(value || 0).toLocaleString('pt-BR')}
               domain={[0, 'dataMax']}
             />
             <YAxis 
@@ -69,7 +80,8 @@ const EquipmentTypesByCompanyChart: React.FC<EquipmentTypesByCompanyChartProps> 
               interval={0}
             />
             <Tooltip 
-              formatter={(value) => [Number(value).toLocaleString('pt-BR'), 'Quantidade']}
+              formatter={(value) => [Number(value || 0).toLocaleString('pt-BR'), 'Quantidade']}
+              labelFormatter={(label) => String(label || '')}
             />
             <Bar 
               dataKey="quantidade" 

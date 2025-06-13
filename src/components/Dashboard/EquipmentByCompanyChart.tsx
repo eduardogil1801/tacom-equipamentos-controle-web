@@ -18,7 +18,19 @@ interface EquipmentByCompanyChartProps {
 const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data }) => {
   console.log('EquipmentByCompanyChart data:', data);
 
-  if (data.length === 0) {
+  // Ensure all data is valid
+  const validData = data.filter(item => 
+    item && 
+    typeof item === 'object' && 
+    typeof item['Em Estoque'] === 'number' && 
+    typeof item['Retirados'] === 'number' &&
+    !isNaN(item['Em Estoque']) && 
+    !isNaN(item['Retirados']) &&
+    isFinite(item['Em Estoque']) && 
+    isFinite(item['Retirados'])
+  );
+
+  if (validData.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -41,16 +53,16 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
         <CardTitle>Equipamentos por Empresa</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={Math.max(400, data.length * 50)}>
+        <ResponsiveContainer width="100%" height={Math.max(400, validData.length * 50)}>
           <BarChart 
-            data={data} 
+            data={validData} 
             layout="horizontal"
             margin={{ top: 20, right: 30, left: 200, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis 
               type="number" 
-              tickFormatter={(value) => value.toLocaleString('pt-BR')}
+              tickFormatter={(value) => Number(value).toLocaleString('pt-BR')}
               domain={[0, 'dataMax']}
             />
             <YAxis 
@@ -62,10 +74,10 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
             />
             <Tooltip 
               labelFormatter={(label) => {
-                const item = data.find(d => d.name === label);
-                return item ? item.fullName : label;
+                const item = validData.find(d => d.name === label);
+                return item ? item.fullName : String(label);
               }}
-              formatter={(value, name) => [Number(value).toLocaleString('pt-BR'), name]}
+              formatter={(value, name) => [Number(value || 0).toLocaleString('pt-BR'), String(name)]}
             />
             <Legend />
             <Bar 
