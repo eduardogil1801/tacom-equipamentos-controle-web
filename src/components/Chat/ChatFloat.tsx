@@ -15,6 +15,7 @@ const ChatFloat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messageText, setMessageText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -37,11 +38,19 @@ const ChatFloat: React.FC = () => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedUser) return;
+    if (!messageText.trim() || !selectedUser || isSending) return;
     
-    console.log('Sending message from ChatFloat:', { selectedUser: selectedUser.id, content: messageText });
-    await sendMessage(selectedUser.id, messageText);
-    setMessageText('');
+    setIsSending(true);
+    console.log('Enviando mensagem do ChatFloat:', { selectedUser: selectedUser.id, content: messageText });
+    
+    try {
+      await sendMessage(selectedUser.id, messageText);
+      setMessageText('');
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -68,7 +77,7 @@ const ChatFloat: React.FC = () => {
 
   return (
     <>
-      {/* Botão flutuante - só aparece quando não há conversa ativa ou chat fechado */}
+      {/* Botão flutuante */}
       {(!selectedUser || !isOpen) && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
@@ -136,7 +145,7 @@ const ChatFloat: React.FC = () => {
           {!isMinimized && (
             <div className="h-full flex flex-col" style={{ height: 'calc(100% - 60px)' }}>
               {selectedUser ? (
-                // Área de conversa
+                /* Área de conversa */
                 <div className="flex flex-col h-full">
                   {/* Mensagens */}
                   <ScrollArea className="flex-1 p-4">
@@ -177,10 +186,11 @@ const ChatFloat: React.FC = () => {
                         onKeyPress={handleKeyPress}
                         placeholder="Digite sua mensagem..."
                         className="flex-1"
+                        disabled={isSending}
                       />
                       <Button
                         onClick={handleSendMessage}
-                        disabled={!messageText.trim()}
+                        disabled={!messageText.trim() || isSending}
                         size="icon"
                         className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
                       >

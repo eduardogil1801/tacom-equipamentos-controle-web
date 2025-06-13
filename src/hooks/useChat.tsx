@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,7 +45,6 @@ export const useChat = () => {
   // Função para tocar som de notificação
   const playNotificationSound = () => {
     try {
-      // Criar um som usando Web Audio API
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -68,16 +68,13 @@ export const useChat = () => {
 
   // Função para mostrar notificação na aba do navegador
   const showBrowserNotification = (message: string) => {
-    // Alterar o título da aba
     const originalTitle = document.title;
     document.title = '💬 Nova mensagem - TACOM';
     
-    // Restaurar título original após 5 segundos
     setTimeout(() => {
       document.title = originalTitle;
     }, 5000);
 
-    // Tentar mostrar notificação do navegador se permitido
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Nova mensagem no chat', {
         body: message,
@@ -102,14 +99,13 @@ export const useChat = () => {
       subscribeToMessages();
     }
 
-    // Cleanup function
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [user?.id]); // Only depend on user.id to prevent unnecessary re-runs
+  }, [user?.id]);
 
   const loadUsers = async () => {
     try {
@@ -132,7 +128,6 @@ export const useChat = () => {
     try {
       setLoading(true);
       
-      // Buscar conversas onde o usuário atual participa
       const { data: conversationsData, error: convError } = await supabase
         .from('chat_conversations')
         .select('*')
@@ -141,12 +136,10 @@ export const useChat = () => {
 
       if (convError) throw convError;
 
-      // Para cada conversa, buscar o outro usuário e a última mensagem
       const conversationsWithDetails = await Promise.all(
         (conversationsData || []).map(async (conv) => {
           const otherUserId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id;
           
-          // Buscar dados do outro usuário
           const { data: userData, error: userError } = await supabase
             .from('usuarios')
             .select('id, nome, sobrenome, email, ativo')
@@ -158,7 +151,6 @@ export const useChat = () => {
             return null;
           }
 
-          // Buscar última mensagem
           const { data: lastMessage } = await supabase
             .from('chat_messages')
             .select('*')
@@ -167,7 +159,6 @@ export const useChat = () => {
             .limit(1)
             .maybeSingle();
 
-          // Contar mensagens não lidas
           const { count: unreadCount } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact', head: true })
@@ -187,7 +178,6 @@ export const useChat = () => {
       const validConversations = conversationsWithDetails.filter(conv => conv !== null) as Conversation[];
       setConversations(validConversations);
       
-      // Calcular total de mensagens não lidas
       const totalUnread = validConversations.reduce((sum, conv) => sum + conv.unread_count, 0);
       setUnreadCount(totalUnread);
       
@@ -211,7 +201,6 @@ export const useChat = () => {
       if (error) throw error;
       setMessages(data || []);
 
-      // Marcar mensagens como lidas
       await markMessagesAsRead(otherUserId);
       
     } catch (error) {
@@ -230,7 +219,7 @@ export const useChat = () => {
     }
 
     try {
-      console.log('Sending message:', { sender_id: user.id, receiver_id: receiverId, content });
+      console.log('Enviando mensagem:', { sender_id: user.id, receiver_id: receiverId, content });
       
       const messageData = {
         sender_id: user.id,
@@ -245,26 +234,23 @@ export const useChat = () => {
         .single();
 
       if (error) {
-        console.error('Error inserting message:', error);
+        console.error('Erro ao inserir mensagem:', error);
         throw error;
       }
 
-      console.log('Message sent successfully:', data);
+      console.log('Mensagem enviada com sucesso:', data);
       
-      // Adicionar mensagem imediatamente à lista local
       setMessages(prev => [...prev, data]);
       
-      // Criar ou atualizar conversa
       await createOrUpdateConversation(receiverId);
       
-      // Recarregar conversas para atualizar a lista
       loadConversations();
       
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Erro ao enviar mensagem:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível enviar a mensagem.",
+        description: "Não foi possível enviar a mensagem. Verifique sua conexão e tente novamente.",
         variant: "destructive",
       });
     }
@@ -286,10 +272,10 @@ export const useChat = () => {
         });
 
       if (error) {
-        console.error('Error creating/updating conversation:', error);
+        console.error('Erro ao criar/atualizar conversa:', error);
       }
     } catch (error) {
-      console.error('Error in createOrUpdateConversation:', error);
+      console.error('Erro em createOrUpdateConversation:', error);
     }
   };
 
@@ -306,11 +292,10 @@ export const useChat = () => {
 
       if (error) throw error;
       
-      // Atualizar contador de não lidas
       loadConversations();
       
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      console.error('Erro ao marcar mensagens como lidas:', error);
     }
   };
 
@@ -328,27 +313,21 @@ export const useChat = () => {
           filter: `receiver_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('New message received:', payload);
+          console.log('Nova mensagem recebida:', payload);
           
-          // Tocar som de notificação
           playNotificationSound();
-          
-          // Mostrar notificação na aba
           showBrowserNotification(payload.new.content);
           
-          // Se é para o usuário selecionado, adicionar à lista de mensagens
           if (selectedUser && payload.new.sender_id === selectedUser.id) {
             setMessages(prev => [...prev, payload.new as ChatMessage]);
             markMessagesAsRead(selectedUser.id);
           } else {
-            // Mostrar notificação
             toast({
               title: "Nova mensagem",
               description: "Você recebeu uma nova mensagem no chat.",
             });
           }
           
-          // Recarregar conversas
           loadConversations();
         }
       )
@@ -361,12 +340,10 @@ export const useChat = () => {
           filter: `sender_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Message sent confirmation:', payload);
+          console.log('Confirmação de mensagem enviada:', payload);
           
-          // Se é para o usuário selecionado, garantir que está na lista
           if (selectedUser && payload.new.receiver_id === selectedUser.id) {
             setMessages(prev => {
-              // Verificar se a mensagem já existe para evitar duplicatas
               const exists = prev.some(msg => msg.id === payload.new.id);
               if (!exists) {
                 return [...prev, payload.new as ChatMessage];
