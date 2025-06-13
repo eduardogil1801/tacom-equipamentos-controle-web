@@ -70,15 +70,25 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função DEFINITIVA para obter a data atual local brasileira
+  // FUNÇÃO CORRIGIDA para obter a data atual do Brasil
   const getCurrentBrazilDate = () => {
+    // Criar nova data no fuso horário de Brasília (UTC-3)
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const brazilOffset = -3; // UTC-3 para Brasília
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const brazilTime = new Date(utc + (brazilOffset * 3600000));
+    
+    const year = brazilTime.getFullYear();
+    const month = String(brazilTime.getMonth() + 1).padStart(2, '0');
+    const day = String(brazilTime.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
     
-    console.log('Data atual Brasil (DEFINITIVA):', dateString, 'Data completa:', now.toString());
+    console.log('=== DATA BRASIL CORRIGIDA ===');
+    console.log('Data UTC original:', now.toISOString());
+    console.log('Data Brasil calculada:', brazilTime.toISOString());
+    console.log('String de data final:', dateString);
+    console.log('============================');
+    
     return dateString;
   };
 
@@ -150,12 +160,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, definir data atual brasileira CORRIGIDA
-      const todayDate = getCurrentBrazilDate();
-      console.log('Definindo data atual brasileira CORRIGIDA para novo equipamento:', todayDate);
+      // Para novos equipamentos, usar a data corrigida do Brasil
+      const todayBrazil = getCurrentBrazilDate();
+      console.log('Definindo data para novo equipamento:', todayBrazil);
       setFormData(prev => ({ 
         ...prev, 
-        data_entrada: todayDate,
+        data_entrada: todayBrazil,
         status: 'disponivel'
       }));
     }
