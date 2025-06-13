@@ -15,7 +15,7 @@ interface Equipment {
   tipo: string;
   modelo?: string;
   numero_serie: string;
-  data_entrance: string;
+  data_entrada: string;
   data_saida?: string;
   id_empresa: string;
   estado?: string;
@@ -71,9 +71,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // FUNÇÃO CORRIGIDA DEFINITIVAMENTE para obter a data atual do Brasil
   const getTodayBrazilDate = () => {
-    // Usar data atual simples - o navegador já está no fuso correto do usuário
     const today = new Date();
     const todayString = format(today, 'yyyy-MM-dd');
     
@@ -153,7 +151,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, usar a data de hoje do Brasil
       const todayBrazil = getTodayBrazilDate();
       console.log('Definindo data para novo equipamento:', todayBrazil);
       setFormData(prev => ({ 
@@ -164,7 +161,6 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     }
   }, [equipment]);
 
-  // Verificar equipamentos duplicados
   useEffect(() => {
     if (formData.numero_serie) {
       checkForDuplicateSerial(formData.numero_serie);

@@ -42,7 +42,6 @@ export const useChat = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const channelRef = useRef<any>(null);
 
-  // Função para tocar som de notificação
   const playNotificationSound = () => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -66,7 +65,6 @@ export const useChat = () => {
     }
   };
 
-  // Função para mostrar notificação na aba do navegador
   const showBrowserNotification = (message: string) => {
     const originalTitle = document.title;
     document.title = '💬 Nova mensagem - TACOM';
@@ -93,7 +91,8 @@ export const useChat = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
+      console.log('Inicializando chat para usuário:', user.id);
       loadUsers();
       loadConversations();
       subscribeToMessages();
@@ -101,6 +100,7 @@ export const useChat = () => {
 
     return () => {
       if (channelRef.current) {
+        console.log('Removendo canal de chat');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
@@ -109,24 +109,39 @@ export const useChat = () => {
 
   const loadUsers = async () => {
     try {
+      console.log('Carregando usuários para chat...');
       const { data, error } = await supabase
         .from('usuarios')
         .select('id, nome, sobrenome, email, ativo')
         .eq('ativo', true)
         .neq('id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar usuários:', error);
+        throw error;
+      }
+      
+      console.log('Usuários carregados:', data?.length || 0);
       setUsers(data || []);
     } catch (error) {
       console.error('Error loading users:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar usuários para chat",
+        variant: "destructive",
+      });
     }
   };
 
   const loadConversations = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('Usuário não encontrado para carregar conversas');
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('Carregando conversas para usuário:', user.id);
       
       const { data: conversationsData, error: convError } = await supabase
         .from('chat_conversations')
@@ -134,7 +149,12 @@ export const useChat = () => {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .order('last_message_at', { ascending: false });
 
-      if (convError) throw convError;
+      if (convError) {
+        console.error('Erro ao carregar conversas:', convError);
+        throw convError;
+      }
+
+      console.log('Conversas encontradas:', conversationsData?.length || 0);
 
       const conversationsWithDetails = await Promise.all(
         (conversationsData || []).map(async (conv) => {
@@ -147,7 +167,7 @@ export const useChat = () => {
             .single();
 
           if (userError) {
-            console.error('Error loading user data:', userError);
+            console.error('Erro ao carregar dados do usuário:', userError);
             return null;
           }
 
@@ -181,35 +201,58 @@ export const useChat = () => {
       const totalUnread = validConversations.reduce((sum, conv) => sum + conv.unread_count, 0);
       setUnreadCount(totalUnread);
       
+      console.log('Conversas processadas:', validConversations.length, 'Total não lidas:', totalUnread);
+      
     } catch (error) {
       console.error('Error loading conversations:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar conversas",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const loadMessages = async (otherUserId: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('Usuário não encontrado para carregar mensagens');
+      return;
+    }
     
     try {
+      console.log('Carregando mensagens entre:', user.id, 'e', otherUserId);
+      
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar mensagens:', error);
+        throw error;
+      }
+      
+      console.log('Mensagens carregadas:', data?.length || 0);
       setMessages(data || []);
 
       await markMessagesAsRead(otherUserId);
       
     } catch (error) {
       console.error('Error loading messages:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar mensagens",
+        variant: "destructive",
+      });
     }
   };
 
   const sendMessage = async (receiverId: string, content: string) => {
     if (!user?.id) {
+      console.error('Usuário não autenticado ao tentar enviar mensagem');
       toast({
         title: "Erro",
         description: "Usuário não autenticado.",
@@ -218,13 +261,19 @@ export const useChat = () => {
       return;
     }
 
+    if (!content.trim()) {
+      console.error('Conteúdo da mensagem vazio');
+      return;
+    }
+
     try {
-      console.log('Enviando mensagem:', { sender_id: user.id, receiver_id: receiverId, content });
+      console.log('Enviando mensagem:', { sender: user.id, receiver: receiverId, content: content.substring(0, 50) + '...' });
       
       const messageData = {
         sender_id: user.id,
         receiver_id: receiverId,
-        content: content.trim()
+        content: content.trim(),
+        is_read: false
       };
 
       const { data, error } = await supabase
@@ -234,17 +283,16 @@ export const useChat = () => {
         .single();
 
       if (error) {
-        console.error('Erro ao inserir mensagem:', error);
+        console.error('Erro ao inserir mensagem no banco:', error);
         throw error;
       }
 
-      console.log('Mensagem enviada com sucesso:', data);
+      console.log('Mensagem enviada com sucesso:', data.id);
       
       setMessages(prev => [...prev, data]);
       
       await createOrUpdateConversation(receiverId);
-      
-      loadConversations();
+      await loadConversations();
       
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -263,6 +311,8 @@ export const useChat = () => {
       const user1Id = user.id < otherUserId ? user.id : otherUserId;
       const user2Id = user.id < otherUserId ? otherUserId : user.id;
 
+      console.log('Criando/atualizando conversa entre:', user1Id, 'e', user2Id);
+
       const { error } = await supabase
         .from('chat_conversations')
         .upsert({
@@ -273,6 +323,8 @@ export const useChat = () => {
 
       if (error) {
         console.error('Erro ao criar/atualizar conversa:', error);
+      } else {
+        console.log('Conversa criada/atualizada com sucesso');
       }
     } catch (error) {
       console.error('Erro em createOrUpdateConversation:', error);
@@ -283,6 +335,8 @@ export const useChat = () => {
     if (!user?.id) return;
     
     try {
+      console.log('Marcando mensagens como lidas de:', senderId, 'para:', user.id);
+      
       const { error } = await supabase
         .from('chat_messages')
         .update({ is_read: true })
@@ -290,9 +344,12 @@ export const useChat = () => {
         .eq('receiver_id', user.id)
         .eq('is_read', false);
 
-      if (error) throw error;
-      
-      loadConversations();
+      if (error) {
+        console.error('Erro ao marcar mensagens como lidas:', error);
+      } else {
+        console.log('Mensagens marcadas como lidas');
+        loadConversations();
+      }
       
     } catch (error) {
       console.error('Erro ao marcar mensagens como lidas:', error);
@@ -300,7 +357,12 @@ export const useChat = () => {
   };
 
   const subscribeToMessages = () => {
-    if (!user?.id || channelRef.current) return;
+    if (!user?.id || channelRef.current) {
+      console.log('Não é possível subscrever:', !user?.id ? 'usuário não encontrado' : 'canal já existe');
+      return;
+    }
+    
+    console.log('Inscrevendo-se para receber mensagens em tempo real para usuário:', user.id);
     
     channelRef.current = supabase
       .channel('chat-messages')
@@ -313,7 +375,7 @@ export const useChat = () => {
           filter: `receiver_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Nova mensagem recebida:', payload);
+          console.log('Nova mensagem recebida em tempo real:', payload.new);
           
           playNotificationSound();
           showBrowserNotification(payload.new.content);
@@ -340,7 +402,7 @@ export const useChat = () => {
           filter: `sender_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Confirmação de mensagem enviada:', payload);
+          console.log('Confirmação de mensagem enviada:', payload.new);
           
           if (selectedUser && payload.new.receiver_id === selectedUser.id) {
             setMessages(prev => {
@@ -353,10 +415,13 @@ export const useChat = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Status da inscrição do chat:', status);
+      });
   };
 
   const startConversation = (targetUser: ChatUser) => {
+    console.log('Iniciando conversa com:', targetUser.nome, targetUser.sobrenome);
     setSelectedUser(targetUser);
     loadMessages(targetUser.id);
   };
