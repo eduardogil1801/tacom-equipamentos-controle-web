@@ -140,7 +140,7 @@ const Dashboard: React.FC = () => {
       setTacomCompany(tacom || null);
       console.log('TACOM company found:', tacom);
 
-      // Load ALL equipments with company data
+      // Load ALL equipments with company data - FIXED: usando data_entrada em vez de data_entrance
       const { data: equipmentsData, error: equipmentsError } = await supabase
         .from('equipamentos')
         .select(`
@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
             estado
           )
         `)
-        .order('data_entrance', { ascending: false });
+        .order('data_entrada', { ascending: false });
 
       if (equipmentsError) {
         console.error('Error loading equipments:', equipmentsError);
