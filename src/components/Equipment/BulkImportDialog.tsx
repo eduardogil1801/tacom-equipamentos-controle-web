@@ -55,13 +55,15 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const mappedData: EquipmentData[] = jsonData.slice(0, 5).map((row: any) => {
         console.log('Linha sendo processada no preview:', row);
         
+        const statusFromFile = (row['Status'] || row['status'] || '').toString().trim().toLowerCase();
+        
         return {
           tipo: (row['Tipo'] || row['tipo'] || '').toString().trim(),
           numero_serie: (row['Número de Série'] || row['numero_serie'] || row['Serial'] || '').toString().trim(),
           modelo: row['Modelo'] || row['modelo'] ? (row['Modelo'] || row['modelo']).toString().trim() : '',
           empresa: (row['Empresa'] || row['empresa'] || '').toString().trim(),
           estado: (row['Estado'] || row['estado'] || '').toString().trim(),
-          status: (row['Status'] || row['status'] || 'disponivel').toString().trim()
+          status: statusFromFile || 'disponivel'
         };
       });
 
@@ -121,9 +123,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const modelo = row['Modelo'] || row['modelo'] ? (row['Modelo'] || row['modelo']).toString().trim() : '';
       const empresa = (row['Empresa'] || row['empresa'] || '').toString().trim();
       const estado = (row['Estado'] || row['estado'] || '').toString().trim();
-      const status = (row['Status'] || row['status'] || 'disponivel').toString().trim();
+      const statusFromFile = (row['Status'] || row['status'] || '').toString().trim().toLowerCase();
 
-      console.log(`Linha ${rowNumber} mapeada:`, { tipo, numero_serie, modelo, empresa, estado, status });
+      console.log(`Linha ${rowNumber} mapeada:`, { tipo, numero_serie, modelo, empresa, estado, status: statusFromFile });
 
       // Validações obrigatórias
       if (!tipo || !numero_serie || !empresa) {
@@ -138,12 +140,18 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
-      // Validar status
+      // Validar e preservar status do arquivo
       const validStatuses = ['disponivel', 'em_uso', 'manutencao', 'aguardando_manutencao', 'danificado', 'indisponivel'];
-      const finalStatus = validStatuses.includes(status.toLowerCase()) ? status.toLowerCase() : 'disponivel';
+      let finalStatus = 'disponivel'; // valor padrão
       
-      if (status && !validStatuses.includes(status.toLowerCase())) {
-        console.warn(`Linha ${rowNumber}: Status "${status}" inválido, usando "disponivel"`);
+      if (statusFromFile) {
+        if (validStatuses.includes(statusFromFile)) {
+          finalStatus = statusFromFile;
+          console.log(`Linha ${rowNumber}: Status "${statusFromFile}" do arquivo será preservado`);
+        } else {
+          console.warn(`Linha ${rowNumber}: Status "${statusFromFile}" inválido, usando "disponivel"`);
+          errors.push(`Linha ${rowNumber}: Status "${statusFromFile}" inválido. Valores válidos: ${validStatuses.join(', ')}`);
+        }
       }
 
       const validEquipment: EquipmentData = {
@@ -310,10 +318,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           id_empresa: empresaId,
           estado: eq.estado || null,
           data_entrada: dataAtual,
-          status: eq.status || 'disponivel'
+          status: eq.status // Preservar o status do arquivo
         };
         
-        console.log('Equipamento preparado:', equipamento);
+        console.log('Equipamento preparado com status do arquivo:', equipamento);
         return equipamento;
       });
 
@@ -321,7 +329,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       console.log('Total a inserir:', equipamentosParaInserir.length);
 
       // Inserir em lotes menores para melhor controle
-      const batchSize = 100;
+      const batchSize = 50;
       let totalInseridos = 0;
       const errosInsercao = [];
 
@@ -330,12 +338,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         const batchNumber = Math.floor(i / batchSize) + 1;
         
         console.log(`=== LOTE ${batchNumber} (${batch.length} equipamentos) ===`);
-        console.log('Amostra do lote:', batch[0]);
+        console.log('Status dos equipamentos no lote:', batch.map(eq => ({ numero_serie: eq.numero_serie, status: eq.status })));
 
         const { data, error } = await supabase
           .from('equipamentos')
           .insert(batch)
-          .select('id, numero_serie, data_entrada, status, id_empresa');
+          .select('id, numero_serie, status');
 
         if (error) {
           console.error(`Erro no lote ${batchNumber}:`, error);
@@ -347,7 +355,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         totalInseridos += inseridosNesteLote;
         
         console.log(`Lote ${batchNumber} inserido: ${inseridosNesteLote} equipamentos`);
-        console.log('Dados inseridos (amostra):', data?.slice(0, 2));
+        console.log('Status dos equipamentos inseridos:', data?.map(eq => ({ numero_serie: eq.numero_serie, status: eq.status })));
         console.log(`Total inserido até agora: ${totalInseridos}`);
       }
 
@@ -361,12 +369,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         console.error('Erros encontrados durante a inserção:', errosInsercao);
       }
 
-      let mensagem = `${totalInseridos} equipamentos importados com sucesso`;
+      let mensagem = `${totalInseridos} equipamentos importados`;
       if (duplicatas > 0) {
         mensagem += `, ${duplicatas} duplicatas ignoradas`;
       }
       if (errosInsercao.length > 0) {
-        mensagem += `, ${errosInsercao.length} erros de inserção`;
+        mensagem += `, ${errosInsercao.length} erros`;
       }
 
       toast({
@@ -462,7 +470,17 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                           <td className="border p-2">{item.modelo || '-'}</td>
                           <td className="border p-2">{item.empresa}</td>
                           <td className="border p-2">{item.estado || '-'}</td>
-                          <td className="border p-2">{item.status || 'disponivel'}</td>
+                          <td className="border p-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              item.status === 'disponivel' ? 'bg-green-100 text-green-800' :
+                              item.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
+                              item.status === 'manutencao' ? 'bg-orange-100 text-orange-800' :
+                              item.status === 'danificado' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -480,6 +498,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <li>• Campos obrigatórios: Tipo, Número de Série, Empresa</li>
               <li>• Campos opcionais: Modelo, Estado, Status</li>
               <li>• Status válidos: disponivel, em_uso, manutencao, aguardando_manutencao, danificado, indisponivel</li>
+              <li>• <strong>O status informado no arquivo será respeitado</strong></li>
               <li>• A empresa especificada no arquivo será respeitada</li>
               <li>• Equipamentos duplicados (mesmo número de série) serão ignorados</li>
               <li>• A data de entrada será definida como a data atual</li>
