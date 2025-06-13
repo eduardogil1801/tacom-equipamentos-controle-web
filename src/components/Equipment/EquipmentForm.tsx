@@ -70,12 +70,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
-  // Função para obter a data atual no formato correto (YYYY-MM-DD)
+  // Função simplificada para obter a data atual
   const getCurrentDate = () => {
-    const now = new Date();
-    // Ajustar para o timezone local brasileiro (UTC-3)
-    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
-    return localDate.toISOString().split('T')[0];
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const loadCompanies = useCallback(async () => {
@@ -146,12 +147,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Para novos equipamentos, usar a data atual correta
-      const currentDate = getCurrentDate();
-      console.log('Data atual definida para novo equipamento:', currentDate);
+      // Para novos equipamentos, definir data atual
+      const todayDate = getCurrentDate();
+      console.log('Data atual definida para novo equipamento:', todayDate);
       setFormData(prev => ({ 
         ...prev, 
-        data_entrada: currentDate,
+        data_entrada: todayDate,
         status: 'disponivel'
       }));
     }
