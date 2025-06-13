@@ -268,18 +268,6 @@ export const useChat = () => {
     try {
       console.log('Enviando mensagem:', { sender: user.id, receiver: receiverId, content: content.substring(0, 50) + '...' });
       
-      // Verificar se o usuário está autenticado no Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('Sessão não encontrada');
-        toast({
-          title: "Erro",
-          description: "Sessão expirada. Faça login novamente.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const messageData = {
         sender_id: user.id,
         receiver_id: receiverId,
