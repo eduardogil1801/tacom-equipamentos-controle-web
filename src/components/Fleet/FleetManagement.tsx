@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,7 +83,7 @@ const FleetManagement: React.FC = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('fleet_data')
+        .from('frota')
         .select('*')
         .order('mes_referencia', { ascending: false });
 
@@ -126,7 +127,7 @@ const FleetManagement: React.FC = () => {
     if (confirm('Tem certeza que deseja excluir este registro de frota?')) {
       try {
         const { error } = await supabase
-          .from('fleet_data')
+          .from('frota')
           .delete()
           .eq('id', id);
 
@@ -189,7 +190,7 @@ const FleetManagement: React.FC = () => {
       if (editingFleet) {
         // Update existing fleet data
         const { error } = await supabase
-          .from('fleet_data')
+          .from('frota')
           .update(fleetDataToSave)
           .eq('id', editingFleet.id);
 
@@ -201,7 +202,7 @@ const FleetManagement: React.FC = () => {
       } else {
         // Insert new fleet data
         const { error } = await supabase
-          .from('fleet_data')
+          .from('frota')
           .insert([fleetDataToSave]);
 
         if (error) throw error;
