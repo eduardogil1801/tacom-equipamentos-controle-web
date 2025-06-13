@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +70,14 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const isOperational = user?.userType === 'operacional';
 
+  // Função para obter a data atual no formato correto (YYYY-MM-DD)
+  const getCurrentDate = () => {
+    const now = new Date();
+    // Ajustar para o timezone local brasileiro (UTC-3)
+    const localDate = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+    return localDate.toISOString().split('T')[0];
+  };
+
   const loadCompanies = useCallback(async () => {
     try {
       console.log('Carregando empresas no formulário...');
@@ -139,12 +146,12 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         status: equipment.status || 'disponivel'
       });
     } else {
-      // Corrigir data atual
-      const today = new Date();
-      const todayString = today.toISOString().split('T')[0];
+      // Para novos equipamentos, usar a data atual correta
+      const currentDate = getCurrentDate();
+      console.log('Data atual definida para novo equipamento:', currentDate);
       setFormData(prev => ({ 
         ...prev, 
-        data_entrada: todayString,
+        data_entrada: currentDate,
         status: 'disponivel'
       }));
     }
