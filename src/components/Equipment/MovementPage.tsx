@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import EquipmentSearchDialog from './EquipmentSearchDialog';
 
 interface Equipment {
@@ -26,13 +27,21 @@ interface Company {
   name: string;
 }
 
+interface MaintenanceType {
+  id: string;
+  descricao: string;
+  codigo: string;
+}
+
 interface MovementPageProps {
   onBack: () => void;
 }
 
 const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
+  const { user } = useAuth();
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -40,20 +49,17 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     tipo_movimento: '',
     data_movimento: '',
     observacoes: '',
-    usuario_responsavel: '',
     empresa_destino: '',
-    tipo_equipamento: '',
-    tipo_manutencao: ''
+    tipo_manutencao_id: ''
   });
 
   useEffect(() => {
     loadCompanies();
-    // CORREÇÃO: Definir data atual corretamente sem problema de fuso horário
+    loadMaintenanceTypes();
+    // CORREÇÃO: Definir data atual sem problema de fuso horário
     const hoje = new Date();
-    const ano = hoje.getFullYear();
-    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-    const dia = String(hoje.getDate()).padStart(2, '0');
-    const dataFormatada = `${ano}-${mes}-${dia}`;
+    hoje.setHours(12, 0, 0, 0); // Define para meio-dia para evitar problemas de fuso
+    const dataFormatada = hoje.toISOString().split('T')[0];
     
     console.log('Data atual definida:', dataFormatada);
     
@@ -77,6 +83,26 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       toast({
         title: "Erro",
         description: "Erro ao carregar empresas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadMaintenanceTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_manutencao')
+        .select('id, descricao, codigo')
+        .eq('ativo', true)
+        .order('descricao');
+
+      if (error) throw error;
+      setMaintenanceTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de manutenção:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar tipos de manutenção.",
         variant: "destructive",
       });
     }
@@ -114,17 +140,26 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       console.log('=== PROCESSANDO MOVIMENTAÇÃO ===');
       console.log('Equipamento selecionado:', selectedEquipment);
       console.log('Dados da movimentação:', movementData);
+      console.log('Usuário logado:', user);
 
-      // 1. Registrar a movimentação
+      // 1. Registrar a movimentação com usuário logado
+      const movimentationData: any = {
+        id_equipamento: selectedEquipment.id,
+        tipo_movimento: movementData.tipo_movimento,
+        data_movimento: movementData.data_movimento,
+        observacoes: movementData.observacoes || null,
+        usuario_responsavel: user?.name ? `${user.name} ${user.surname || ''}`.trim() : user?.username || 'Sistema'
+      };
+
+      // Adicionar tipo_manutencao_id se for uma movimentação de manutenção
+      if ((movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') 
+          && movementData.tipo_manutencao_id) {
+        movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
+      }
+
       const { error: movementError } = await supabase
         .from('movimentacoes')
-        .insert({
-          id_equipamento: selectedEquipment.id,
-          tipo_movimento: movementData.tipo_movimento,
-          data_movimento: movementData.data_movimento,
-          observacoes: movementData.observacoes || null,
-          usuario_responsavel: movementData.usuario_responsavel || null
-        });
+        .insert(movimentationData);
 
       if (movementError) {
         console.error('Erro ao inserir movimentação:', movementError);
@@ -143,9 +178,8 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         updateData.data_saida = null;
         updateData.status = 'disponivel';
       } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
-        // CORREÇÃO: Para movimentação entre empresas, atualizar a empresa corretamente
         updateData.id_empresa = movementData.empresa_destino;
-        updateData.status = 'disponivel'; // Equipamento fica disponível na nova empresa
+        updateData.status = 'disponivel';
         console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
       } else if (movementData.tipo_movimento === 'manutencao') {
         updateData.status = 'manutencao';
@@ -181,19 +215,15 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       // Resetar formulário
       setSelectedEquipment(null);
       const hoje = new Date();
-      const ano = hoje.getFullYear();
-      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-      const dia = String(hoje.getDate()).padStart(2, '0');
-      const dataAtual = `${ano}-${mes}-${dia}`;
+      hoje.setHours(12, 0, 0, 0);
+      const dataAtual = hoje.toISOString().split('T')[0];
       
       setMovementData({
         tipo_movimento: '',
         data_movimento: dataAtual,
         observacoes: '',
-        usuario_responsavel: '',
         empresa_destino: '',
-        tipo_equipamento: '',
-        tipo_manutencao: ''
+        tipo_manutencao_id: ''
       });
 
     } catch (error) {
@@ -285,7 +315,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                 />
               </div>
 
-              {/* CORREÇÃO: Campo Empresa Destino apenas para movimentação */}
+              {/* Campo Empresa Destino apenas para movimentação */}
               {movementData.tipo_movimento === 'movimentacao' && (
                 <div>
                   <Label htmlFor="empresa_destino">Empresa Destino</Label>
@@ -294,7 +324,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                     onValueChange={(value) => handleInputChange('empresa_destino', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a empresa destino (23 disponíveis)" />
+                      <SelectValue placeholder="Selecione a empresa destino" />
                     </SelectTrigger>
                     <SelectContent>
                       {companies.map((company) => (
@@ -307,49 +337,27 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                 </div>
               )}
 
-              <div>
-                <Label htmlFor="tipo_manutencao">Tipo de Manutenção</Label>
-                <Select
-                  value={movementData.tipo_manutencao}
-                  onValueChange={(value) => handleInputChange('tipo_manutencao', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de manutenção" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="preventiva">Preventiva</SelectItem>
-                    <SelectItem value="corretiva">Corretiva</SelectItem>
-                    <SelectItem value="upgrade">Upgrade</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
-                <Select
-                  value={movementData.tipo_equipamento}
-                  onValueChange={(value) => handleInputChange('tipo_equipamento', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tablet">Tablet</SelectItem>
-                    <SelectItem value="smartphone">Smartphone</SelectItem>
-                    <SelectItem value="notebook">Notebook</SelectItem>
-                    <SelectItem value="desktop">Desktop</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
-                <Input
-                  id="usuario_responsavel"
-                  value={movementData.usuario_responsavel}
-                  onChange={(e) => handleInputChange('usuario_responsavel', e.target.value)}
-                />
-              </div>
+              {/* Campo Tipo de Manutenção apenas para manutenções */}
+              {(movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') && (
+                <div>
+                  <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
+                  <Select
+                    value={movementData.tipo_manutencao_id}
+                    onValueChange={(value) => handleInputChange('tipo_manutencao_id', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de manutenção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {maintenanceTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.descricao} ({type.codigo})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div>

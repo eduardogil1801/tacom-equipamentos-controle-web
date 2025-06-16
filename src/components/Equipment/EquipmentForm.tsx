@@ -24,6 +24,12 @@ interface Equipment {
 interface Company {
   id: string;
   name: string;
+  estado?: string;
+}
+
+interface EquipmentType {
+  id: string;
+  nome: string;
 }
 
 interface EquipmentFormProps {
@@ -48,9 +54,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     data_entrada: '',
     id_empresa: ''
   });
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    loadEquipmentTypes();
+    
     if (equipment) {
       // Para edição, usar os dados existentes
       setFormData({
@@ -62,24 +72,60 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         data_entrada: equipment.data_entrada || '',
         id_empresa: equipment.id_empresa || ''
       });
+      
+      // Buscar empresa selecionada
+      const company = companies.find(c => c.id === equipment.id_empresa);
+      if (company) {
+        setSelectedCompany(company);
+      }
     } else {
-      // Para novo equipamento, definir data atual
+      // Para novo equipamento, definir data atual corretamente
       const hoje = new Date();
-      const dataFormatada = hoje.getFullYear() + '-' + 
-                          String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
-                          String(hoje.getDate()).padStart(2, '0');
+      hoje.setHours(12, 0, 0, 0); // Define para meio-dia para evitar problemas de fuso
+      const dataFormatada = hoje.toISOString().split('T')[0];
       
       setFormData(prev => ({
         ...prev,
         data_entrada: dataFormatada
       }));
     }
-  }, [equipment]);
+  }, [equipment, companies]);
+
+  const loadEquipmentTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_equipamento')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (error) throw error;
+      setEquipmentTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de equipamento:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar tipos de equipamento.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleCompanyChange = (companyId: string) => {
+    const company = companies.find(c => c.id === companyId);
+    setSelectedCompany(company || null);
+    
+    setFormData(prev => ({
+      ...prev,
+      id_empresa: companyId,
+      estado: company?.estado || ''
     }));
   };
 
@@ -184,12 +230,21 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
               <div>
                 <Label htmlFor="tipo">Tipo *</Label>
-                <Input
-                  id="tipo"
+                <Select
                   value={formData.tipo}
-                  onChange={(e) => handleInputChange('tipo', e.target.value)}
-                  required
-                />
+                  onValueChange={(value) => handleInputChange('tipo', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipmentTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.nome}>
+                        {type.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -202,19 +257,10 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
               </div>
 
               <div>
-                <Label htmlFor="estado">Estado</Label>
-                <Input
-                  id="estado"
-                  value={formData.estado}
-                  onChange={(e) => handleInputChange('estado', e.target.value)}
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="empresa">Empresa *</Label>
                 <Select
                   value={formData.id_empresa}
-                  onValueChange={(value) => handleInputChange('id_empresa', value)}
+                  onValueChange={handleCompanyChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
@@ -227,6 +273,17 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="estado">Estado</Label>
+                <Input
+                  id="estado"
+                  value={formData.estado}
+                  readOnly
+                  className="bg-gray-100"
+                  placeholder="Estado será preenchido automaticamente"
+                />
               </div>
 
               <div>
