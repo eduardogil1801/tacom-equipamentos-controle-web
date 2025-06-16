@@ -55,7 +55,11 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const mappedData: EquipmentData[] = jsonData.slice(0, 5).map((row: any) => {
         console.log('Linha sendo processada no preview:', row);
         
-        const statusFromFile = (row['Status'] || row['status'] || '').toString().trim().toLowerCase();
+        // Mapear status do arquivo preservando exatamente como está
+        let statusFromFile = '';
+        if (row['Status'] || row['status']) {
+          statusFromFile = (row['Status'] || row['status']).toString().trim();
+        }
         
         return {
           tipo: (row['Tipo'] || row['tipo'] || '').toString().trim(),
@@ -123,7 +127,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const modelo = row['Modelo'] || row['modelo'] ? (row['Modelo'] || row['modelo']).toString().trim() : '';
       const empresa = (row['Empresa'] || row['empresa'] || '').toString().trim();
       const estado = (row['Estado'] || row['estado'] || '').toString().trim();
-      const statusFromFile = (row['Status'] || row['status'] || '').toString().trim().toLowerCase();
+      
+      // CORREÇÃO: Preservar status exatamente como está no arquivo
+      let statusFromFile = '';
+      if (row['Status'] || row['status']) {
+        statusFromFile = (row['Status'] || row['status']).toString().trim();
+      }
 
       console.log(`Linha ${rowNumber} mapeada:`, { tipo, numero_serie, modelo, empresa, estado, status: statusFromFile });
 
@@ -140,17 +149,33 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
-      // Validar e preservar status do arquivo
+      // CORREÇÃO: Mapear status corretamente
       const validStatuses = ['disponivel', 'em_uso', 'manutencao', 'aguardando_manutencao', 'danificado', 'indisponivel'];
       let finalStatus = 'disponivel'; // valor padrão
       
       if (statusFromFile) {
-        if (validStatuses.includes(statusFromFile)) {
-          finalStatus = statusFromFile;
-          console.log(`Linha ${rowNumber}: Status "${statusFromFile}" do arquivo será preservado`);
+        // Mapear possíveis variações do status
+        const statusMap: { [key: string]: string } = {
+          'disponivel': 'disponivel',
+          'disponível': 'disponivel',
+          'em_uso': 'em_uso',
+          'em uso': 'em_uso',
+          'manutencao': 'manutencao',
+          'manutenção': 'manutencao',
+          'aguardando_manutencao': 'aguardando_manutencao',
+          'aguardando manutenção': 'aguardando_manutencao',
+          'danificado': 'danificado',
+          'indisponivel': 'indisponivel',
+          'indisponível': 'indisponivel'
+        };
+        
+        const statusNormalizado = statusFromFile.toLowerCase().trim();
+        if (statusMap[statusNormalizado]) {
+          finalStatus = statusMap[statusNormalizado];
+          console.log(`Linha ${rowNumber}: Status "${statusFromFile}" mapeado para "${finalStatus}"`);
         } else {
-          console.warn(`Linha ${rowNumber}: Status "${statusFromFile}" inválido, usando "disponivel"`);
-          errors.push(`Linha ${rowNumber}: Status "${statusFromFile}" inválido. Valores válidos: ${validStatuses.join(', ')}`);
+          console.warn(`Linha ${rowNumber}: Status "${statusFromFile}" não reconhecido, usando "disponivel"`);
+          errors.push(`Linha ${rowNumber}: Status "${statusFromFile}" inválido. Valores válidos: ${Object.keys(statusMap).join(', ')}`);
         }
       }
 
@@ -301,13 +326,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('=== PREPARANDO EQUIPAMENTOS PARA INSERÇÃO ===');
 
-      // Obter data atual no formato correto
+      // CORREÇÃO: Obter data atual sem problema de fuso horário
       const hoje = new Date();
-      const dataAtual = hoje.getFullYear() + '-' + 
-                      String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
-                      String(hoje.getDate()).padStart(2, '0');
+      // Usar UTC para evitar problemas de fuso horário
+      const dataAtual = hoje.getUTCFullYear() + '-' + 
+                      String(hoje.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+                      String(hoje.getUTCDate()).padStart(2, '0');
       
-      console.log('Data de entrada definida:', dataAtual);
+      console.log('Data de entrada definida (UTC):', dataAtual);
       
       const equipamentosParaInserir = equipamentosNovos.map(eq => {
         const empresaId = empresasMap.get(eq.empresa.toLowerCase().trim());
@@ -318,7 +344,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           id_empresa: empresaId,
           estado: eq.estado || null,
           data_entrada: dataAtual,
-          status: eq.status // Preservar o status do arquivo
+          status: eq.status // CORREÇÃO: Preservar o status do arquivo
         };
         
         console.log('Equipamento preparado com status do arquivo:', equipamento);

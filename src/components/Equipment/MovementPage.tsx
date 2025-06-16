@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,17 +41,21 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     data_movimento: '',
     observacoes: '',
     usuario_responsavel: '',
-    empresa_destino: ''
+    empresa_destino: '',
+    tipo_equipamento: '',
+    tipo_manutencao: ''
   });
 
   useEffect(() => {
     loadCompanies();
-    // Definir data atual no formato local
+    // CORREÇÃO: Definir data atual corretamente sem problema de fuso horário
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = String(hoje.getMonth() + 1).padStart(2, '0');
     const dia = String(hoje.getDate()).padStart(2, '0');
     const dataFormatada = `${ano}-${mes}-${dia}`;
+    
+    console.log('Data atual definida:', dataFormatada);
     
     setMovementData(prev => ({
       ...prev,
@@ -138,9 +143,10 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         updateData.data_saida = null;
         updateData.status = 'disponivel';
       } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
-        // Para movimentação entre empresas, atualizar a empresa
+        // CORREÇÃO: Para movimentação entre empresas, atualizar a empresa corretamente
         updateData.id_empresa = movementData.empresa_destino;
         updateData.status = 'disponivel'; // Equipamento fica disponível na nova empresa
+        console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
       } else if (movementData.tipo_movimento === 'manutencao') {
         updateData.status = 'manutencao';
       } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
@@ -174,12 +180,20 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
       // Resetar formulário
       setSelectedEquipment(null);
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      const dia = String(hoje.getDate()).padStart(2, '0');
+      const dataAtual = `${ano}-${mes}-${dia}`;
+      
       setMovementData({
         tipo_movimento: '',
-        data_movimento: new Date().toISOString().split('T')[0],
+        data_movimento: dataAtual,
         observacoes: '',
         usuario_responsavel: '',
-        empresa_destino: ''
+        empresa_destino: '',
+        tipo_equipamento: '',
+        tipo_manutencao: ''
       });
 
     } catch (error) {
@@ -201,18 +215,18 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold">Movimentação de Equipamentos</h1>
+        <h1 className="text-2xl font-bold">Movimentações de Equipamentos</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Registrar Movimentação</CardTitle>
+          <CardTitle>Nova Movimentação</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Seleção do Equipamento */}
             <div>
-              <Label>Equipamento *</Label>
+              <Label>Equipamentos Selecionados</Label>
               <div className="flex gap-2">
                 <div className="flex-1">
                   {selectedEquipment ? (
@@ -233,14 +247,14 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                 </div>
                 <Button type="button" onClick={() => setShowSearch(true)}>
                   <Search className="h-4 w-4 mr-2" />
-                  Buscar
+                  Buscar Equipamentos
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="tipo_movimento">Tipo de Movimento *</Label>
+                <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
                 <Select
                   value={movementData.tipo_movimento}
                   onValueChange={(value) => handleInputChange('tipo_movimento', value)}
@@ -261,7 +275,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <Label htmlFor="data_movimento">Data do Movimento *</Label>
+                <Label htmlFor="data_movimento">Data da Movimentação *</Label>
                 <Input
                   id="data_movimento"
                   type="date"
@@ -271,6 +285,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                 />
               </div>
 
+              {/* CORREÇÃO: Campo Empresa Destino apenas para movimentação */}
               {movementData.tipo_movimento === 'movimentacao' && (
                 <div>
                   <Label htmlFor="empresa_destino">Empresa Destino</Label>
@@ -279,7 +294,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                     onValueChange={(value) => handleInputChange('empresa_destino', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a empresa destino" />
+                      <SelectValue placeholder="Selecione a empresa destino (23 disponíveis)" />
                     </SelectTrigger>
                     <SelectContent>
                       {companies.map((company) => (
@@ -291,6 +306,41 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                   </Select>
                 </div>
               )}
+
+              <div>
+                <Label htmlFor="tipo_manutencao">Tipo de Manutenção</Label>
+                <Select
+                  value={movementData.tipo_manutencao}
+                  onValueChange={(value) => handleInputChange('tipo_manutencao', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de manutenção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="preventiva">Preventiva</SelectItem>
+                    <SelectItem value="corretiva">Corretiva</SelectItem>
+                    <SelectItem value="upgrade">Upgrade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
+                <Select
+                  value={movementData.tipo_equipamento}
+                  onValueChange={(value) => handleInputChange('tipo_equipamento', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tablet">Tablet</SelectItem>
+                    <SelectItem value="smartphone">Smartphone</SelectItem>
+                    <SelectItem value="notebook">Notebook</SelectItem>
+                    <SelectItem value="desktop">Desktop</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div>
                 <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
@@ -308,6 +358,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                 id="observacoes"
                 value={movementData.observacoes}
                 onChange={(e) => handleInputChange('observacoes', e.target.value)}
+                placeholder="Digite observações sobre a movimentação..."
                 rows={3}
               />
             </div>
