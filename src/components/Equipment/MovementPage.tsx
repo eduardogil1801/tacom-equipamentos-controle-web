@@ -139,21 +139,21 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       if (movementData.tipo_movimento === 'saida') {
         updateData.data_saida = movementData.data_movimento;
         updateData.status = 'em_uso';
-      } else if (movimentData.tipo_movimento === 'entrada') {
+      } else if (movementData.tipo_movimento === 'entrada') {
         updateData.data_saida = null;
         updateData.status = 'disponivel';
-      } else if (movimentData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
+      } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
         // CORREÇÃO: Para movimentação entre empresas, atualizar a empresa corretamente
         updateData.id_empresa = movementData.empresa_destino;
         updateData.status = 'disponivel'; // Equipamento fica disponível na nova empresa
         console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
-      } else if (movimentData.tipo_movimento === 'manutencao') {
+      } else if (movementData.tipo_movimento === 'manutencao') {
         updateData.status = 'manutencao';
-      } else if (movimentData.tipo_movimento === 'aguardando_manutencao') {
+      } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
         updateData.status = 'aguardando_manutencao';
-      } else if (movimentData.tipo_movimento === 'danificado') {
+      } else if (movementData.tipo_movimento === 'danificado') {
         updateData.status = 'danificado';
-      } else if (movimentData.tipo_movimento === 'indisponivel') {
+      } else if (movementData.tipo_movimento === 'indisponivel') {
         updateData.status = 'indisponivel';
       }
 
