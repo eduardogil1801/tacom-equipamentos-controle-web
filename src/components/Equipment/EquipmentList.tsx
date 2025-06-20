@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import EquipmentForm from './EquipmentForm';
 import EquipmentFilters from './EquipmentFilters';
 import BulkImportDialog from './BulkImportDialog';
@@ -85,6 +87,11 @@ const EquipmentList: React.FC = () => {
       setFilteredEquipments(equipmentsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar dados.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -163,14 +170,23 @@ const EquipmentList: React.FC = () => {
 
         if (error) throw error;
         
+        toast({
+          title: "Sucesso",
+          description: "Equipamento excluído com sucesso!",
+        });
+        
         loadData();
       } catch (error) {
         console.error('Error deleting equipment:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir equipamento.",
+          variant: "destructive",
+        });
       }
     }
   };
 
-  // CORREÇÃO: Função melhorada para mostrar status correto com cores corretas
   const getStatusBadge = (equipment: Equipment) => {
     const status = equipment.status || 'disponivel';
     
@@ -204,7 +220,7 @@ const EquipmentList: React.FC = () => {
     console.log('handleFormSave called');
     setShowForm(false);
     setEditingEquipment(null);
-    loadData();
+    loadData(); // Recarregar dados após salvar
   };
 
   if (loading) {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -257,14 +256,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       }
 
       console.log('Empresas carregadas do banco:', empresas?.length);
-      console.log('Lista de empresas:', empresas?.map(e => ({ id: e.id, name: e.name })));
 
       // Criar mapa de empresas (nome -> id) - case insensitive
       const empresasMap = new Map<string, string>();
       empresas?.forEach(empresa => {
         const nomeNormalizado = empresa.name.toLowerCase().trim();
         empresasMap.set(nomeNormalizado, empresa.id);
-        console.log(`Mapeamento: "${nomeNormalizado}" -> ${empresa.id}`);
       });
 
       console.log('=== VERIFICANDO EMPRESAS DOS EQUIPAMENTOS ===');
@@ -287,28 +284,31 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('=== VERIFICANDO EQUIPAMENTOS DUPLICADOS ===');
 
-      // Verificar equipamentos duplicados
+      // CORREÇÃO: Verificar duplicatas considerando tipo + número de série
       const { data: equipamentosExistentes, error: equipError } = await supabase
         .from('equipamentos')
-        .select('numero_serie');
+        .select('numero_serie, tipo');
 
       if (equipError) {
         console.error('Erro ao verificar equipamentos existentes:', equipError);
         throw new Error(`Erro ao verificar duplicatas: ${equipError.message}`);
       }
 
-      const numerosExistentes = new Set<string>();
+      // Criar conjunto de equipamentos existentes usando tipo + número de série
+      const equipamentosExistentesSet = new Set<string>();
       equipamentosExistentes?.forEach(eq => {
-        numerosExistentes.add(eq.numero_serie.toLowerCase().trim());
+        const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
+        equipamentosExistentesSet.add(chave);
       });
 
-      console.log('Equipamentos já existentes no banco:', numerosExistentes.size);
+      console.log('Equipamentos já existentes no banco:', equipamentosExistentesSet.size);
 
       // Filtrar equipamentos que não são duplicados
       const equipamentosNovos = valid.filter(eq => {
-        const isDuplicate = numerosExistentes.has(eq.numero_serie.toLowerCase().trim());
+        const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
+        const isDuplicate = equipamentosExistentesSet.has(chave);
         if (isDuplicate) {
-          console.log(`DUPLICATA IGNORADA: ${eq.numero_serie}`);
+          console.log(`DUPLICATA IGNORADA: ${eq.tipo} - ${eq.numero_serie}`);
         }
         return !isDuplicate;
       });
@@ -326,17 +326,32 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('=== PREPARANDO EQUIPAMENTOS PARA INSERÇÃO ===');
 
-      // CORREÇÃO: Obter data atual sem problema de fuso horário
+      // Obter data atual corretamente
       const hoje = new Date();
-      // Usar UTC para evitar problemas de fuso horário
-      const dataAtual = hoje.getUTCFullYear() + '-' + 
-                      String(hoje.getUTCMonth() + 1).padStart(2, '0') + '-' + 
-                      String(hoje.getUTCDate()).padStart(2, '0');
+      const dataAtual = hoje.getFullYear() + '-' + 
+                      String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
+                      String(hoje.getDate()).padStart(2, '0');
       
-      console.log('Data de entrada definida (UTC):', dataAtual);
+      console.log('Data de entrada definida:', dataAtual);
       
       const equipamentosParaInserir = equipamentosNovos.map(eq => {
         const empresaId = empresasMap.get(eq.empresa.toLowerCase().trim());
+        
+        // CORREÇÃO: Definir status automaticamente para operadoras
+        let statusFinal = eq.status || 'disponivel';
+        
+        // Se a empresa contém "operadora" no nome, definir como "em_uso"
+        const empresaNome = eq.empresa.toLowerCase();
+        const isOperadora = empresaNome.includes('operadora') || 
+                          empresaNome.includes('tacom') ||
+                          empresaNome.includes('poa') ||
+                          empresaNome.includes('sistemas');
+        
+        if (isOperadora && statusFinal === 'disponivel') {
+          statusFinal = 'em_uso';
+          console.log(`Equipamento ${eq.numero_serie} em operadora definido como "em_uso"`);
+        }
+        
         const equipamento = {
           tipo: eq.tipo,
           numero_serie: eq.numero_serie,
@@ -344,10 +359,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           id_empresa: empresaId,
           estado: eq.estado || null,
           data_entrada: dataAtual,
-          status: eq.status // CORREÇÃO: Preservar o status do arquivo
+          status: statusFinal
         };
         
-        console.log('Equipamento preparado com status do arquivo:', equipamento);
+        console.log('Equipamento preparado:', equipamento);
         return equipamento;
       });
 
@@ -364,7 +379,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         const batchNumber = Math.floor(i / batchSize) + 1;
         
         console.log(`=== LOTE ${batchNumber} (${batch.length} equipamentos) ===`);
-        console.log('Status dos equipamentos no lote:', batch.map(eq => ({ numero_serie: eq.numero_serie, status: eq.status })));
 
         const { data, error } = await supabase
           .from('equipamentos')
@@ -381,7 +395,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         totalInseridos += inseridosNesteLote;
         
         console.log(`Lote ${batchNumber} inserido: ${inseridosNesteLote} equipamentos`);
-        console.log('Status dos equipamentos inseridos:', data?.map(eq => ({ numero_serie: eq.numero_serie, status: eq.status })));
         console.log(`Total inserido até agora: ${totalInseridos}`);
       }
 
@@ -524,9 +537,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <li>• Campos obrigatórios: Tipo, Número de Série, Empresa</li>
               <li>• Campos opcionais: Modelo, Estado, Status</li>
               <li>• Status válidos: disponivel, em_uso, manutencao, aguardando_manutencao, danificado, indisponivel</li>
-              <li>• <strong>O status informado no arquivo será respeitado</strong></li>
-              <li>• A empresa especificada no arquivo será respeitada</li>
-              <li>• Equipamentos duplicados (mesmo número de série) serão ignorados</li>
+              <li>• <strong>Equipamentos em operadoras serão automaticamente definidos como "em_uso"</strong></li>
+              <li>• Duplicatas são verificadas por tipo + número de série</li>
               <li>• A data de entrada será definida como a data atual</li>
             </ul>
           </div>

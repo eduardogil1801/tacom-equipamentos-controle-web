@@ -56,10 +56,11 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   useEffect(() => {
     loadCompanies();
     loadMaintenanceTypes();
-    // CORREÇÃO: Definir data atual sem problema de fuso horário
+    // Definir data atual corretamente
     const hoje = new Date();
-    hoje.setHours(12, 0, 0, 0); // Define para meio-dia para evitar problemas de fuso
-    const dataFormatada = hoje.toISOString().split('T')[0];
+    const dataFormatada = hoje.getFullYear() + '-' + 
+                         String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
+                         String(hoje.getDate()).padStart(2, '0');
     
     console.log('Data atual definida:', dataFormatada);
     
@@ -157,6 +158,8 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
       }
 
+      console.log('Dados completos da movimentação:', movimentationData);
+
       const { error: movementError } = await supabase
         .from('movimentacoes')
         .insert(movimentationData);
@@ -215,8 +218,9 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       // Resetar formulário
       setSelectedEquipment(null);
       const hoje = new Date();
-      hoje.setHours(12, 0, 0, 0);
-      const dataAtual = hoje.toISOString().split('T')[0];
+      const dataAtual = hoje.getFullYear() + '-' + 
+                       String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(hoje.getDate()).padStart(2, '0');
       
       setMovementData({
         tipo_movimento: '',
