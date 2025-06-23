@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Search } from 'lucide-react';
+import { ArrowLeft, Save, Search, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,7 +39,7 @@ interface MovementPageProps {
 
 const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   const { user } = useAuth();
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
+  const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -56,11 +56,11 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   useEffect(() => {
     loadCompanies();
     loadMaintenanceTypes();
-    // Definir data atual corretamente
+    // Definir data atual corretamente em UTC
     const hoje = new Date();
-    const dataFormatada = hoje.getFullYear() + '-' + 
-                         String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
-                         String(hoje.getDate()).padStart(2, '0');
+    // Ajustar para fuso horário local
+    const localDate = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000));
+    const dataFormatada = localDate.toISOString().split('T')[0];
     
     console.log('Data atual definida:', dataFormatada);
     
@@ -110,10 +110,13 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   };
 
   const handleEquipmentSelect = (equipments: Equipment[]) => {
-    if (equipments.length > 0) {
-      setSelectedEquipment(equipments[0]);
-    }
+    console.log('Equipamentos selecionados:', equipments);
+    setSelectedEquipments(equipments);
     setShowSearch(false);
+  };
+
+  const removeEquipment = (equipmentId: string) => {
+    setSelectedEquipments(prev => prev.filter(eq => eq.id !== equipmentId));
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -126,10 +129,10 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedEquipment || !movementData.tipo_movimento || !movementData.data_movimento) {
+    if (selectedEquipments.length === 0 || !movementData.tipo_movimento || !movementData.data_movimento) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios.",
+        description: "Preencha todos os campos obrigatórios e selecione pelo menos um equipamento.",
         variant: "destructive",
       });
       return;
@@ -139,88 +142,90 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
     try {
       console.log('=== PROCESSANDO MOVIMENTAÇÃO ===');
-      console.log('Equipamento selecionado:', selectedEquipment);
+      console.log('Equipamentos selecionados:', selectedEquipments);
       console.log('Dados da movimentação:', movementData);
       console.log('Usuário logado:', user);
 
-      // 1. Registrar a movimentação com usuário logado
-      const movimentationData: any = {
-        id_equipamento: selectedEquipment.id,
-        tipo_movimento: movementData.tipo_movimento,
-        data_movimento: movementData.data_movimento,
-        observacoes: movementData.observacoes || null,
-        usuario_responsavel: user?.name ? `${user.name} ${user.surname || ''}`.trim() : user?.username || 'Sistema'
-      };
+      // Processar cada equipamento individualmente
+      for (const equipment of selectedEquipments) {
+        // 1. Registrar a movimentação com usuário logado
+        const movimentationData: any = {
+          id_equipamento: equipment.id,
+          tipo_movimento: movementData.tipo_movimento,
+          data_movimento: movementData.data_movimento,
+          observacoes: movementData.observacoes || null,
+          usuario_responsavel: user?.name ? `${user.name} ${user.surname || ''}`.trim() : user?.username || 'Sistema'
+        };
 
-      // Adicionar tipo_manutencao_id se for uma movimentação de manutenção
-      if ((movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') 
-          && movementData.tipo_manutencao_id) {
-        movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
-      }
-
-      console.log('Dados completos da movimentação:', movimentationData);
-
-      const { error: movementError } = await supabase
-        .from('movimentacoes')
-        .insert(movimentationData);
-
-      if (movementError) {
-        console.error('Erro ao inserir movimentação:', movementError);
-        throw movementError;
-      }
-
-      console.log('Movimentação registrada com sucesso');
-
-      // 2. Atualizar o equipamento baseado no tipo de movimento
-      let updateData: any = {};
-
-      if (movementData.tipo_movimento === 'saida') {
-        updateData.data_saida = movementData.data_movimento;
-        updateData.status = 'em_uso';
-      } else if (movementData.tipo_movimento === 'entrada') {
-        updateData.data_saida = null;
-        updateData.status = 'disponivel';
-      } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
-        updateData.id_empresa = movementData.empresa_destino;
-        updateData.status = 'disponivel';
-        console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
-      } else if (movementData.tipo_movimento === 'manutencao') {
-        updateData.status = 'manutencao';
-      } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
-        updateData.status = 'aguardando_manutencao';
-      } else if (movementData.tipo_movimento === 'danificado') {
-        updateData.status = 'danificado';
-      } else if (movementData.tipo_movimento === 'indisponivel') {
-        updateData.status = 'indisponivel';
-      }
-
-      console.log('Dados para atualizar equipamento:', updateData);
-
-      if (Object.keys(updateData).length > 0) {
-        const { error: updateError } = await supabase
-          .from('equipamentos')
-          .update(updateData)
-          .eq('id', selectedEquipment.id);
-
-        if (updateError) {
-          console.error('Erro ao atualizar equipamento:', updateError);
-          throw updateError;
+        // Adicionar tipo_manutencao_id se for uma movimentação de manutenção
+        if ((movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') 
+            && movementData.tipo_manutencao_id) {
+          movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
         }
 
-        console.log('Equipamento atualizado com sucesso');
+        console.log('Dados da movimentação para equipamento', equipment.numero_serie, ':', movimentationData);
+
+        const { error: movementError } = await supabase
+          .from('movimentacoes')
+          .insert(movimentationData);
+
+        if (movementError) {
+          console.error('Erro ao inserir movimentação:', movementError);
+          throw movementError;
+        }
+
+        console.log('Movimentação registrada com sucesso para', equipment.numero_serie);
+
+        // 2. Atualizar o equipamento baseado no tipo de movimento
+        let updateData: any = {};
+
+        if (movementData.tipo_movimento === 'saida') {
+          updateData.data_saida = movementData.data_movimento;
+          updateData.status = 'em_uso';
+        } else if (movementData.tipo_movimento === 'entrada') {
+          updateData.data_saida = null;
+          updateData.status = 'disponivel';
+        } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
+          updateData.id_empresa = movementData.empresa_destino;
+          updateData.status = 'disponivel';
+          console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
+        } else if (movementData.tipo_movimento === 'manutencao') {
+          updateData.status = 'manutencao';
+        } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
+          updateData.status = 'aguardando_manutencao';
+        } else if (movementData.tipo_movimento === 'danificado') {
+          updateData.status = 'danificado';
+        } else if (movementData.tipo_movimento === 'indisponivel') {
+          updateData.status = 'indisponivel';
+        }
+
+        console.log('Dados para atualizar equipamento', equipment.numero_serie, ':', updateData);
+
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await supabase
+            .from('equipamentos')
+            .update(updateData)
+            .eq('id', equipment.id);
+
+          if (updateError) {
+            console.error('Erro ao atualizar equipamento:', updateError);
+            throw updateError;
+          }
+
+          console.log('Equipamento', equipment.numero_serie, 'atualizado com sucesso');
+        }
       }
 
       toast({
         title: "Sucesso",
-        description: "Movimentação registrada com sucesso!",
+        description: `Movimentação registrada com sucesso para ${selectedEquipments.length} equipamento(s)!`,
       });
 
       // Resetar formulário
-      setSelectedEquipment(null);
+      setSelectedEquipments([]);
       const hoje = new Date();
-      const dataAtual = hoje.getFullYear() + '-' + 
-                       String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
-                       String(hoje.getDate()).padStart(2, '0');
+      const localDate = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000));
+      const dataAtual = localDate.toISOString().split('T')[0];
       
       setMovementData({
         tipo_movimento: '',
@@ -258,20 +263,34 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Seleção do Equipamento */}
+            {/* Seleção dos Equipamentos */}
             <div>
-              <Label>Equipamentos Selecionados</Label>
+              <Label>Equipamentos Selecionados ({selectedEquipments.length})</Label>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  {selectedEquipment ? (
-                    <div className="p-3 border rounded-lg bg-gray-50">
-                      <p className="font-medium">{selectedEquipment.numero_serie}</p>
-                      <p className="text-sm text-gray-600">
-                        {selectedEquipment.tipo} {selectedEquipment.modelo && `- ${selectedEquipment.modelo}`}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Empresa: {selectedEquipment.empresas?.name || 'N/A'}
-                      </p>
+                  {selectedEquipments.length > 0 ? (
+                    <div className="space-y-2 max-h-32 overflow-y-auto border rounded-lg p-3">
+                      {selectedEquipments.map((equipment) => (
+                        <div key={equipment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                          <div>
+                            <p className="font-medium">{equipment.numero_serie}</p>
+                            <p className="text-sm text-gray-600">
+                              {equipment.tipo} {equipment.modelo && `- ${equipment.modelo}`}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Empresa: {equipment.empresas?.name || 'N/A'}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeEquipment(equipment.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="p-3 border rounded-lg border-dashed">

@@ -45,12 +45,16 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (searchTerm.trim()) {
-      searchEquipments();
-    } else {
-      setFilteredEquipments([]);
-    }
-  }, [searchTerm, equipmentType]);
+    const delayedSearch = setTimeout(() => {
+      if (searchTerm.trim()) {
+        searchEquipments();
+      } else {
+        setFilteredEquipments([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayedSearch);
+  }, [searchTerm]);
 
   const searchEquipments = async () => {
     if (!searchTerm.trim()) {
@@ -60,6 +64,8 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
 
     setLoading(true);
     try {
+      console.log('Buscando equipamentos com termo:', searchTerm);
+      
       // Check if it's a comma-separated search
       const isMultipleSearch = searchTerm.includes(',');
       
@@ -80,12 +86,14 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
           .map(s => s.trim())
           .filter(Boolean);
 
+        console.log('Buscando números de série:', serialNumbers);
+
         if (serialNumbers.length > 0) {
           query = query.in('numero_serie', serialNumbers);
         }
       } else {
-        // Handle single search term
-        query = query.or(`numero_serie.ilike.%${searchTerm}%,tipo.ilike.%${searchTerm}%,modelo.ilike.%${searchTerm}%`);
+        // Handle single search term - busca em qualquer parte do número de série
+        query = query.ilike('numero_serie', `%${searchTerm.trim()}%`);
       }
 
       // Filter by equipment type if specified
@@ -95,7 +103,12 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na busca:', error);
+        throw error;
+      }
+
+      console.log('Equipamentos encontrados:', data);
       setFilteredEquipments(data || []);
     } catch (error) {
       console.error('Erro ao buscar equipamentos:', error);
@@ -116,7 +129,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedEquipments.size === filteredEquipments.length) {
+    if (selectedEquipments.size === filteredEquipments.length && filteredEquipments.length > 0) {
       setSelectedEquipments(new Set());
     } else {
       setSelectedEquipments(new Set(filteredEquipments.map(eq => eq.id)));
@@ -125,6 +138,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
 
   const handleConfirm = () => {
     const selectedEquipmentsList = filteredEquipments.filter(eq => selectedEquipments.has(eq.id));
+    console.log('Equipamentos confirmados:', selectedEquipmentsList);
     onConfirm(selectedEquipmentsList);
     setSelectedEquipments(new Set());
     setSearchTerm('');
@@ -147,17 +161,17 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
         <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
           <div className="space-y-2">
             <Label htmlFor="search">
-              Buscar por número de série, tipo ou modelo
+              Buscar por número de série
             </Label>
             <div className="flex gap-2">
               <Input
                 id="search"
-                placeholder="Digite um número ou múltiplos separados por vírgula (ex: 41341,40013,50002)"
+                placeholder="Digite um número ou múltiplos separados por vírgula (ex: 00000,11111,22222)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
               />
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" onClick={searchEquipments}>
                 <Search className="h-4 w-4" />
               </Button>
             </div>
@@ -166,6 +180,9 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
                 Filtrando por tipo: <strong>{equipmentType}</strong>
               </p>
             )}
+            <p className="text-xs text-gray-500">
+              Digite números de série separados por vírgula para buscar múltiplos equipamentos
+            </p>
           </div>
 
           {filteredEquipments.length > 0 && (
@@ -189,7 +206,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             ) : filteredEquipments.length === 0 && searchTerm ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-sm text-gray-500">
-                  Nenhum equipamento encontrado
+                  Nenhum equipamento encontrado para "{searchTerm}"
                 </div>
               </div>
             ) : filteredEquipments.length === 0 && !searchTerm ? (
