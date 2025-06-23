@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +32,11 @@ interface MaintenanceType {
   codigo: string;
 }
 
+interface EquipmentType {
+  id: string;
+  nome: string;
+}
+
 interface MovementPageProps {
   onBack: () => void;
 }
@@ -42,6 +46,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -50,12 +55,14 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     data_movimento: '',
     observacoes: '',
     empresa_destino: '',
-    tipo_manutencao_id: ''
+    tipo_manutencao_id: '',
+    tipo_equipamento: ''
   });
 
   useEffect(() => {
     loadCompanies();
     loadMaintenanceTypes();
+    loadEquipmentTypes();
     // Definir data atual corretamente em UTC
     const hoje = new Date();
     // Ajustar para fuso horário local
@@ -104,6 +111,26 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       toast({
         title: "Erro",
         description: "Erro ao carregar tipos de manutenção.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadEquipmentTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipos_equipamento')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (error) throw error;
+      setEquipmentTypes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar tipos de equipamento:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar tipos de equipamento.",
         variant: "destructive",
       });
     }
@@ -232,7 +259,8 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         data_movimento: dataAtual,
         observacoes: '',
         empresa_destino: '',
-        tipo_manutencao_id: ''
+        tipo_manutencao_id: '',
+        tipo_equipamento: ''
       });
 
     } catch (error) {
@@ -263,9 +291,100 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
+                <Select
+                  value={movementData.tipo_movimento}
+                  onValueChange={(value) => handleInputChange('tipo_movimento', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entrada">Entrada</SelectItem>
+                    <SelectItem value="saida">Saída</SelectItem>
+                    <SelectItem value="movimentacao">Movimentação</SelectItem>
+                    <SelectItem value="manutencao">Manutenção</SelectItem>
+                    <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
+                    <SelectItem value="danificado">Danificado</SelectItem>
+                    <SelectItem value="indisponivel">Indisponível</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="data_movimento">Data da Movimentação *</Label>
+                <Input
+                  id="data_movimento"
+                  type="date"
+                  value={movementData.data_movimento}
+                  onChange={(e) => handleInputChange('data_movimento', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="empresa_destino">Empresa Destino</Label>
+                <Select
+                  value={movementData.empresa_destino}
+                  onValueChange={(value) => handleInputChange('empresa_destino', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a empresa destino (23 disponíveis)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {companies.map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
+                <Select
+                  value={movementData.tipo_manutencao_id}
+                  onValueChange={(value) => handleInputChange('tipo_manutencao_id', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de manutenção" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {maintenanceTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.descricao} ({type.codigo})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
+                <Select
+                  value={movementData.tipo_equipamento}
+                  onValueChange={(value) => handleInputChange('tipo_equipamento', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipmentTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.nome}>
+                        {type.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* Seleção dos Equipamentos */}
             <div>
-              <Label>Equipamentos Selecionados ({selectedEquipments.length})</Label>
+              <Label>Equipamentos Selecionados</Label>
               <div className="flex gap-2">
                 <div className="flex-1">
                   {selectedEquipments.length > 0 ? (
@@ -305,84 +424,6 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
-                <Select
-                  value={movementData.tipo_movimento}
-                  onValueChange={(value) => handleInputChange('tipo_movimento', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="entrada">Entrada</SelectItem>
-                    <SelectItem value="saida">Saída</SelectItem>
-                    <SelectItem value="movimentacao">Movimentação</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
-                    <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
-                    <SelectItem value="danificado">Danificado</SelectItem>
-                    <SelectItem value="indisponivel">Indisponível</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="data_movimento">Data da Movimentação *</Label>
-                <Input
-                  id="data_movimento"
-                  type="date"
-                  value={movementData.data_movimento}
-                  onChange={(e) => handleInputChange('data_movimento', e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Campo Empresa Destino apenas para movimentação */}
-              {movementData.tipo_movimento === 'movimentacao' && (
-                <div>
-                  <Label htmlFor="empresa_destino">Empresa Destino</Label>
-                  <Select
-                    value={movementData.empresa_destino}
-                    onValueChange={(value) => handleInputChange('empresa_destino', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a empresa destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Campo Tipo de Manutenção apenas para manutenções */}
-              {(movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') && (
-                <div>
-                  <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
-                  <Select
-                    value={movementData.tipo_manutencao_id}
-                    onValueChange={(value) => handleInputChange('tipo_manutencao_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo de manutenção" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {maintenanceTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.descricao} ({type.codigo})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
             <div>
               <Label htmlFor="observacoes">Observações</Label>
               <Textarea
@@ -412,6 +453,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           isOpen={showSearch}
           onClose={() => setShowSearch(false)}
           onConfirm={handleEquipmentSelect}
+          equipmentType={movementData.tipo_equipamento}
         />
       )}
     </div>
