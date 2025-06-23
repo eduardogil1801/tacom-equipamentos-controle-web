@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -92,8 +91,8 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
           query = query.in('numero_serie', serialNumbers);
         }
       } else {
-        // Handle single search term - busca em qualquer parte do número de série
-        query = query.ilike('numero_serie', `%${searchTerm.trim()}%`);
+        // Handle single search term - busca apenas no início do número de série
+        query = query.ilike('numero_serie', `${searchTerm.trim()}%`);
       }
 
       // Filter by equipment type if specified
@@ -166,7 +165,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             <div className="flex gap-2">
               <Input
                 id="search"
-                placeholder="Digite um número ou múltiplos separados por vírgula (ex: 00000,11111,22222)"
+                placeholder="Digite os primeiros números ou múltiplos separados por vírgula (ex: 412, 40412,41200)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
@@ -181,7 +180,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
               </p>
             )}
             <p className="text-xs text-gray-500">
-              Digite números de série separados por vírgula para buscar múltiplos equipamentos
+              A busca procura equipamentos que começam com os números digitados
             </p>
           </div>
 
