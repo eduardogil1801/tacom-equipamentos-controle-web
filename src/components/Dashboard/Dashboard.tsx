@@ -459,20 +459,6 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Equipment by Company Chart */}
-      {selectedCompany === 'all' && companyData.length > 0 && (
-        <EquipmentByCompanyChart data={companyData} />
-      )}
-
-      {/* Equipment Types by Company Chart */}
-      {equipmentTypeData.length > 0 && (
-        <EquipmentTypesByCompanyChart 
-          data={equipmentTypeData}
-          selectedCompany={selectedCompany}
-          companyName={selectedCompanyName}
-        />
-      )}
     </div>
   );
 };
