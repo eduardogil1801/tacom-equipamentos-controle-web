@@ -62,6 +62,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     loadEquipmentTypes();
     
     if (equipment) {
+      console.log('Carregando equipamento para edição:', equipment);
       // Para edição, usar os dados existentes
       setFormData({
         numero_serie: equipment.numero_serie || '',
@@ -112,6 +113,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   };
 
   const handleInputChange = (field: string, value: string) => {
+    console.log(`Alterando campo ${field} para:`, value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -119,6 +121,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   };
 
   const handleCompanyChange = (companyId: string) => {
+    console.log('Alterando empresa para ID:', companyId);
     const company = companies.find(c => c.id === companyId);
     setSelectedCompany(company || null);
     
@@ -131,6 +134,10 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('=== SALVANDO EQUIPAMENTO ===');
+    console.log('Dados do formulário:', formData);
+    console.log('Equipamento existente:', equipment);
     
     if (!formData.numero_serie || !formData.tipo || !formData.id_empresa) {
       toast({
@@ -146,39 +153,61 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     try {
       if (equipment) {
         // Atualizar equipamento existente
+        console.log('Atualizando equipamento existente com ID:', equipment.id);
+        
+        const updateData = {
+          numero_serie: formData.numero_serie,
+          tipo: formData.tipo,
+          modelo: formData.modelo || null,
+          estado: formData.estado || null,
+          status: formData.status,
+          id_empresa: formData.id_empresa
+        };
+        
+        console.log('Dados para atualização:', updateData);
+
         const { error } = await supabase
           .from('equipamentos')
-          .update({
-            numero_serie: formData.numero_serie,
-            tipo: formData.tipo,
-            modelo: formData.modelo || null,
-            estado: formData.estado || null,
-            status: formData.status,
-            id_empresa: formData.id_empresa
-          })
+          .update(updateData)
           .eq('id', equipment.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro na atualização:', error);
+          throw error;
+        }
 
+        console.log('Equipamento atualizado com sucesso');
+        
         toast({
           title: "Sucesso",
           description: "Equipamento atualizado com sucesso!",
         });
       } else {
         // Criar novo equipamento
+        console.log('Criando novo equipamento');
+        
+        const insertData = {
+          numero_serie: formData.numero_serie,
+          tipo: formData.tipo,
+          modelo: formData.modelo || null,
+          estado: formData.estado || null,
+          status: formData.status,
+          data_entrada: formData.data_entrada,
+          id_empresa: formData.id_empresa
+        };
+        
+        console.log('Dados para inserção:', insertData);
+
         const { error } = await supabase
           .from('equipamentos')
-          .insert({
-            numero_serie: formData.numero_serie,
-            tipo: formData.tipo,
-            modelo: formData.modelo || null,
-            estado: formData.estado || null,
-            status: formData.status,
-            data_entrada: formData.data_entrada,
-            id_empresa: formData.id_empresa
-          });
+          .insert(insertData);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro na inserção:', error);
+          throw error;
+        }
+
+        console.log('Equipamento criado com sucesso');
 
         toast({
           title: "Sucesso",
@@ -189,9 +218,21 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
       onSave();
     } catch (error) {
       console.error('Erro ao salvar equipamento:', error);
+      
+      // Melhor tratamento de erro
+      let errorMessage = "Erro desconhecido ao salvar equipamento.";
+      
+      if (error && typeof error === 'object') {
+        if ('message' in error) {
+          errorMessage = `Erro: ${error.message}`;
+        } else if ('details' in error) {
+          errorMessage = `Erro: ${error.details}`;
+        }
+      }
+      
       toast({
         title: "Erro",
-        description: "Erro ao salvar equipamento.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

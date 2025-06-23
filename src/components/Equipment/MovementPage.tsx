@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -175,6 +176,8 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
       // Processar cada equipamento individualmente
       for (const equipment of selectedEquipments) {
+        console.log(`=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
+        
         // 1. Registrar a movimentação com usuário logado
         const movimentationData: any = {
           id_equipamento: equipment.id,
@@ -213,6 +216,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           updateData.data_saida = null;
           updateData.status = 'disponivel';
         } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
+          // CORREÇÃO: Atualizar a empresa do equipamento em movimentações
           updateData.id_empresa = movementData.empresa_destino;
           updateData.status = 'disponivel';
           console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
@@ -325,13 +329,15 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
               </div>
 
               <div>
-                <Label htmlFor="empresa_destino">Empresa Destino</Label>
+                <Label htmlFor="empresa_destino">
+                  Empresa Destino {movementData.tipo_movimento === 'movimentacao' && '*'}
+                </Label>
                 <Select
                   value={movementData.empresa_destino}
                   onValueChange={(value) => handleInputChange('empresa_destino', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a empresa destino (23 disponíveis)" />
+                    <SelectValue placeholder="Selecione a empresa destino" />
                   </SelectTrigger>
                   <SelectContent>
                     {companies.map((company) => (
