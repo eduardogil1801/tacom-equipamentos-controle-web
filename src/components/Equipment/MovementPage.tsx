@@ -247,7 +247,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           if (movementData.empresa_destino) {
             updateData.id_empresa = movementData.empresa_destino;
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
-            console.log(`Equipamento ${equipment.numero_serie}: empresa ${equipment.empresas?.name} (ID: ${equipment.id_empresa}) -> nova empresa ID: ${movementData.empresa_destino}`);
+            console.log(`Equipamento ${equipment.numero_serie}: empresa ${equipment.empresas?.name} -> nova empresa ID: ${movementData.empresa_destino}`);
             
             // Buscar dados da nova empresa para logs
             const newCompany = companies.find(c => c.id === movementData.empresa_destino);
