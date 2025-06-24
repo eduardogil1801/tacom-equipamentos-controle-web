@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -208,7 +209,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         const movimentationData: any = {
           id_equipamento: equipment.id,
           tipo_movimento: movementData.tipo_movimento,
-          data_movimento: movementData.data_movimento, // CORREÇÃO: Usar a data escolhida pelo usuário
+          data_movimento: movementData.data_movimento, // CORREÇÃO: Usar exatamente a data escolhida pelo usuário
           observacoes: movementData.observacoes || null,
           usuario_responsavel: user?.name ? `${user.name} ${user.surname || ''}`.trim() : user?.username || 'Sistema'
         };
@@ -232,7 +233,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
         console.log('Movimentação registrada com sucesso para', equipment.numero_serie);
 
-        // 2. Atualizar o equipamento baseado no tipo de movimento
+        // 2. CORREÇÃO CRÍTICA: Atualizar o equipamento baseado no tipo de movimento
         let updateData: any = {};
 
         if (movementData.tipo_movimento === 'saida') {
@@ -242,18 +243,23 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           updateData.data_saida = null;
           updateData.status = 'disponivel';
         } else if (movementData.tipo_movimento === 'movimentacao') {
-          // CORREÇÃO: Para movimentações, sempre atualizar a empresa se especificada
+          // CORREÇÃO PRINCIPAL: Para movimentações, SEMPRE atualizar a empresa
           if (movementData.empresa_destino) {
             updateData.id_empresa = movementData.empresa_destino;
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
-            console.log(`Equipamento ${equipment.numero_serie}: empresa atual -> nova empresa ${movementData.empresa_destino}`);
+            console.log(`Equipamento ${equipment.numero_serie}: empresa ${equipment.empresas?.name} (ID: ${equipment.id_empresa}) -> nova empresa ID: ${movementData.empresa_destino}`);
+            
+            // Buscar dados da nova empresa para logs
+            const newCompany = companies.find(c => c.id === movementData.empresa_destino);
+            console.log(`Nova empresa: ${newCompany?.name}`);
           }
           
-          // NOVA FUNCIONALIDADE: Se é TACOM e tem status definido, usar o status definido
+          // CORREÇÃO: Se é TACOM e tem status definido, usar o status definido
           if (isDestinationTacom() && movementData.status_equipamento) {
             updateData.status = movementData.status_equipamento;
             console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
-          } else {
+          } else if (!isDestinationTacom()) {
+            // Se não é TACOM, manter como disponível
             updateData.status = 'disponivel';
           }
         } else if (movementData.tipo_movimento === 'manutencao') {
@@ -268,7 +274,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
         console.log('Dados para atualizar equipamento', equipment.numero_serie, ':', updateData);
 
-        // CORREÇÃO: Sempre atualizar o equipamento com as informações da movimentação
+        // CORREÇÃO CRÍTICA: SEMPRE atualizar o equipamento se há dados para atualizar
         if (Object.keys(updateData).length > 0) {
           const { error: updateError } = await supabase
             .from('equipamentos')
@@ -280,12 +286,19 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
             throw updateError;
           }
 
-          console.log('Equipamento', equipment.numero_serie, 'atualizado com sucesso');
+          console.log('✅ Equipamento', equipment.numero_serie, 'atualizado com sucesso');
           
-          // Log adicional para movimentações
+          // Log detalhado para movimentações
           if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
-            console.log(`✅ EMPRESA ATUALIZADA: Equipamento ${equipment.numero_serie} agora pertence à empresa ID: ${movementData.empresa_destino}`);
+            const newCompany = companies.find(c => c.id === movementData.empresa_destino);
+            console.log(`✅ EMPRESA ATUALIZADA: Equipamento ${equipment.numero_serie} agora pertence à empresa: ${newCompany?.name} (ID: ${movementData.empresa_destino})`);
+            
+            if (isDestinationTacom() && movementData.status_equipamento) {
+              console.log(`✅ STATUS ATUALIZADO: Equipamento ${equipment.numero_serie} agora tem status: ${movementData.status_equipamento}`);
+            }
           }
+        } else {
+          console.log('⚠️ Nenhum dado para atualizar no equipamento', equipment.numero_serie);
         }
       }
 

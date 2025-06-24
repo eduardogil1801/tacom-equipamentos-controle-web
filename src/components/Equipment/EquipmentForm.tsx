@@ -64,8 +64,8 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     
     if (equipment) {
       console.log('Carregando equipamento para edição:', equipment);
-      // CORREÇÃO: Garantir que a data seja formatada corretamente para edição
-      const dataEntrada = equipment.data_entrada ? equipment.data_entrada : getCurrentLocalDate();
+      // CORREÇÃO: Garantir que a data seja mantida exatamente como está no banco
+      const dataEntrada = equipment.data_entrada || getCurrentLocalDate();
       
       setFormData({
         numero_serie: equipment.numero_serie || '',
@@ -163,6 +163,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
           modelo: formData.modelo || null,
           estado: formData.estado || null,
           status: formData.status,
+          data_entrada: formData.data_entrada, // CORREÇÃO: Incluir data_entrada na atualização
           id_empresa: formData.id_empresa
         };
         
