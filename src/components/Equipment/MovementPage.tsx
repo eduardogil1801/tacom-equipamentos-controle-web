@@ -166,6 +166,16 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       return;
     }
 
+    // VALIDAÇÃO: Para movimentações, empresa destino é obrigatória
+    if (movementData.tipo_movimento === 'movimentacao' && !movementData.empresa_destino) {
+      toast({
+        title: "Erro",
+        description: "Para movimentações entre empresas, selecione a empresa de destino.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -215,11 +225,14 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         } else if (movementData.tipo_movimento === 'entrada') {
           updateData.data_saida = null;
           updateData.status = 'disponivel';
-        } else if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
-          // CORREÇÃO: Atualizar a empresa do equipamento em movimentações
-          updateData.id_empresa = movementData.empresa_destino;
+        } else if (movementData.tipo_movimento === 'movimentacao') {
+          // CORREÇÃO: Para movimentações, sempre atualizar a empresa se especificada
+          if (movementData.empresa_destino) {
+            updateData.id_empresa = movementData.empresa_destino;
+            console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
+            console.log(`Equipamento ${equipment.numero_serie}: empresa atual -> nova empresa ${movementData.empresa_destino}`);
+          }
           updateData.status = 'disponivel';
-          console.log('Movimentação entre empresas - Nova empresa ID:', movementData.empresa_destino);
         } else if (movementData.tipo_movimento === 'manutencao') {
           updateData.status = 'manutencao';
         } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
@@ -244,6 +257,11 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           }
 
           console.log('Equipamento', equipment.numero_serie, 'atualizado com sucesso');
+          
+          // Log adicional para movimentações
+          if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
+            console.log(`✅ EMPRESA ATUALIZADA: Equipamento ${equipment.numero_serie} agora pertence à empresa ID: ${movementData.empresa_destino}`);
+          }
         }
       }
 
@@ -347,6 +365,11 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                     ))}
                   </SelectContent>
                 </Select>
+                {movementData.tipo_movimento === 'movimentacao' && (
+                  <p className="text-xs text-gray-600 mt-1">
+                    ⚠️ Obrigatório para movimentações entre empresas
+                  </p>
+                )}
               </div>
 
               <div>

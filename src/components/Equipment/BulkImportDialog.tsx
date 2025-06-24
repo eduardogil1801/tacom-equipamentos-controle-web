@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -284,7 +285,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('=== VERIFICANDO EQUIPAMENTOS DUPLICADOS ===');
 
-      // CORREÇÃO: Verificar duplicatas considerando tipo + número de série
+      // CORREÇÃO: Verificar duplicatas considerando APENAS tipo + número de série (mesmo tipo com mesmo número = duplicata)
       const { data: equipamentosExistentes, error: equipError } = await supabase
         .from('equipamentos')
         .select('numero_serie, tipo');
@@ -294,21 +295,24 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         throw new Error(`Erro ao verificar duplicatas: ${equipError.message}`);
       }
 
-      // Criar conjunto de equipamentos existentes usando tipo + número de série
+      // CORREÇÃO: Criar conjunto de equipamentos existentes usando APENAS tipo + número de série
+      // Agora vai permitir mesmo número de série para tipos diferentes
       const equipamentosExistentesSet = new Set<string>();
       equipamentosExistentes?.forEach(eq => {
         const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
         equipamentosExistentesSet.add(chave);
       });
 
-      console.log('Equipamentos já existentes no banco:', equipamentosExistentesSet.size);
+      console.log('Equipamentos já existentes no banco (tipo+série):', equipamentosExistentesSet.size);
 
-      // Filtrar equipamentos que não são duplicados
+      // Filtrar equipamentos que não são duplicados (mesmo tipo + mesmo número de série)
       const equipamentosNovos = valid.filter(eq => {
         const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
         const isDuplicate = equipamentosExistentesSet.has(chave);
         if (isDuplicate) {
-          console.log(`DUPLICATA IGNORADA: ${eq.tipo} - ${eq.numero_serie}`);
+          console.log(`DUPLICATA IGNORADA: ${eq.tipo} - ${eq.numero_serie} (mesmo tipo e mesmo número)`);
+        } else {
+          console.log(`ACEITO: ${eq.tipo} - ${eq.numero_serie} (combinação única de tipo+número)`);
         }
         return !isDuplicate;
       });
@@ -316,12 +320,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       console.log('Equipamentos novos para inserir:', equipamentosNovos.length);
 
       if (equipamentosNovos.length === 0) {
-        throw new Error('Todos os equipamentos já existem no sistema');
+        throw new Error('Todos os equipamentos já existem no sistema (mesma combinação de tipo + número de série)');
       }
 
       const duplicatas = valid.length - equipamentosNovos.length;
       if (duplicatas > 0) {
-        console.log(`${duplicatas} equipamentos duplicados serão ignorados`);
+        console.log(`${duplicatas} equipamentos duplicados serão ignorados (mesmo tipo + mesmo número de série)`);
       }
 
       console.log('=== PREPARANDO EQUIPAMENTOS PARA INSERÇÃO ===');
@@ -410,7 +414,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       let mensagem = `${totalInseridos} equipamentos importados`;
       if (duplicatas > 0) {
-        mensagem += `, ${duplicatas} duplicatas ignoradas`;
+        mensagem += `, ${duplicatas} duplicatas ignoradas (mesmo tipo + número de série)`;
       }
       if (errosInsercao.length > 0) {
         mensagem += `, ${errosInsercao.length} erros`;
@@ -537,8 +541,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <li>• Campos obrigatórios: Tipo, Número de Série, Empresa</li>
               <li>• Campos opcionais: Modelo, Estado, Status</li>
               <li>• Status válidos: disponivel, em_uso, manutencao, aguardando_manutencao, danificado, indisponivel</li>
-              <li>• <strong>Equipamentos em operadoras serão automaticamente definidos como "em_uso"</strong></li>
-              <li>• Duplicatas são verificadas por tipo + número de série</li>
+              <li>• <strong>Equipamentos com mesmo número mas tipos diferentes são aceitos</strong></li>
+              <li>• <strong>Duplicatas são verificadas por tipo + número de série (mesma combinação não é aceita)</strong></li>
+              <li>• Equipamentos em operadoras serão automaticamente definidos como "em_uso"</li>
               <li>• A data de entrada será definida como a data atual</li>
             </ul>
           </div>
