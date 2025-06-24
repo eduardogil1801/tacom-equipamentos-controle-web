@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +61,7 @@ const FleetForm = () => {
     try {
       const { data, error } = await supabase
         .from('empresas')
-        .select('id, name')
+        .select('id, name, cnpj')
         .order('name');
 
       if (error) throw error;
