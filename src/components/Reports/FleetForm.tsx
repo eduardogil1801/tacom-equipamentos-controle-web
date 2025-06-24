@@ -1,15 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getCurrentLocalMonth } from '@/utils/dateUtils';
 import { useAuth } from '@/hooks/useAuth';
+import FleetFormFields from './FleetForm/FleetFormFields';
+import FleetFormSummary from './FleetForm/FleetFormSummary';
+import FleetFormActions from './FleetForm/FleetFormActions';
 
 interface Company {
   id: string;
@@ -242,156 +240,17 @@ const FleetForm = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="empresa">Nome da Empresa *</Label>
-                <Select 
-                  value={formData.nome_empresa} 
-                  onValueChange={handleCompanyChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione uma empresa" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-gray-300 shadow-lg z-50 max-h-[200px] overflow-y-auto">
-                    {companies.map(company => (
-                      <SelectItem 
-                        key={company.id} 
-                        value={company.name}
-                        className="cursor-pointer hover:bg-gray-100"
-                      >
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <FleetFormFields
+              companies={companies}
+              formData={formData}
+              userResponsibleName={getUserResponsibleName()}
+              onCompanyChange={handleCompanyChange}
+              onInputChange={handleInputChange}
+            />
 
-              <div className="space-y-2">
-                <Label htmlFor="cod_operadora">Código da Operadora *</Label>
-                <Input
-                  id="cod_operadora"
-                  placeholder="Código automático"
-                  value={formData.cod_operadora}
-                  readOnly
-                  className="bg-gray-100"
-                />
-              </div>
+            <FleetFormSummary total={calculateTotal()} />
 
-              <div className="space-y-2">
-                <Label htmlFor="mes_referencia">Mês de Referência *</Label>
-                <Input
-                  id="mes_referencia"
-                  type="month"
-                  value={formData.mes_referencia}
-                  onChange={(e) => handleInputChange('mes_referencia', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="simples_com_imagem">Simples C/Imagem</Label>
-                <Input
-                  id="simples_com_imagem"
-                  type="number"
-                  min="0"
-                  value={formData.simples_com_imagem}
-                  onChange={(e) => handleInputChange('simples_com_imagem', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="simples_sem_imagem">Simples S/Imagem</Label>
-                <Input
-                  id="simples_sem_imagem"
-                  type="number"
-                  min="0"
-                  value={formData.simples_sem_imagem}
-                  onChange={(e) => handleInputChange('simples_sem_imagem', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="secao">Seção</Label>
-                <Input
-                  id="secao"
-                  type="number"
-                  min="0"
-                  value={formData.secao}
-                  onChange={(e) => handleInputChange('secao', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="citgis">CITGIS</Label>
-                <Input
-                  id="citgis"
-                  type="number"
-                  min="0"
-                  value={formData.citgis}
-                  onChange={(e) => handleInputChange('citgis', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="buszoom">BUSZOOM</Label>
-                <Input
-                  id="buszoom"
-                  type="number"
-                  min="0"
-                  value={formData.buszoom}
-                  onChange={(e) => handleInputChange('buszoom', parseInt(e.target.value) || 0)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nuvem">Telemetria</Label>
-                <Input
-                  id="nuvem"
-                  type="number"
-                  min="0"
-                  value={formData.nuvem}
-                  onChange={(e) => handleInputChange('nuvem', parseInt(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
-              <Input
-                id="usuario_responsavel"
-                value={getUserResponsibleName()}
-                readOnly
-                className="bg-gray-100"
-              />
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded">
-              <div className="text-lg font-semibold text-blue-800">
-                Total da Frota: {calculateTotal()}
-              </div>
-              <div className="text-sm text-blue-600 mt-1">
-                Soma automática de todos os tipos de sistema
-              </div>
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <Button 
-                type="submit" 
-                className="bg-primary hover:bg-primary/90 flex items-center gap-2" 
-                disabled={loading}
-              >
-                {loading ? (
-                  'Salvando...'
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Salvar Frota
-                  </>
-                )}
-              </Button>
-            </div>
+            <FleetFormActions loading={loading} />
           </form>
         </CardContent>
       </Card>
