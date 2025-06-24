@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Save, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getCurrentLocalMonth } from '@/utils/dateUtils';
 
 interface Company {
   id: string;
@@ -54,7 +54,7 @@ const FleetForm = () => {
   const [formData, setFormData] = useState<FleetData>({
     nome_empresa: '',
     cod_operadora: '',
-    mes_referencia: new Date().toISOString().substring(0, 7), // YYYY-MM format
+    mes_referencia: '',
     simples_com_imagem: 0,
     simples_sem_imagem: 0,
     secao: 0,
@@ -66,6 +66,15 @@ const FleetForm = () => {
 
   useEffect(() => {
     loadCompanies();
+    
+    // Usar a função utilitária para obter o mês atual
+    const mesAtual = getCurrentLocalMonth();
+    console.log('Mês atual definido:', mesAtual);
+    
+    setFormData(prev => ({
+      ...prev,
+      mes_referencia: mesAtual
+    }));
   }, []);
 
   const loadCompanies = async () => {
@@ -168,11 +177,12 @@ const FleetForm = () => {
         });
       }
 
-      // Resetar formulário
+      // Resetar formulário com mês atual
+      const mesAtual = getCurrentLocalMonth();
       setFormData({
         nome_empresa: '',
         cod_operadora: '',
-        mes_referencia: new Date().toISOString().substring(0, 7),
+        mes_referencia: mesAtual,
         simples_com_imagem: 0,
         simples_sem_imagem: 0,
         secao: 0,

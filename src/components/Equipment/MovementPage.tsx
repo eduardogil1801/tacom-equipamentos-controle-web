@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import EquipmentSearchDialog from './EquipmentSearchDialog';
+import { getCurrentLocalDate } from '@/utils/dateUtils';
 
 interface Equipment {
   id: string;
@@ -64,17 +64,14 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     loadCompanies();
     loadMaintenanceTypes();
     loadEquipmentTypes();
-    // Definir data atual corretamente em UTC
-    const hoje = new Date();
-    // Ajustar para fuso horário local
-    const localDate = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000));
-    const dataFormatada = localDate.toISOString().split('T')[0];
     
-    console.log('Data atual definida:', dataFormatada);
+    // Usar a função utilitária para obter a data atual
+    const dataAtual = getCurrentLocalDate();
+    console.log('Data atual definida:', dataAtual);
     
     setMovementData(prev => ({
       ...prev,
-      data_movimento: dataFormatada
+      data_movimento: dataAtual
     }));
   }, []);
 
@@ -270,11 +267,9 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         description: `Movimentação registrada com sucesso para ${selectedEquipments.length} equipamento(s)!`,
       });
 
-      // Resetar formulário
+      // Resetar formulário com data atual
       setSelectedEquipments([]);
-      const hoje = new Date();
-      const localDate = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000));
-      const dataAtual = localDate.toISOString().split('T')[0];
+      const dataAtual = getCurrentLocalDate();
       
       setMovementData({
         tipo_movimento: '',

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getCurrentLocalDate } from '@/utils/dateUtils';
 
 interface Equipment {
   id: string;
@@ -80,14 +80,13 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
         setSelectedCompany(company);
       }
     } else {
-      // Para novo equipamento, definir data atual corretamente
-      const hoje = new Date();
-      hoje.setHours(12, 0, 0, 0); // Define para meio-dia para evitar problemas de fuso
-      const dataFormatada = hoje.toISOString().split('T')[0];
+      // Para novo equipamento, usar a função utilitária para obter a data atual
+      const dataAtual = getCurrentLocalDate();
+      console.log('Data atual para novo equipamento:', dataAtual);
       
       setFormData(prev => ({
         ...prev,
-        data_entrada: dataFormatada
+        data_entrada: dataAtual
       }));
     }
   }, [equipment, companies]);
