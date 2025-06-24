@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 interface Company {
   id: string;
   name: string;
-  cod_operadora?: string;
+  cnpj?: string;
 }
 
 interface FleetData {
@@ -44,6 +45,14 @@ const FleetForm = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Obter nome do usuário responsável
+  const getUserResponsibleName = () => {
+    if (user?.name && user?.surname) {
+      return `${user.name} ${user.surname}`;
+    }
+    return user?.username || 'N/A';
+  };
+
   useEffect(() => {
     loadCompanies();
     
@@ -65,12 +74,14 @@ const FleetForm = () => {
         .order('name');
 
       if (error) throw error;
+      
+      console.log('Empresas carregadas:', data);
       setCompanies(data || []);
     } catch (error) {
       console.error('Error loading companies:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar operadoras",
+        description: "Erro ao carregar empresas",
         variant: "destructive",
       });
     }
@@ -82,6 +93,8 @@ const FleetForm = () => {
 
   const handleCompanyChange = async (companyName: string) => {
     try {
+      console.log('Empresa selecionada:', companyName);
+      
       // Buscar informações da empresa selecionada no banco de dados
       const { data: companyData, error } = await supabase
         .from('empresas')
@@ -99,7 +112,9 @@ const FleetForm = () => {
         return;
       }
 
-      // Usar o ID da empresa como código da operadora (ou CNPJ se preferir)
+      console.log('Dados da empresa:', companyData);
+
+      // Usar o ID da empresa como código da operadora
       const codOperadora = companyData.id || '';
       
       setFormData(prev => ({ 
@@ -148,7 +163,7 @@ const FleetForm = () => {
         ...formData,
         total,
         mes_referencia: formData.mes_referencia + '-01', // Converter para formato DATE
-        usuario_responsavel: user?.name && user?.surname ? `${user.name} ${user.surname}` : user?.username || 'N/A'
+        usuario_responsavel: getUserResponsibleName()
       };
 
       // Verificar se já existe registro para a empresa e mês
@@ -229,13 +244,13 @@ const FleetForm = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="empresa">Operadora *</Label>
+                <Label htmlFor="empresa">Empresa *</Label>
                 <Select 
                   value={formData.nome_empresa} 
                   onValueChange={handleCompanyChange}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma operadora" />
+                    <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
                   <SelectContent>
                     {companies.map(company => (
@@ -342,7 +357,7 @@ const FleetForm = () => {
               <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
               <Input
                 id="usuario_responsavel"
-                value={user?.name && user?.surname ? `${user.name} ${user.surname}` : user?.username || 'N/A'}
+                value={getUserResponsibleName()}
                 readOnly
                 className="bg-gray-100"
               />
