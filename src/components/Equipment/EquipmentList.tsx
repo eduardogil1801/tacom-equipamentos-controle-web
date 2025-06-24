@@ -299,7 +299,7 @@ const EquipmentList: React.FC = () => {
                   <TableCell>{equipment.empresas?.estado || equipment.estado || '-'}</TableCell>
                   <TableCell>{getStatusBadge(equipment)}</TableCell>
                   <TableCell>
-                    {new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}
+                    {equipment.data_entrada ? new Date(equipment.data_entrada + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">

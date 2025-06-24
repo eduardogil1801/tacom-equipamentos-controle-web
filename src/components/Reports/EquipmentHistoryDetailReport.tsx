@@ -259,10 +259,10 @@ const EquipmentHistoryDetailReport = () => {
                     <strong>Estado:</strong> {equipment.estado || '-'}
                   </div>
                   <div>
-                    <strong>Data Entrada:</strong> {new Date(equipment.data_entrada).toLocaleDateString('pt-BR')}
+                    <strong>Data Entrada:</strong> {equipment.data_entrada ? new Date(equipment.data_entrada + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                   </div>
                   <div>
-                    <strong>Data Saída:</strong> {equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : 'Em estoque'}
+                    <strong>Data Saída:</strong> {equipment.data_saida ? new Date(equipment.data_saida + 'T00:00:00').toLocaleDateString('pt-BR') : 'Em estoque'}
                   </div>
                 </div>
 
@@ -283,7 +283,7 @@ const EquipmentHistoryDetailReport = () => {
                           {equipmentMovements.map(movement => (
                             <tr key={movement.id} className="hover:bg-gray-50">
                               <td className="border border-gray-300 p-2">
-                                {new Date(movement.data_movimento).toLocaleDateString('pt-BR')}
+                                {movement.data_movimento ? new Date(movement.data_movimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                               </td>
                               <td className="border border-gray-300 p-2">{movement.tipo_movimento}</td>
                               <td className="border border-gray-300 p-2">{movement.usuario_responsavel || '-'}</td>
