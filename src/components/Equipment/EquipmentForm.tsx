@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,14 +64,16 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
     
     if (equipment) {
       console.log('Carregando equipamento para edição:', equipment);
-      // Para edição, usar os dados existentes
+      // CORREÇÃO: Garantir que a data seja formatada corretamente para edição
+      const dataEntrada = equipment.data_entrada ? equipment.data_entrada : getCurrentLocalDate();
+      
       setFormData({
         numero_serie: equipment.numero_serie || '',
         tipo: equipment.tipo || '',
         modelo: equipment.modelo || '',
         estado: equipment.estado || '',
         status: equipment.status || 'disponivel',
-        data_entrada: equipment.data_entrada || '',
+        data_entrada: dataEntrada,
         id_empresa: equipment.id_empresa || ''
       });
       

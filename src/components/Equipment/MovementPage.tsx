@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import EquipmentSearchDialog from './EquipmentSearchDialog';
+import MovementStatusSelector from './MovementStatusSelector';
 import { getCurrentLocalDate } from '@/utils/dateUtils';
 
 interface Equipment {
@@ -57,8 +58,16 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     observacoes: '',
     empresa_destino: '',
     tipo_manutencao_id: '',
-    tipo_equipamento: ''
+    tipo_equipamento: '',
+    status_equipamento: '' // Novo campo para status quando necessário
   });
+
+  // Verificar se a empresa destino é TACOM
+  const isDestinationTacom = () => {
+    if (!movementData.empresa_destino) return false;
+    const company = companies.find(c => c.id === movementData.empresa_destino);
+    return company?.name.toUpperCase().includes('TACOM');
+  };
 
   useEffect(() => {
     loadCompanies();
@@ -173,6 +182,16 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
       return;
     }
 
+    // NOVA VALIDAÇÃO: Status obrigatório para TACOM
+    if (isDestinationTacom() && !movementData.status_equipamento) {
+      toast({
+        title: "Erro",
+        description: "Status do equipamento é obrigatório para movimentações para TACOM.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -189,7 +208,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         const movimentationData: any = {
           id_equipamento: equipment.id,
           tipo_movimento: movementData.tipo_movimento,
-          data_movimento: movementData.data_movimento,
+          data_movimento: movementData.data_movimento, // CORREÇÃO: Usar a data escolhida pelo usuário
           observacoes: movementData.observacoes || null,
           usuario_responsavel: user?.name ? `${user.name} ${user.surname || ''}`.trim() : user?.username || 'Sistema'
         };
@@ -229,7 +248,14 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
             console.log(`Equipamento ${equipment.numero_serie}: empresa atual -> nova empresa ${movementData.empresa_destino}`);
           }
-          updateData.status = 'disponivel';
+          
+          // NOVA FUNCIONALIDADE: Se é TACOM e tem status definido, usar o status definido
+          if (isDestinationTacom() && movementData.status_equipamento) {
+            updateData.status = movementData.status_equipamento;
+            console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
+          } else {
+            updateData.status = 'disponivel';
+          }
         } else if (movementData.tipo_movimento === 'manutencao') {
           updateData.status = 'manutencao';
         } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
@@ -242,6 +268,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
         console.log('Dados para atualizar equipamento', equipment.numero_serie, ':', updateData);
 
+        // CORREÇÃO: Sempre atualizar o equipamento com as informações da movimentação
         if (Object.keys(updateData).length > 0) {
           const { error: updateError } = await supabase
             .from('equipamentos')
@@ -277,7 +304,8 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
         observacoes: '',
         empresa_destino: '',
         tipo_manutencao_id: '',
-        tipo_equipamento: ''
+        tipo_equipamento: '',
+        status_equipamento: ''
       });
 
     } catch (error) {
@@ -404,6 +432,16 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* NOVO: Campo de status obrigatório para TACOM */}
+              {isDestinationTacom() && (
+                <MovementStatusSelector
+                  isRequired={true}
+                  value={movementData.status_equipamento}
+                  onChange={(value) => handleInputChange('status_equipamento', value)}
+                  label="Status para TACOM"
+                />
+              )}
             </div>
 
             {/* Seleção dos Equipamentos */}
