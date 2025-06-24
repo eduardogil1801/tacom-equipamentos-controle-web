@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -245,17 +244,21 @@ const FleetForm = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="empresa">Empresa *</Label>
+                <Label htmlFor="empresa">Nome da Empresa *</Label>
                 <Select 
                   value={formData.nome_empresa} 
                   onValueChange={handleCompanyChange}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border border-gray-300 shadow-lg z-50">
+                  <SelectContent className="bg-white border border-gray-300 shadow-lg z-50 max-h-[200px] overflow-y-auto">
                     {companies.map(company => (
-                      <SelectItem key={company.id} value={company.name}>
+                      <SelectItem 
+                        key={company.id} 
+                        value={company.name}
+                        className="cursor-pointer hover:bg-gray-100"
+                      >
                         {company.name}
                       </SelectItem>
                     ))}
@@ -397,4 +400,3 @@ const FleetForm = () => {
 };
 
 export default FleetForm;
-
