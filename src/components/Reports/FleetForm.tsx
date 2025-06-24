@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +9,12 @@ import { Save, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getCurrentLocalMonth } from '@/utils/dateUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Company {
   id: string;
   name: string;
+  cod_operadora?: string;
 }
 
 interface FleetData {
@@ -26,30 +29,8 @@ interface FleetData {
   nuvem: number;
 }
 
-// Mapeamento de operadoras
-const operadoraMapping: { [key: string]: string } = {
-  'Catsul': '32',
-  'Guaíba': '9',
-  'Itapuã': '11',
-  'Sogal': '12',
-  'Soul': '14',
-  'Sogil': '13',
-  'Transcal': '15',
-  'Viamão': '16',
-  'Cmt': '27',
-  'Central': '29',
-  'Transbus': '21',
-  'Tc_Sapi': '23',
-  'Sti': '20',
-  'Sapucaia': '26',
-  'Trensurb': '34',
-  'Nova Santa Rita': '41',
-  'Hamburguesa': '42',
-  'Parobe': '46',
-  'Soul Municipal': '47'
-};
-
 const FleetForm = () => {
+  const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [formData, setFormData] = useState<FleetData>({
     nome_empresa: '',
@@ -100,13 +81,42 @@ const FleetForm = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCompanyChange = (companyName: string) => {
-    const codOperadora = operadoraMapping[companyName] || '';
-    setFormData(prev => ({ 
-      ...prev, 
-      nome_empresa: companyName,
-      cod_operadora: codOperadora
-    }));
+  const handleCompanyChange = async (companyName: string) => {
+    try {
+      // Buscar informações da empresa selecionada no banco de dados
+      const { data: companyData, error } = await supabase
+        .from('empresas')
+        .select('id, name, cnpj')
+        .eq('name', companyName)
+        .single();
+
+      if (error) {
+        console.error('Error fetching company data:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao buscar dados da empresa",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Usar o ID da empresa como código da operadora (ou CNPJ se preferir)
+      const codOperadora = companyData.id || '';
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        nome_empresa: companyName,
+        cod_operadora: codOperadora
+      }));
+
+    } catch (error) {
+      console.error('Error handling company change:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar seleção da empresa",
+        variant: "destructive",
+      });
+    }
   };
 
   const calculateTotal = () => {
@@ -138,7 +148,8 @@ const FleetForm = () => {
       const fleetData = {
         ...formData,
         total,
-        mes_referencia: formData.mes_referencia + '-01' // Converter para formato DATE
+        mes_referencia: formData.mes_referencia + '-01', // Converter para formato DATE
+        usuario_responsavel: user?.name && user?.surname ? `${user.name} ${user.surname}` : user?.username || 'N/A'
       };
 
       // Verificar se já existe registro para a empresa e mês
@@ -326,6 +337,16 @@ const FleetForm = () => {
                   onChange={(e) => handleInputChange('nuvem', parseInt(e.target.value) || 0)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
+              <Input
+                id="usuario_responsavel"
+                value={user?.name && user?.surname ? `${user.name} ${user.surname}` : user?.username || 'N/A'}
+                readOnly
+                className="bg-gray-100"
+              />
             </div>
 
             <div className="bg-blue-50 p-4 rounded">
