@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -252,7 +253,7 @@ const FleetForm = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma empresa" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border border-gray-300 shadow-lg z-50">
                     {companies.map(company => (
                       <SelectItem key={company.id} value={company.name}>
                         {company.name}
@@ -396,3 +397,4 @@ const FleetForm = () => {
 };
 
 export default FleetForm;
+
