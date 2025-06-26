@@ -29,6 +29,7 @@ interface MovementData {
   empresa_destino: string;
   tipo_manutencao_id: string;
   tipo_equipamento: string;
+  modelo_equipamento: string;
   status_equipamento: string;
 }
 
@@ -146,6 +147,19 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="modelo_equipamento">Modelo do Equipamento</Label>
+          <Input
+            id="modelo_equipamento"
+            value={movementData.modelo_equipamento}
+            onChange={(e) => onInputChange('modelo_equipamento', e.target.value)}
+            placeholder="Ex: Com DVR, Sem DVR, etc."
+          />
+          <p className="text-xs text-gray-600 mt-1">
+            Opcional - para especificar variações do equipamento
+          </p>
         </div>
 
         <MovementStatusSelector

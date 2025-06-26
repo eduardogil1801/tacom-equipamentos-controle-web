@@ -38,6 +38,7 @@ interface MovementData {
   empresa_destino: string;
   tipo_manutencao_id: string;
   tipo_equipamento: string;
+  modelo_equipamento: string;
   status_equipamento: string;
 }
 
@@ -56,6 +57,7 @@ export const useMovementForm = () => {
     empresa_destino: '',
     tipo_manutencao_id: '',
     tipo_equipamento: '',
+    modelo_equipamento: '',
     status_equipamento: ''
   });
 
@@ -244,6 +246,15 @@ export const useMovementForm = () => {
           updateData.status = 'indisponivel';
         }
 
+        // Atualizar tipo e modelo se especificados
+        if (movementData.tipo_equipamento) {
+          updateData.tipo = movementData.tipo_equipamento;
+        }
+        
+        if (movementData.modelo_equipamento) {
+          updateData.modelo = movementData.modelo_equipamento;
+        }
+
         console.log('Dados para atualizar equipamento', equipment.numero_serie, ':', updateData);
 
         if (Object.keys(updateData).length > 0) {
@@ -287,6 +298,7 @@ export const useMovementForm = () => {
         empresa_destino: '',
         tipo_manutencao_id: '',
         tipo_equipamento: '',
+        modelo_equipamento: '',
         status_equipamento: ''
       });
 

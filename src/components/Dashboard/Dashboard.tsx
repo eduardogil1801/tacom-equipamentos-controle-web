@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -158,7 +159,7 @@ const Dashboard: React.FC = () => {
       setAllEquipments(equipmentsData || []);
       setEquipments(equipmentsData || []);
 
-      // Load maintenance movements
+      // Load maintenance movements with ALL maintenance types (including "Em Análise")
       const { data: maintenanceData, error: maintenanceError } = await supabase
         .from('movimentacoes')
         .select(`
@@ -168,7 +169,7 @@ const Dashboard: React.FC = () => {
             descricao
           )
         `)
-        .eq('tipo_movimento', 'manutencao');
+        .in('tipo_movimento', ['manutencao', 'aguardando_manutencao']);
 
       if (maintenanceError) {
         console.error('Error loading maintenance movements:', maintenanceError);
@@ -209,11 +210,12 @@ const Dashboard: React.FC = () => {
     : [];
   const inStockEquipments = ensureValidNumber(tacomEquipmentsInStock.length);
 
-  // Equipamentos atualmente em manutenção
+  // Equipamentos atualmente em manutenção - incluindo "Em Análise"
   const equipmentsInMaintenance = equipments.filter(eq => 
     eq.em_manutencao === true || 
     eq.status === 'aguardando_manutencao' || 
-    eq.status === 'em_manutencao'
+    eq.status === 'em_manutencao' ||
+    eq.status === 'manutencao'
   );
   const equipmentsInMaintenanceCount = ensureValidNumber(equipmentsInMaintenance.length);
 
@@ -227,31 +229,6 @@ const Dashboard: React.FC = () => {
 
   // Check if filtered company is TACOM
   const isTacomFiltered = selectedCompanyData && tacomCompany && selectedCompanyData.id === tacomCompany.id;
-
-  // Data for company equipment chart - Enhanced validation with Total
-  const companyData = validateChartData(
-    companies
-      .map(company => {
-        const companyEquipments = allEquipments.filter(eq => eq.id_empresa === company.id);
-        const total = ensureValidNumber(companyEquipments.length);
-        const emEstoque = ensureValidNumber(companyEquipments.filter(eq => !eq.data_saida).length);
-        const retirados = ensureValidNumber(total - emEstoque);
-        
-        return {
-          name: company.name.length > 25 ? company.name.substring(0, 25) + '...' : company.name,
-          fullName: company.name,
-          'Em Estoque': emEstoque,
-          'Retirados': retirados,
-          'Total': total,
-          total
-        };
-      })
-      .filter(item => item.total > 0)
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 15)
-  );
-
-  console.log('Company chart data (validated):', companyData);
 
   // Data for equipment types chart - Enhanced validation
   const equipmentTypeData = validateChartData(
@@ -297,16 +274,25 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => b.value - a.value)
   );
 
-  // Maintenance types data - Enhanced validation
+  // Maintenance types data - Enhanced validation including "Em Análise"
   const maintenanceTypesData = validateChartData(
     equipmentsInMaintenance.reduce((acc: any[], equipment) => {
+      // Buscar movimentações de manutenção mais recentes para este equipamento
       const recentMaintenance = maintenanceMovements
         .filter(mov => mov.id_equipamento === equipment.id)
         .sort((a, b) => new Date(b.data_criacao || '').getTime() - new Date(a.data_criacao || '').getTime())[0];
       
-      const tipo = recentMaintenance?.tipos_manutencao?.descricao || 
-                   recentMaintenance?.detalhes_manutencao || 
-                   'Tipo não especificado';
+      let tipo = 'Tipo não especificado';
+      
+      if (recentMaintenance?.tipos_manutencao?.descricao) {
+        tipo = recentMaintenance.tipos_manutencao.descricao;
+      } else if (recentMaintenance?.detalhes_manutencao) {
+        tipo = recentMaintenance.detalhes_manutencao;
+      } else if (equipment.status === 'aguardando_manutencao') {
+        tipo = 'Aguardando Manutenção';
+      } else if (equipment.status === 'em_manutencao' || equipment.status === 'manutencao') {
+        tipo = 'Em Manutenção';
+      }
       
       const existing = acc.find(item => item.name === tipo);
       if (existing) {
