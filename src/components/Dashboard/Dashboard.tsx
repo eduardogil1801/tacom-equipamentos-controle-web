@@ -219,6 +219,17 @@ const Dashboard: React.FC = () => {
   );
   const equipmentsInMaintenanceCount = ensureValidNumber(equipmentsInMaintenance.length);
 
+  // Statistics for filtered company
+  const isCompanyFiltered = selectedCompany !== 'all';
+  const selectedCompanyData = isCompanyFiltered ? companies.find(c => c.id === selectedCompany) : null;
+  const filteredCompanyEquipments = isCompanyFiltered ? equipments : [];
+  const filteredCompanyTotal = ensureValidNumber(filteredCompanyEquipments.length);
+  const filteredCompanyInStock = ensureValidNumber(filteredCompanyEquipments.filter(eq => !eq.data_saida).length);
+  const filteredCompanyWithdrawn = ensureValidNumber(filteredCompanyTotal - filteredCompanyInStock);
+
+  // Check if filtered company is TACOM
+  const isTacomFiltered = selectedCompanyData && tacomCompany && selectedCompanyData.id === tacomCompany.id;
+
   // Data for company equipment chart - Enhanced validation with Total
   const companyData = validateChartData(
     companies
@@ -341,43 +352,105 @@ const Dashboard: React.FC = () => {
       />
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Equipamentos</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalEquipments.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">
-              Equipamentos cadastrados no sistema
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Conditional cards based on filter */}
+        {!isCompanyFiltered ? (
+          /* Show general statistics when no company is filtered */
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Equipamentos</CardTitle>
+                <Database className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{totalEquipments.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">
+                  Equipamentos cadastrados no sistema
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Estoque</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{inStockEquipments.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">
-              Equipamentos na TACOM SISTEMAS POA
-            </p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Em Estoque</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{inStockEquipments.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">
+                  Equipamentos na TACOM SISTEMAS POA
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Manutenção</CardTitle>
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenanceCount.toLocaleString('pt-BR')}</div>
-            <p className="text-xs text-muted-foreground">Equipamentos em manutenção</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Em Manutenção</CardTitle>
+                <Wrench className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenanceCount.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">Equipamentos em manutenção</p>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          /* Show company-specific statistics when a company is filtered */
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total da Empresa</CardTitle>
+                <Building className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{filteredCompanyTotal.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">
+                  Equipamentos de {selectedCompanyData?.name}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Em Estoque</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{filteredCompanyInStock.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">
+                  Equipamentos em estoque
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Retirados</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">{filteredCompanyWithdrawn.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground">
+                  Equipamentos retirados
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Show maintenance card only for TACOM */}
+            {isTacomFiltered && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Em Manutenção</CardTitle>
+                  <Wrench className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-600">{equipmentsInMaintenanceCount.toLocaleString('pt-BR')}</div>
+                  <p className="text-xs text-muted-foreground">Equipamentos em manutenção</p>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
       </div>
 
       {/* Charts Grid */}
@@ -386,7 +459,10 @@ const Dashboard: React.FC = () => {
         <EquipmentByCompanyChart data={companyData} />
 
         {/* Equipment Types Chart */}
-        <EquipmentTypesByCompanyChart data={equipmentTypeData} />
+        <EquipmentTypesByCompanyChart 
+          data={equipmentTypeData} 
+          selectedCompany={selectedCompanyName || 'Todas as empresas'} 
+        />
       </div>
 
       {/* Additional Charts Grid */}
@@ -430,44 +506,46 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Maintenance Types Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Equipamentos em Manutenção por Tipo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {maintenanceTypesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={maintenanceTypesData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${ensureValidNumber(value)}`}
-                  >
-                    {maintenanceTypesData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [ensureValidNumber(value), '']} 
-                    labelFormatter={(label) => String(label || '')}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500">
-                <div className="text-center">
-                  <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum equipamento em manutenção</p>
+        {/* Maintenance Types Chart - Only show for TACOM or when no filter is applied */}
+        {(!isCompanyFiltered || isTacomFiltered) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Equipamentos em Manutenção por Tipo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {maintenanceTypesData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={maintenanceTypesData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${ensureValidNumber(value)}`}
+                    >
+                      {maintenanceTypesData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value) => [ensureValidNumber(value), '']} 
+                      labelFormatter={(label) => String(label || '')}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[300px] text-gray-500">
+                  <div className="text-center">
+                    <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhum equipamento em manutenção</p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
