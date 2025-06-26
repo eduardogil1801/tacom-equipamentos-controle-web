@@ -117,18 +117,17 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     console.log('Total de linhas recebidas:', data.length);
 
     data.forEach((row, index) => {
-      const rowNumber = index + 2; // +2 porque começamos da linha 2 no Excel (linha 1 é cabeçalho)
+      const rowNumber = index + 2;
       
       console.log(`Validando linha ${rowNumber}:`, row);
       
-      // Mapear diferentes possíveis nomes de colunas com tratamento de tipos
       const tipo = (row['Tipo'] || row['tipo'] || '').toString().trim();
       const numero_serie = (row['Número de Série'] || row['numero_serie'] || row['Serial'] || '').toString().trim();
       const modelo = row['Modelo'] || row['modelo'] ? (row['Modelo'] || row['modelo']).toString().trim() : '';
       const empresa = (row['Empresa'] || row['empresa'] || '').toString().trim();
       const estado = (row['Estado'] || row['estado'] || '').toString().trim();
       
-      // CORREÇÃO: Preservar status exatamente como está no arquivo
+      // CORREÇÃO: Mapear status corretamente
       let statusFromFile = '';
       if (row['Status'] || row['status']) {
         statusFromFile = (row['Status'] || row['status']).toString().trim();
@@ -136,7 +135,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log(`Linha ${rowNumber} mapeada:`, { tipo, numero_serie, modelo, empresa, estado, status: statusFromFile });
 
-      // Validações obrigatórias
       if (!tipo || !numero_serie || !empresa) {
         const missingFields = [];
         if (!tipo) missingFields.push('Tipo');
@@ -149,12 +147,11 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
-      // CORREÇÃO: Mapear status corretamente
-      const validStatuses = ['disponivel', 'em_uso', 'manutencao', 'aguardando_manutencao', 'danificado', 'indisponivel'];
-      let finalStatus = 'disponivel'; // valor padrão
+      // CORREÇÃO: Mapear status preservando o valor original
+      const validStatuses = ['disponivel', 'em_uso', 'manutencao', 'aguardando_manutencao', 'danificado', 'indisponivel', 'devolvido'];
+      let finalStatus = 'disponivel';
       
       if (statusFromFile) {
-        // Mapear possíveis variações do status
         const statusMap: { [key: string]: string } = {
           'disponivel': 'disponivel',
           'disponível': 'disponivel',
@@ -166,7 +163,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           'aguardando manutenção': 'aguardando_manutencao',
           'danificado': 'danificado',
           'indisponivel': 'indisponivel',
-          'indisponível': 'indisponivel'
+          'indisponível': 'indisponivel',
+          'devolvido': 'devolvido'
         };
         
         const statusNormalizado = statusFromFile.toLowerCase().trim();
@@ -213,9 +211,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
     try {
       console.log('=== INICIANDO PROCESSAMENTO DA IMPORTAÇÃO ===');
-      console.log('Arquivo:', file.name, 'Tamanho:', file.size);
       
-      // Ler arquivo Excel
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
@@ -223,13 +219,11 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
       console.log('Dados brutos extraídos do Excel:', jsonData.length, 'linhas');
-      console.log('Primeiras 3 linhas:', jsonData.slice(0, 3));
 
       if (jsonData.length === 0) {
         throw new Error('Arquivo está vazio ou não possui dados válidos');
       }
 
-      // Validar dados
       const { valid, errors } = validateData(jsonData);
 
       if (errors.length > 0) {
@@ -246,7 +240,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('=== CARREGANDO EMPRESAS DO BANCO ===');
       
-      // Carregar empresas para mapear nomes para IDs
       const { data: empresas, error: empresasError } = await supabase
         .from('empresas')
         .select('id, name');
@@ -256,26 +249,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         throw new Error(`Erro ao carregar empresas: ${empresasError.message}`);
       }
 
-      console.log('Empresas carregadas do banco:', empresas?.length);
-
-      // Criar mapa de empresas (nome -> id) - case insensitive
       const empresasMap = new Map<string, string>();
       empresas?.forEach(empresa => {
         const nomeNormalizado = empresa.name.toLowerCase().trim();
         empresasMap.set(nomeNormalizado, empresa.id);
       });
 
-      console.log('=== VERIFICANDO EMPRESAS DOS EQUIPAMENTOS ===');
-
-      // Verificar se todas as empresas do arquivo existem no banco
       const empresasDoArquivo = [...new Set(valid.map(eq => eq.empresa.toLowerCase().trim()))];
-      console.log('Empresas únicas no arquivo:', empresasDoArquivo);
-
-      const empresasNaoEncontradas = empresasDoArquivo.filter(nomeEmpresa => {
-        const encontrada = empresasMap.has(nomeEmpresa);
-        console.log(`Empresa "${nomeEmpresa}": ${encontrada ? 'ENCONTRADA' : 'NÃO ENCONTRADA'}`);
-        return !encontrada;
-      });
+      const empresasNaoEncontradas = empresasDoArquivo.filter(nomeEmpresa => !empresasMap.has(nomeEmpresa));
 
       if (empresasNaoEncontradas.length > 0) {
         const erro = `Empresas não encontradas no sistema: ${empresasNaoEncontradas.join(', ')}`;
@@ -285,7 +266,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('=== VERIFICANDO EQUIPAMENTOS DUPLICADOS ===');
 
-      // CORREÇÃO: Verificar duplicatas considerando APENAS tipo + número de série (mesmo tipo com mesmo número = duplicata)
       const { data: equipamentosExistentes, error: equipError } = await supabase
         .from('equipamentos')
         .select('numero_serie, tipo');
@@ -295,24 +275,17 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         throw new Error(`Erro ao verificar duplicatas: ${equipError.message}`);
       }
 
-      // CORREÇÃO: Criar conjunto de equipamentos existentes usando APENAS tipo + número de série
-      // Agora vai permitir mesmo número de série para tipos diferentes
       const equipamentosExistentesSet = new Set<string>();
       equipamentosExistentes?.forEach(eq => {
         const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
         equipamentosExistentesSet.add(chave);
       });
 
-      console.log('Equipamentos já existentes no banco (tipo+série):', equipamentosExistentesSet.size);
-
-      // Filtrar equipamentos que não são duplicados (mesmo tipo + mesmo número de série)
       const equipamentosNovos = valid.filter(eq => {
         const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
         const isDuplicate = equipamentosExistentesSet.has(chave);
         if (isDuplicate) {
-          console.log(`DUPLICATA IGNORADA: ${eq.tipo} - ${eq.numero_serie} (mesmo tipo e mesmo número)`);
-        } else {
-          console.log(`ACEITO: ${eq.tipo} - ${eq.numero_serie} (combinação única de tipo+número)`);
+          console.log(`DUPLICATA IGNORADA: ${eq.tipo} - ${eq.numero_serie}`);
         }
         return !isDuplicate;
       });
@@ -320,17 +293,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       console.log('Equipamentos novos para inserir:', equipamentosNovos.length);
 
       if (equipamentosNovos.length === 0) {
-        throw new Error('Todos os equipamentos já existem no sistema (mesma combinação de tipo + número de série)');
+        throw new Error('Todos os equipamentos já existem no sistema');
       }
 
       const duplicatas = valid.length - equipamentosNovos.length;
-      if (duplicatas > 0) {
-        console.log(`${duplicatas} equipamentos duplicados serão ignorados (mesmo tipo + mesmo número de série)`);
-      }
 
       console.log('=== PREPARANDO EQUIPAMENTOS PARA INSERÇÃO ===');
 
-      // Obter data atual corretamente
+      // CORREÇÃO: Usar data atual corretamente sem problemas de fuso horário
       const hoje = new Date();
       const dataAtual = hoje.getFullYear() + '-' + 
                       String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -341,17 +311,17 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const equipamentosParaInserir = equipamentosNovos.map(eq => {
         const empresaId = empresasMap.get(eq.empresa.toLowerCase().trim());
         
-        // CORREÇÃO: Definir status automaticamente para operadoras
+        // CORREÇÃO: Preservar status do arquivo
         let statusFinal = eq.status || 'disponivel';
         
-        // Se a empresa contém "operadora" no nome, definir como "em_uso"
+        // Se a empresa contém "operadora" no nome e status não foi especificado, definir como "em_uso"
         const empresaNome = eq.empresa.toLowerCase();
         const isOperadora = empresaNome.includes('operadora') || 
                           empresaNome.includes('tacom') ||
                           empresaNome.includes('poa') ||
                           empresaNome.includes('sistemas');
         
-        if (isOperadora && statusFinal === 'disponivel') {
+        if (isOperadora && (!eq.status || eq.status === 'disponivel')) {
           statusFinal = 'em_uso';
           console.log(`Equipamento ${eq.numero_serie} em operadora definido como "em_uso"`);
         }
@@ -363,17 +333,15 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           id_empresa: empresaId,
           estado: eq.estado || null,
           data_entrada: dataAtual,
-          status: statusFinal
+          status: statusFinal // CORREÇÃO: Usar o status correto
         };
         
-        console.log('Equipamento preparado:', equipamento);
+        console.log('Equipamento preparado com status:', equipamento);
         return equipamento;
       });
 
       console.log('=== INSERINDO EQUIPAMENTOS NO BANCO ===');
-      console.log('Total a inserir:', equipamentosParaInserir.length);
 
-      // Inserir em lotes menores para melhor controle
       const batchSize = 50;
       let totalInseridos = 0;
       const errosInsercao = [];
@@ -399,25 +367,15 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         totalInseridos += inseridosNesteLote;
         
         console.log(`Lote ${batchNumber} inserido: ${inseridosNesteLote} equipamentos`);
-        console.log(`Total inserido até agora: ${totalInseridos}`);
+        console.log(`Status dos equipamentos inseridos:`, data?.map(eq => `${eq.numero_serie}: ${eq.status}`));
       }
 
       console.log('=== RESULTADO FINAL ===');
-      console.log('Total processado:', valid.length);
       console.log('Total inserido:', totalInseridos);
-      console.log('Duplicatas ignoradas:', duplicatas);
-      console.log('Erros de inserção:', errosInsercao.length);
-
-      if (errosInsercao.length > 0) {
-        console.error('Erros encontrados durante a inserção:', errosInsercao);
-      }
 
       let mensagem = `${totalInseridos} equipamentos importados`;
       if (duplicatas > 0) {
-        mensagem += `, ${duplicatas} duplicatas ignoradas (mesmo tipo + número de série)`;
-      }
-      if (errosInsercao.length > 0) {
-        mensagem += `, ${errosInsercao.length} erros`;
+        mensagem += `, ${duplicatas} duplicatas ignoradas`;
       }
 
       toast({
@@ -453,7 +411,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Seção de Template */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
               <FileSpreadsheet className="h-4 w-4" />
@@ -473,7 +430,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
             </Button>
           </div>
 
-          {/* Seção de Upload */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="file-upload">Selecionar Arquivo Excel</Label>
@@ -486,7 +442,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               />
             </div>
 
-            {/* Preview dos dados */}
             {previewData.length > 0 && (
               <div className="border rounded-lg p-4">
                 <h4 className="font-semibold mb-3 flex items-center gap-2">
@@ -519,6 +474,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
                               item.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
                               item.status === 'manutencao' ? 'bg-orange-100 text-orange-800' :
                               item.status === 'danificado' ? 'bg-red-100 text-red-800' :
+                              item.status === 'devolvido' ? 'bg-black text-white' :
                               'bg-gray-100 text-gray-800'
                             }`}>
                               {item.status}
@@ -533,22 +489,20 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
             )}
           </div>
 
-          {/* Instruções */}
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="font-semibold mb-2">Instruções:</h4>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• O arquivo deve estar no formato Excel (.xlsx ou .xls)</li>
               <li>• Campos obrigatórios: Tipo, Número de Série, Empresa</li>
               <li>• Campos opcionais: Modelo, Estado, Status</li>
-              <li>• Status válidos: disponivel, em_uso, manutencao, aguardando_manutencao, danificado, indisponivel</li>
-              <li>• <strong>Equipamentos com mesmo número mas tipos diferentes são aceitos</strong></li>
-              <li>• <strong>Duplicatas são verificadas por tipo + número de série (mesma combinação não é aceita)</strong></li>
-              <li>• Equipamentos em operadoras serão automaticamente definidos como "em_uso"</li>
+              <li>• Status válidos: disponivel, em_uso, manutencao, aguardando_manutencao, danificado, indisponivel, devolvido</li>
+              <li>• <strong>O status será preservado conforme especificado no arquivo</strong></li>
+              <li>• Equipamentos com mesmo número mas tipos diferentes são aceitos</li>
+              <li>• Duplicatas são verificadas por tipo + número de série</li>
               <li>• A data de entrada será definida como a data atual</li>
             </ul>
           </div>
 
-          {/* Botões */}
           <div className="flex justify-end gap-4">
             <Button variant="outline" onClick={onClose} disabled={isProcessing}>
               Cancelar

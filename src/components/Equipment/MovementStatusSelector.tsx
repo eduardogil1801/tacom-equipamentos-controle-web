@@ -32,6 +32,7 @@ const MovementStatusSelector: React.FC<MovementStatusSelectorProps> = ({
           <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
           <SelectItem value="danificado">Danificado</SelectItem>
           <SelectItem value="indisponivel">Indisponível</SelectItem>
+          <SelectItem value="devolvido">Devolvido</SelectItem>
         </SelectContent>
       </Select>
       {isRequired && (

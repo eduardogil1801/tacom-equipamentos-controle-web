@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { getCurrentLocalDate } from '@/utils/dateUtils';
 
 interface Equipment {
   id: string;
@@ -67,13 +66,23 @@ export const useMovementForm = () => {
     return company?.name.toUpperCase().includes('TACOM');
   };
 
+  // CORREÇÃO: Função para obter data atual sem problemas de fuso horário
+  const getCurrentLocalDate = (): string => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     loadCompanies();
     loadMaintenanceTypes();
     loadEquipmentTypes();
     
+    // CORREÇÃO: Usar função local para data atual
     const dataAtual = getCurrentLocalDate();
-    console.log('Data atual definida:', dataAtual);
+    console.log('Data atual definida na movimentação:', dataAtual);
     
     setMovementData(prev => ({
       ...prev,
@@ -230,6 +239,7 @@ export const useMovementForm = () => {
             console.log(`Nova empresa: ${newCompany?.name}`);
           }
           
+          // CORREÇÃO: Garantir que o status seja salvo corretamente
           if (isDestinationTacom() && movementData.status_equipamento) {
             updateData.status = movementData.status_equipamento;
             console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
@@ -269,14 +279,11 @@ export const useMovementForm = () => {
           }
 
           console.log('✅ Equipamento', equipment.numero_serie, 'atualizado com sucesso');
+          console.log('✅ Status atualizado para:', updateData.status);
           
-          if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
+          if (movimentData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
             const newCompany = companies.find(c => c.id === movementData.empresa_destino);
-            console.log(`✅ EMPRESA ATUALIZADA: Equipamento ${equipment.numero_serie} agora pertence à empresa: ${newCompany?.name} (ID: ${movementData.empresa_destino})`);
-            
-            if (isDestinationTacom() && movementData.status_equipamento) {
-              console.log(`✅ STATUS ATUALIZADO: Equipamento ${equipment.numero_serie} agora tem status: ${movementData.status_equipamento}`);
-            }
+            console.log(`✅ EMPRESA ATUALIZADA: Equipamento ${equipment.numero_serie} agora pertence à empresa: ${newCompany?.name}`);
           }
         } else {
           console.log('⚠️ Nenhum dado para atualizar no equipamento', equipment.numero_serie);
