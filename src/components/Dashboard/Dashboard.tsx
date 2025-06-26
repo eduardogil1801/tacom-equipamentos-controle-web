@@ -4,8 +4,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Building, Database, TrendingUp, Package, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import DashboardFilters from './DashboardFilters';
-import EquipmentByCompanyChart from './EquipmentByCompanyChart';
-import EquipmentTypesByCompanyChart from './EquipmentTypesByCompanyChart';
 
 interface Equipment {
   id: string;
@@ -454,18 +452,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Company Equipment Chart */}
-        <EquipmentByCompanyChart data={companyData} />
-
-        {/* Equipment Types Chart */}
-        <EquipmentTypesByCompanyChart 
-          data={equipmentTypeData} 
-          selectedCompany={selectedCompanyName || 'Todas as empresas'} 
-        />
-      </div>
-
-      {/* Additional Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Equipment Types in Stock Pie Chart */}
         <Card>
