@@ -8,6 +8,7 @@ interface ChartData {
   fullName: string;
   'Em Estoque': number;
   'Retirados': number;
+  'Total': number;
   total: number;
 }
 
@@ -24,11 +25,17 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
     typeof item === 'object' && 
     typeof item['Em Estoque'] === 'number' && 
     typeof item['Retirados'] === 'number' &&
+    typeof item['Total'] === 'number' &&
     !isNaN(item['Em Estoque']) && 
     !isNaN(item['Retirados']) &&
+    !isNaN(item['Total']) &&
     isFinite(item['Em Estoque']) && 
-    isFinite(item['Retirados'])
-  );
+    isFinite(item['Retirados']) &&
+    isFinite(item['Total'])
+  ).map(item => ({
+    ...item,
+    'Total': item.total // Ensure Total matches total for consistency
+  }));
 
   if (validData.length === 0) {
     return (
@@ -53,7 +60,7 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
         <CardTitle>Equipamentos por Empresa</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={Math.max(400, validData.length * 50)}>
+        <ResponsiveContainer width="100%" height={Math.max(400, validData.length * 60)}>
           <BarChart 
             data={validData} 
             layout="horizontal"
@@ -91,6 +98,11 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
               stackId="a" 
               fill="#DC2626" 
               name="Retirados"
+            />
+            <Bar 
+              dataKey="Total" 
+              fill="#2563EB" 
+              name="Total Geral"
             />
           </BarChart>
         </ResponsiveContainer>

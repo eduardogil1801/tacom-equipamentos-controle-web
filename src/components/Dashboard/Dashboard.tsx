@@ -219,7 +219,7 @@ const Dashboard: React.FC = () => {
   );
   const equipmentsInMaintenanceCount = ensureValidNumber(equipmentsInMaintenance.length);
 
-  // Data for company equipment chart - Enhanced validation
+  // Data for company equipment chart - Enhanced validation with Total
   const companyData = validateChartData(
     companies
       .map(company => {
@@ -233,6 +233,7 @@ const Dashboard: React.FC = () => {
           fullName: company.name,
           'Em Estoque': emEstoque,
           'Retirados': retirados,
+          'Total': total,
           total
         };
       })
@@ -380,6 +381,15 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Company Equipment Chart */}
+        <EquipmentByCompanyChart data={companyData} />
+
+        {/* Equipment Types Chart */}
+        <EquipmentTypesByCompanyChart data={equipmentTypeData} />
+      </div>
+
+      {/* Additional Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Equipment Types in Stock Pie Chart */}
         <Card>
