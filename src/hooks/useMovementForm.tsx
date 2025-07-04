@@ -229,12 +229,13 @@ export const useMovementForm = () => {
             console.log(`Nova empresa: ${newCompany?.name}`);
           }
           
-          // CORREÇÃO: Garantir que o status seja salvo corretamente
+          // CORREÇÃO: Aplicar regras de status por empresa
           if (isDestinationTacom() && movementData.status_equipamento) {
             updateData.status = movementData.status_equipamento;
             console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
           } else if (!isDestinationTacom()) {
-            updateData.status = 'disponivel';
+            updateData.status = 'em_uso'; // CORREÇÃO: Equipamentos não-TACOM ficam "em_uso"
+            console.log(`Status definido para empresa não-TACOM: "em_uso"`);
           }
         } else if (movementData.tipo_movimento === 'manutencao') {
           updateData.status = 'manutencao';

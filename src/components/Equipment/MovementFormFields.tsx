@@ -162,12 +162,15 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
           </p>
         </div>
 
-        <MovementStatusSelector
-          isRequired={isDestinationTacom}
-          value={movementData.status_equipamento}
-          onChange={(value) => onInputChange('status_equipamento', value)}
-          label={isDestinationTacom ? "Status para TACOM" : "Status do Equipamento"}
-        />
+        {/* CORREÇÃO: Só mostrar campo de status se for TACOM */}
+        {(movementData.tipo_movimento === 'movimentacao' && isDestinationTacom) && (
+          <MovementStatusSelector
+            isRequired={true}
+            value={movementData.status_equipamento}
+            onChange={(value) => onInputChange('status_equipamento', value)}
+            label="Status para TACOM"
+          />
+        )}
       </div>
 
       <div>

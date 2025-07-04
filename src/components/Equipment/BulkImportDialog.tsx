@@ -314,16 +314,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         // CORREÇÃO: Preservar status do arquivo
         let statusFinal = eq.status || 'disponivel';
         
-        // Se a empresa contém "operadora" no nome e status não foi especificado, definir como "em_uso"
+        // CORREÇÃO: Aplicar regra - equipamentos não-TACOM devem ter status "em_uso"
         const empresaNome = eq.empresa.toLowerCase();
-        const isOperadora = empresaNome.includes('operadora') || 
-                          empresaNome.includes('tacom') ||
-                          empresaNome.includes('poa') ||
-                          empresaNome.includes('sistemas');
+        const isTacom = empresaNome.includes('tacom');
         
-        if (isOperadora && (!eq.status || eq.status === 'disponivel')) {
+        // Se não é TACOM e status não foi especificado ou é 'disponivel', definir como "em_uso"
+        if (!isTacom && (!eq.status || eq.status === 'disponivel')) {
           statusFinal = 'em_uso';
-          console.log(`Equipamento ${eq.numero_serie} em operadora definido como "em_uso"`);
+          console.log(`Equipamento ${eq.numero_serie} em empresa não-TACOM definido como "em_uso"`);
         }
         
         const equipamento = {

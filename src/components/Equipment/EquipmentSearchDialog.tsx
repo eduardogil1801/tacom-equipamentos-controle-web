@@ -65,8 +65,8 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
     try {
       console.log('Buscando equipamentos com termo:', searchTerm);
       
-      // Check if it's a comma-separated search
-      const isMultipleSearch = searchTerm.includes(',');
+      // Check if it's a space-separated search
+      const isMultipleSearch = searchTerm.includes(' ');
       
       let query = supabase
         .from('equipamentos')
@@ -79,9 +79,9 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
         .order('numero_serie');
 
       if (isMultipleSearch) {
-        // Handle comma-separated search
+        // Handle space-separated search
         const serialNumbers = searchTerm
-          .split(',')
+          .split(' ')
           .map(s => s.trim())
           .filter(Boolean);
 
@@ -165,7 +165,7 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
             <div className="flex gap-2">
               <Input
                 id="search"
-                placeholder="Digite os primeiros números ou múltiplos separados por vírgula (ex: 412, 40412,41200)"
+                placeholder="Digite os primeiros números ou múltiplos separados por espaço (ex: 412 40412 41200)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
