@@ -3,15 +3,17 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useMovementForm } from '@/hooks/useMovementForm';
 import MovementFormFields from './MovementFormFields';
 import MovementEquipmentSelector from './MovementEquipmentSelector';
 
 interface MovementPageProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
+  const navigate = useNavigate();
   const {
     selectedEquipments,
     setSelectedEquipments,
@@ -41,7 +43,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="outline" onClick={() => onBack ? onBack() : navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
@@ -71,7 +73,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
             />
 
             <div className="flex justify-end gap-4">
-              <Button type="button" variant="outline" onClick={onBack}>
+              <Button type="button" variant="outline" onClick={() => onBack ? onBack() : navigate(-1)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={loading}>

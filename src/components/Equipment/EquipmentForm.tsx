@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useEquipmentForm } from '@/hooks/useEquipmentForm';
 import EquipmentFormFields from './EquipmentFormFields';
 import EquipmentFormActions from './EquipmentFormActions';
@@ -38,6 +39,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   onCancel,
   onSave
 }) => {
+  const navigate = useNavigate();
   const {
     formData,
     equipmentTypes,
@@ -51,7 +53,7 @@ const EquipmentForm: React.FC<EquipmentFormProps> = ({
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={onCancel || (() => navigate(-1))}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>

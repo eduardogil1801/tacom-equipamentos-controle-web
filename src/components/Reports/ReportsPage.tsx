@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   Package, 
@@ -122,6 +123,7 @@ const allReports: ReportItem[] = [
 const ReportsPage: React.FC = () => {
   const [activeReport, setActiveReport] = useState<string | null>(null);
   const { hasReportPermission, loading } = useReportPermissions();
+  const navigate = useNavigate();
 
   // Filtrar relatórios baseado nas permissões do usuário
   const availableReports = allReports.filter(report => hasReportPermission(report.key));
@@ -131,7 +133,7 @@ const ReportsPage: React.FC = () => {
   };
 
   const handleBackToMenu = () => {
-    setActiveReport(null);
+    navigate(-1);
   };
 
   if (loading) {
