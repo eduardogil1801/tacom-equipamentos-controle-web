@@ -190,8 +190,8 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             </p>
           </div>
 
-          {/* CORREÇÃO: Só mostrar campo de status se for TACOM */}
-          {(movementData.tipo_movimento === 'movimentacao' && isDestinationTacom) && (
+          {/* Campo de status sempre aparece quando destino é TACOM */}
+          {isDestinationTacom && (
             <MovementStatusSelector
               isRequired={true}
               value={movementData.status_equipamento}
