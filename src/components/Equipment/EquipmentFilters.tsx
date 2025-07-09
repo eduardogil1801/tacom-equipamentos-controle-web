@@ -123,7 +123,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
               <SelectTrigger>
                 <SelectValue placeholder="Todas as empresas" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto bg-white border border-gray-200 shadow-lg z-50">
                 <SelectItem value="all">Todas as empresas</SelectItem>
                 {companies.map(company => (
                   <SelectItem key={company.id} value={company.id}>
@@ -140,12 +140,14 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
               <SelectTrigger>
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto bg-white border border-gray-200 shadow-lg z-50">
                 <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="disponivel">Disponível</SelectItem>
                 <SelectItem value="em_uso">Em Uso</SelectItem>
+                <SelectItem value="manutencao">Manutenção</SelectItem>
                 <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
-                <SelectItem value="em_manutencao">Em Manutenção</SelectItem>
+                <SelectItem value="danificado">Danificado</SelectItem>
+                <SelectItem value="indisponivel">Indisponível</SelectItem>
               </SelectContent>
             </Select>
           </div>

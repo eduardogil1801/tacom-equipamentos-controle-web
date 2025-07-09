@@ -35,6 +35,7 @@ interface MovementData {
   data_movimento: string;
   observacoes: string;
   empresa_destino: string;
+  empresa_origem?: string;
   tipo_manutencao_id: string;
   tipo_equipamento: string;
   modelo_equipamento: string;
@@ -54,6 +55,7 @@ export const useMovementForm = () => {
     data_movimento: '',
     observacoes: '',
     empresa_destino: '',
+    empresa_origem: '',
     tipo_manutencao_id: '',
     tipo_equipamento: '',
     modelo_equipamento: '',
@@ -144,6 +146,22 @@ export const useMovementForm = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const updateOriginCompany = (equipments: Equipment[]) => {
+    if (equipments.length > 0) {
+      const firstEquipment = equipments[0];
+      const companyName = firstEquipment.empresas?.name || '';
+      setMovementData(prev => ({
+        ...prev,
+        empresa_origem: companyName
+      }));
+    } else {
+      setMovementData(prev => ({
+        ...prev,
+        empresa_origem: ''
+      }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -294,6 +312,7 @@ export const useMovementForm = () => {
         data_movimento: dataAtual,
         observacoes: '',
         empresa_destino: '',
+        empresa_origem: '',
         tipo_manutencao_id: '',
         tipo_equipamento: '',
         modelo_equipamento: '',
@@ -324,6 +343,7 @@ export const useMovementForm = () => {
     loading,
     isDestinationTacom,
     handleInputChange,
-    handleSubmit
+    handleSubmit,
+    updateOriginCompany
   };
 };

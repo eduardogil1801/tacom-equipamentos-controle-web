@@ -24,11 +24,13 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     loading,
     isDestinationTacom,
     handleInputChange,
-    handleSubmit
+    handleSubmit,
+    updateOriginCompany
   } = useMovementForm();
 
   const handleEquipmentSelect = (equipments: any[]) => {
     setSelectedEquipments(equipments);
+    updateOriginCompany(equipments);
   };
 
   const removeEquipment = (equipmentId: string) => {

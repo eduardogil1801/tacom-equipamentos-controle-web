@@ -21,7 +21,7 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) => {
       case 'danificado':
         return { label: 'Danificado', className: 'bg-red-100 text-red-800 hover:bg-red-200' };
       case 'indisponivel':
-        return { label: 'Indisponível', className: 'bg-gray-100 text-gray-800 hover:bg-gray-200' };
+        return { label: 'Indisponível', className: 'bg-black text-white hover:bg-gray-800' };
       case 'devolvido':
         return { label: 'Devolvido', className: 'bg-black text-white hover:bg-gray-800' };
       default:

@@ -27,6 +27,7 @@ interface MovementData {
   data_movimento: string;
   observacoes: string;
   empresa_destino: string;
+  empresa_origem?: string;
   tipo_manutencao_id: string;
   tipo_equipamento: string;
   modelo_equipamento: string;
@@ -52,7 +53,8 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 }) => {
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Primeira linha - campos principais */}
         <div>
           <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
           <Select
@@ -63,13 +65,10 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               <SelectValue placeholder="Selecione o tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="entrada">Entrada</SelectItem>
-              <SelectItem value="saida">Saída</SelectItem>
-              <SelectItem value="movimentacao">Movimentação</SelectItem>
+              <SelectItem value="movimentacao">Alocação</SelectItem>
               <SelectItem value="manutencao">Manutenção</SelectItem>
-              <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
-              <SelectItem value="danificado">Danificado</SelectItem>
-              <SelectItem value="indisponivel">Indisponível</SelectItem>
+              <SelectItem value="devolucao">Devolução</SelectItem>
+              <SelectItem value="retorno_manutencao">Retorno de Manutenção</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -82,6 +81,37 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             value={movementData.data_movimento}
             onChange={(e) => onInputChange('data_movimento', e.target.value)}
             required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
+          <Select
+            value={movementData.tipo_equipamento}
+            onValueChange={(value) => onInputChange('tipo_equipamento', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {equipmentTypes.map((type) => (
+                <SelectItem key={type.id} value={type.nome}>
+                  {type.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Segunda linha - empresa origem e destino */}
+        <div>
+          <Label htmlFor="empresa_origem">Empresa Origem</Label>
+          <Input
+            id="empresa_origem"
+            value={movementData.empresa_origem || ''}
+            readOnly
+            placeholder="Será preenchido automaticamente"
+            className="bg-gray-50"
           />
         </div>
 
@@ -112,6 +142,20 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
         </div>
 
         <div>
+          <Label htmlFor="modelo_equipamento">Modelo do Equipamento</Label>
+          <Input
+            id="modelo_equipamento"
+            value={movementData.modelo_equipamento}
+            onChange={(e) => onInputChange('modelo_equipamento', e.target.value)}
+            placeholder="Ex: Com DVR, Sem DVR, etc."
+          />
+          <p className="text-xs text-gray-600 mt-1">
+            Opcional - para especificar variações do equipamento
+          </p>
+        </div>
+
+        {/* Terceira linha - campos específicos */}
+        <div>
           <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
           <Select
             value={movementData.tipo_manutencao_id}
@@ -128,38 +172,6 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
-          <Select
-            value={movementData.tipo_equipamento}
-            onValueChange={(value) => onInputChange('tipo_equipamento', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              {equipmentTypes.map((type) => (
-                <SelectItem key={type.id} value={type.nome}>
-                  {type.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="modelo_equipamento">Modelo do Equipamento</Label>
-          <Input
-            id="modelo_equipamento"
-            value={movementData.modelo_equipamento}
-            onChange={(e) => onInputChange('modelo_equipamento', e.target.value)}
-            placeholder="Ex: Com DVR, Sem DVR, etc."
-          />
-          <p className="text-xs text-gray-600 mt-1">
-            Opcional - para especificar variações do equipamento
-          </p>
         </div>
 
         {/* CORREÇÃO: Só mostrar campo de status se for TACOM */}
