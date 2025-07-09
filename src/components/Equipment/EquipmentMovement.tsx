@@ -8,6 +8,7 @@ type Movement = {
   id: string;
   tipo_movimento: string;
   data_movimento: string;
+  data_criacao: string;
   observacoes?: string;
   usuario_responsavel?: string;
   equipamentos?: {
@@ -48,7 +49,15 @@ const EquipmentMovement = () => {
       if (error) {
         console.error('Erro ao buscar movimentos:', error);
       } else {
-        setMovements(data as Movement[]);
+        // Filtrar para mostrar apenas a primeira movimentação por equipamento/tipo/data
+        const uniqueMovements = data?.filter((movement, index, array) => {
+          const key = `${movement.id_equipamento}-${movement.tipo_movimento}-${movement.data_movimento}`;
+          return array.findIndex(m => 
+            `${m.id_equipamento}-${m.tipo_movimento}-${m.data_movimento}` === key
+          ) === index;
+        }) || [];
+        
+        setMovements(uniqueMovements as Movement[]);
       }
     };
 
@@ -84,7 +93,13 @@ const EquipmentMovement = () => {
               </td>
               <td className="py-2 px-4 border-b">{movement.tipo_movimento}</td>
               <td className="py-2 px-4 border-b">
-                {formatDateForDisplay(movement.data_movimento)}
+                {new Date(movement.data_criacao).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
               </td>
               <td className="py-2 px-4 border-b">{movement.usuario_responsavel || 'N/A'}</td>
               <td className="py-2 px-4 border-b">{movement.observacoes || '-'}</td>
