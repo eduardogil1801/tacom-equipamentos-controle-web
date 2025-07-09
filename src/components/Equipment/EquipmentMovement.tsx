@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 
 type Movement = {
   id: string;
@@ -82,7 +83,7 @@ const EquipmentMovement = () => {
               </td>
               <td className="py-2 px-4 border-b">{movement.tipo_movimento}</td>
               <td className="py-2 px-4 border-b">
-                {new Date(movement.data_movimento).toLocaleDateString('pt-BR')}
+                {formatDateForDisplay(movement.data_movimento)}
               </td>
               <td className="py-2 px-4 border-b">{movement.usuario_responsavel || 'N/A'}</td>
               <td className="py-2 px-4 border-b">{movement.observacoes || '-'}</td>
