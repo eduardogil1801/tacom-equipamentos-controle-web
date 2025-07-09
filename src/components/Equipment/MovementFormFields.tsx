@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import MovementStatusSelector from './MovementStatusSelector';
+import MovementEquipmentSelector from './MovementEquipmentSelector';
 
 interface Company {
   id: string;
@@ -40,7 +41,10 @@ interface MovementFormFieldsProps {
   maintenanceTypes: MaintenanceType[];
   equipmentTypes: EquipmentType[];
   isDestinationTacom: boolean;
+  selectedEquipments: any[];
   onInputChange: (field: string, value: string) => void;
+  onEquipmentSelect: (equipments: any[]) => void;
+  onRemoveEquipment: (equipmentId: string) => void;
 }
 
 const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
@@ -49,7 +53,10 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   maintenanceTypes,
   equipmentTypes,
   isDestinationTacom,
-  onInputChange
+  selectedEquipments,
+  onInputChange,
+  onEquipmentSelect,
+  onRemoveEquipment
 }) => {
   return (
     <>
@@ -92,6 +99,13 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               </SelectContent>
             </Select>
           </div>
+
+          <MovementEquipmentSelector
+            selectedEquipments={selectedEquipments}
+            onEquipmentSelect={onEquipmentSelect}
+            onRemoveEquipment={onRemoveEquipment}
+            equipmentType={movementData.tipo_equipamento}
+          />
 
           <div>
             <Label htmlFor="empresa_origem">Empresa Origem</Label>
