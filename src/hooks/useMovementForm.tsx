@@ -227,6 +227,24 @@ export const useMovementForm = () => {
       for (const equipment of selectedEquipments) {
         console.log(`=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
         
+        // Verificar se já existe movimentação duplicada
+        const { data: existingMovements } = await supabase
+          .from('movimentacoes')
+          .select('id')
+          .eq('id_equipamento', equipment.id)
+          .eq('data_movimento', movementData.data_movimento)
+          .eq('tipo_movimento', movementData.tipo_movimento);
+
+        if (existingMovements && existingMovements.length > 0) {
+          console.log(`⚠️ Movimentação duplicada detectada para equipamento ${equipment.numero_serie}`);
+          toast({
+            title: "Aviso",
+            description: `Já existe uma movimentação do tipo "${movementData.tipo_movimento}" para o equipamento ${equipment.numero_serie} na data ${movementData.data_movimento}.`,
+            variant: "destructive",
+          });
+          continue; // Pula este equipamento
+        }
+        
         const movimentationData: any = {
           id_equipamento: equipment.id,
           tipo_movimento: movementData.tipo_movimento,
