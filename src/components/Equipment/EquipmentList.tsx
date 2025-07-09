@@ -81,7 +81,7 @@ const EquipmentList: React.FC = () => {
             estado
           )
         `)
-        .order('data_entrada', { ascending: false });
+        .order('at_criado', { ascending: false });
 
       if (equipmentsError) throw equipmentsError;
       setEquipments(equipmentsData || []);
