@@ -75,7 +75,11 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
               <Button type="button" variant="outline" onClick={() => onBack ? onBack() : navigate(-1)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                onClick={() => console.log('⚡ BOTÃO CLICADO DIRETAMENTE!')}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? 'Registrando...' : 'Registrar Movimentação'}
               </Button>
