@@ -305,46 +305,66 @@ const MovementsReport: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-3">Data</th>
-                  <th className="text-left p-3">Tipo</th>
-                  <th className="text-left p-3">Número Série</th>
-                  <th className="text-left p-3">Tipo Equipamento</th>
-                  <th className="text-left p-3">Empresa</th>
-                  <th className="text-left p-3">Responsável</th>
-                  <th className="text-left p-3">Observações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMovements.map(movement => (
-                  <tr key={movement.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{formatDateForDisplay(movement.data_movimento)}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
-                        movement.tipo_movimento === 'saida' ? 'bg-red-100 text-red-800' :
-                        movement.tipo_movimento === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {movement.tipo_movimento}
-                      </span>
-                    </td>
-                    <td className="p-3">{movement.equipamentos?.numero_serie || '-'}</td>
-                    <td className="p-3">{movement.equipamentos?.tipo || '-'}</td>
-                    <td className="p-3">{movement.equipamentos?.empresas?.name || '-'}</td>
-                    <td className="p-3">{movement.usuario_responsavel || '-'}</td>
-                    <td className="p-3 max-w-xs truncate" title={movement.observacoes}>
-                      {movement.observacoes || '-'}
-                    </td>
+            <div className="min-w-[800px]">
+              <table className="w-full border-collapse border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[100px]">Data</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Tipo</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Número Série</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[140px]">Tipo Equipamento</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[150px]">Empresa</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Responsável</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[200px]">Observações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredMovements.map(movement => (
+                    <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                      <td className="p-3 text-sm">{formatDateForDisplay(movement.data_movimento)}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
+                          movement.tipo_movimento === 'saida' ? 'bg-red-100 text-red-800' :
+                          movement.tipo_movimento === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
+                          movement.tipo_movimento === 'movimentacao' ? 'bg-blue-100 text-blue-800' :
+                          movement.tipo_movimento === 'devolucao' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {movement.tipo_movimento === 'movimentacao' ? 'Alocação' :
+                           movement.tipo_movimento === 'manutencao' ? 'Manutenção' :
+                           movement.tipo_movimento === 'devolucao' ? 'Devolução' :
+                           movement.tipo_movimento === 'retorno_manutencao' ? 'Retorno Manutenção' :
+                           movement.tipo_movimento === 'entrada' ? 'Entrada' :
+                           movement.tipo_movimento === 'saida' ? 'Saída' :
+                           movement.tipo_movimento}
+                        </span>
+                      </td>
+                      <td className="p-3 text-sm font-mono">{movement.equipamentos?.numero_serie || '-'}</td>
+                      <td className="p-3 text-sm">{movement.equipamentos?.tipo || '-'}</td>
+                      <td className="p-3 text-sm">{movement.equipamentos?.empresas?.name || '-'}</td>
+                      <td className="p-3 text-sm">{movement.usuario_responsavel || '-'}</td>
+                      <td className="p-3 text-sm">
+                        <div className="max-w-[200px] overflow-hidden">
+                          {movement.observacoes ? (
+                            <span 
+                              className="block truncate"
+                              title={movement.observacoes}
+                            >
+                              {movement.observacoes}
+                            </span>
+                          ) : '-'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {filteredMovements.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                Nenhuma movimentação encontrada com os filtros aplicados
+              <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg mt-4">
+                <div className="text-lg font-medium">Nenhuma movimentação encontrada</div>
+                <div className="text-sm mt-1">Tente ajustar os filtros para ver os resultados</div>
               </div>
             )}
           </div>

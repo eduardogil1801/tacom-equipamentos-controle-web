@@ -129,10 +129,16 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a empresa destino" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[300px]">
                 {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
+                  <SelectItem 
+                    key={company.id} 
+                    value={company.id}
+                    className="text-sm"
+                  >
+                    <div className="w-full">
+                      {company.name}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
