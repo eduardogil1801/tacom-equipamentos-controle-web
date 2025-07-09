@@ -378,14 +378,43 @@ export const useMovementForm = () => {
         console.log('Dados para atualizar equipamento', equipment.numero_serie, ':', updateData);
 
         if (Object.keys(updateData).length > 0) {
+          console.log('=== TENTANDO ATUALIZAR EQUIPAMENTO ===');
+          console.log('ID do equipamento:', equipment.id);
+          console.log('Dados para atualização:', updateData);
+          
           const { error: updateError } = await supabase
             .from('equipamentos')
             .update(updateData)
             .eq('id', equipment.id);
 
           if (updateError) {
-            console.error('Erro ao atualizar equipamento:', updateError);
-            throw updateError;
+            console.error('=== ERRO DETALHADO AO ATUALIZAR EQUIPAMENTO ===');
+            console.error('Código do erro:', updateError.code);
+            console.error('Mensagem do erro:', updateError.message);
+            console.error('Detalhes do erro:', updateError.details);
+            console.error('Dica do erro:', updateError.hint);
+            console.error('Equipamento ID:', equipment.id);
+            console.error('Dados que estavam sendo atualizados:', updateData);
+            
+            // Se for erro 409, tentar novamente após pequeno delay
+            if (updateError.code === '23505' || updateError.message?.includes('409')) {
+              console.log('Tentando novamente após conflito...');
+              await new Promise(resolve => setTimeout(resolve, 200));
+              
+              const { error: retryError } = await supabase
+                .from('equipamentos')
+                .update(updateData)
+                .eq('id', equipment.id);
+                
+              if (retryError) {
+                console.error('Erro persistiu após retry:', retryError);
+                throw retryError;
+              } else {
+                console.log('✅ Atualização bem-sucedida após retry');
+              }
+            } else {
+              throw updateError;
+            }
           }
 
           console.log('✅ Equipamento', equipment.numero_serie, 'atualizado com sucesso');

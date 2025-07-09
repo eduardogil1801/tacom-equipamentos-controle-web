@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -155,6 +155,9 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
       <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Buscar Equipamentos</DialogTitle>
+          <DialogDescription>
+            Selecione os equipamentos que deseja incluir na movimentação
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
