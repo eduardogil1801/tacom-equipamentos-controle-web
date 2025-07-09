@@ -9,6 +9,7 @@ interface Equipment {
   numero_serie: string;
   tipo: string;
   modelo?: string;
+  id_empresa: string;
   empresas?: {
     name: string;
   };
@@ -227,19 +228,12 @@ export const useMovementForm = () => {
       for (const equipment of selectedEquipments) {
         console.log(`=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
         
-        // Verificar se já existe movimentação duplicada
-        const { data: existingMovements } = await supabase
-          .from('movimentacoes')
-          .select('id')
-          .eq('id_equipamento', equipment.id)
-          .eq('data_movimento', movementData.data_movimento)
-          .eq('tipo_movimento', movementData.tipo_movimento);
-
-        if (existingMovements && existingMovements.length > 0) {
-          console.log(`⚠️ Movimentação duplicada detectada para equipamento ${equipment.numero_serie}`);
+        // Verificar se o equipamento já está na empresa de destino (para movimentações)
+        if (movementData.tipo_movimento === 'movimentacao' && equipment.id_empresa === movementData.empresa_destino) {
+          console.log(`⚠️ Equipamento ${equipment.numero_serie} já está na empresa de destino`);
           toast({
             title: "Aviso",
-            description: `Já existe uma movimentação do tipo "${movementData.tipo_movimento}" para o equipamento ${equipment.numero_serie} na data ${movementData.data_movimento}.`,
+            description: `O equipamento ${equipment.numero_serie} já está na empresa de destino.`,
             variant: "destructive",
           });
           continue; // Pula este equipamento
