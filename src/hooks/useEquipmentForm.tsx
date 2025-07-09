@@ -121,10 +121,15 @@ export const useEquipmentForm = (
     const company = companies.find(c => c.id === companyId);
     setSelectedCompany(company || null);
     
+    // Verificar se a empresa é TACOM
+    const isTacom = company?.name?.toUpperCase().includes('TACOM') || false;
+    
     setFormData(prev => ({
       ...prev,
       id_empresa: companyId,
-      estado: company?.estado || ''
+      estado: company?.estado || '',
+      // Se não for TACOM, definir status como "em_uso"
+      status: !isTacom ? 'em_uso' : prev.status
     }));
   };
 
