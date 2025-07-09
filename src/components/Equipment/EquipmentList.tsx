@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Edit, Trash2, Upload } from 'lucide-react';
+import EquipmentExport from './EquipmentExport';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import EquipmentForm from './EquipmentForm';
@@ -274,7 +275,10 @@ const EquipmentList: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Equipamentos Cadastrados ({filteredEquipments.length})</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Equipamentos Cadastrados ({filteredEquipments.length})</CardTitle>
+            <EquipmentExport data={filteredEquipments} />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
