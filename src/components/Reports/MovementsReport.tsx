@@ -229,10 +229,12 @@ const MovementsReport: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="movimentacao">Alocação</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="devolucao">Devolução</SelectItem>
+                  <SelectItem value="retorno_manutencao">Retorno de Manutenção</SelectItem>
                   <SelectItem value="entrada">Entrada</SelectItem>
                   <SelectItem value="saida">Saída</SelectItem>
-                  <SelectItem value="manutencao">Manutenção</SelectItem>
-                  <SelectItem value="transferencia">Transferência</SelectItem>
                 </SelectContent>
               </Select>
             </div>
