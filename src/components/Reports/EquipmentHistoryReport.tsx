@@ -301,7 +301,7 @@ const EquipmentHistoryReport: React.FC = () => {
                           </span>
                         </div>
                         <span className="text-xs text-gray-500">
-                          {movement.usuario_responsavel || 'Sistema'}
+                          {movement.usuario_responsavel || 'Usuário não identificado'}
                         </span>
                       </div>
                     ))}

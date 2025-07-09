@@ -226,16 +226,23 @@ export const useMovementForm = () => {
       console.log('Usuário logado:', user);
 
       // Buscar nome completo do usuário logado
-      let currentUserName = 'Sistema';
-      if (user?.id) {
-        const { data: userData } = await supabase
-          .from('usuarios')
-          .select('nome, sobrenome')
-          .eq('id', user.id)
-          .single();
-        
-        if (userData) {
-          currentUserName = `${userData.nome} ${userData.sobrenome}`;
+      let currentUserName = user?.name && user?.surname ? `${user.name} ${user.surname}` : 'Usuário não identificado';
+      
+      // Se temos o ID do usuário mas não o nome completo, buscar no banco
+      if (user?.id && (!user?.name || !user?.surname)) {
+        try {
+          const { data: userData } = await supabase
+            .from('usuarios')
+            .select('nome, sobrenome')
+            .eq('id', user.id)
+            .single();
+          
+          if (userData) {
+            currentUserName = `${userData.nome} ${userData.sobrenome}`;
+          }
+        } catch (error) {
+          console.error('Erro ao buscar dados do usuário:', error);
+          // Manter o nome do usuário atual se houver erro
         }
       }
 
