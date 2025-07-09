@@ -42,6 +42,7 @@ const EquipmentMovement = () => {
             )
           )
         `)
+        .order('data_criacao', { ascending: false })
         .order('data_movimento', { ascending: false });
 
       if (error) {
