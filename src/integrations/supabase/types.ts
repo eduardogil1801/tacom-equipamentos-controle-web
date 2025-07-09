@@ -586,6 +586,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      get_user_full_name_improved: {
+        Args: { user_id?: string }
+        Returns: string
+      }
     }
     Enums: {
       user_type: "administrador" | "operacional"
