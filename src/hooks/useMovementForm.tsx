@@ -183,10 +183,10 @@ export const useMovementForm = () => {
       return false;
     }
 
-    if (!movementData.tipo_manutencao_id) {
+    if (movementData.tipo_movimento === 'manutencao' && !movementData.tipo_manutencao_id) {
       toast({
         title: "Erro",
-        description: "Tipo de manutenção é obrigatório.",
+        description: "Tipo de manutenção é obrigatório para movimentações de manutenção.",
         variant: "destructive",
       });
       return false;
