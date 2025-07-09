@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,7 +120,7 @@ const EquipmentHistoryReport: React.FC = () => {
     // Dados dos equipamentos
     equipments.forEach(equipment => {
       const movimentacoesText = equipment.movimentacoes
-        .map(mov => `${new Date(mov.data_movimento).toLocaleDateString('pt-BR')}: ${mov.tipo_movimento} - ${mov.observacoes || 'Sem observações'}`)
+        .map(mov => `${formatDateForDisplay(mov.data_movimento)}: ${mov.tipo_movimento} - ${mov.observacoes || 'Sem observações'}`)
         .join(' | ');
       
       csvData.push([
@@ -293,7 +294,7 @@ const EquipmentHistoryReport: React.FC = () => {
                             {movement.tipo_movimento}
                           </span>
                           <span className="text-sm">
-                            {new Date(movement.data_movimento).toLocaleDateString('pt-BR')}
+                            {formatDateForDisplay(movement.data_movimento)}
                           </span>
                           <span className="text-sm text-gray-600">
                             {movement.observacoes || 'Sem observações'}

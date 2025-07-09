@@ -76,3 +76,17 @@ export const formatDateForDatabase = (dateString: string): string => {
   
   return dateString;
 };
+
+/**
+ * Formata data para exibição evitando problemas de timezone
+ * CORREÇÃO: Cria data local sem conversão de timezone
+ */
+export const formatDateForDisplay = (dateString: string): string => {
+  if (!dateString) return '-';
+  
+  // Criar data no formato local (sem conversão de timezone)
+  const [year, month, day] = dateString.split('-');
+  const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  
+  return localDate.toLocaleDateString('pt-BR');
+};

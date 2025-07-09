@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,7 +163,7 @@ const MovementsReport: React.FC = () => {
     }
 
     const tableData = filteredMovements.map(item => [
-      new Date(item.data_movimento).toLocaleDateString('pt-BR'),
+      formatDateForDisplay(item.data_movimento),
       item.tipo_movimento,
       item.equipamentos?.numero_serie || '-',
       item.equipamentos?.tipo || '-',
@@ -319,7 +320,7 @@ const MovementsReport: React.FC = () => {
               <tbody>
                 {filteredMovements.map(movement => (
                   <tr key={movement.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{new Date(movement.data_movimento).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3">{formatDateForDisplay(movement.data_movimento)}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 rounded text-xs ${
                         movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
