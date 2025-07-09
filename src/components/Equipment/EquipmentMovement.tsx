@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/hooks/useAuth';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 
 type Movement = {
@@ -22,14 +22,9 @@ type Movement = {
 
 const EquipmentMovement = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-
     const fetchMovements = async () => {
       const { data, error } = await supabase
         .from('movimentacoes')
@@ -61,16 +56,15 @@ const EquipmentMovement = () => {
       }
     };
 
-    fetchUser();
     fetchMovements();
   }, []);
 
-  const sector = (user?.user_metadata as { sector?: string })?.sector || 'Não informado';
+  const currentUserName = user ? `${user.name} ${user.surname}` : 'Usuário não logado';
 
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">Movimentações de Equipamentos</h1>
-      <p className="mb-4">Setor: {sector}</p>
+      <p className="mb-4">Usuário logado: {currentUserName}</p>
       <table className="min-w-full bg-white border border-gray-300">
         <thead>
           <tr>
@@ -101,7 +95,13 @@ const EquipmentMovement = () => {
                   minute: '2-digit'
                 })}
               </td>
-              <td className="py-2 px-4 border-b">{movement.usuario_responsavel || 'N/A'}</td>
+              <td className="py-2 px-4 border-b">
+                {movement.usuario_responsavel === 'Sistema' || 
+                 movement.usuario_responsavel === 'Usuário não identificado' || 
+                 !movement.usuario_responsavel 
+                  ? currentUserName 
+                  : movement.usuario_responsavel}
+              </td>
               <td className="py-2 px-4 border-b">{movement.observacoes || '-'}</td>
             </tr>
           ))}
