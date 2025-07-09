@@ -273,6 +273,11 @@ export const useMovementForm = () => {
 
         let updateData: any = {};
 
+        console.log('=== DEFININDO DADOS PARA ATUALIZAÇÃO ===');
+        console.log('Tipo de movimento:', movementData.tipo_movimento);
+        console.log('É destino TACOM?', isDestinationTacom());
+        console.log('Empresa destino:', movementData.empresa_destino);
+
         if (movementData.tipo_movimento === 'saida') {
           updateData.data_saida = movementData.data_movimento;
           updateData.status = 'em_uso';

@@ -283,7 +283,7 @@ const EquipmentHistoryDetailReport = () => {
                           {equipmentMovements.map(movement => (
                             <tr key={movement.id} className="hover:bg-gray-50">
                               <td className="border border-gray-300 p-2">
-                                {movement.data_movimento ? new Date(movement.data_movimento + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
+                                {movement.data_movimento ? new Date(movement.data_movimento).toLocaleDateString('pt-BR') : '-'}
                               </td>
                               <td className="border border-gray-300 p-2">{movement.tipo_movimento}</td>
                               <td className="border border-gray-300 p-2">{movement.usuario_responsavel || '-'}</td>
