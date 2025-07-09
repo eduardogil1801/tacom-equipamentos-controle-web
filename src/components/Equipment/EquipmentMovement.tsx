@@ -44,13 +44,19 @@ const EquipmentMovement = () => {
       if (error) {
         console.error('Erro ao buscar movimentos:', error);
       } else {
-        // Filtrar para mostrar apenas a primeira movimentação por equipamento/tipo/data
-        const uniqueMovements = data?.filter((movement, index, array) => {
+        // Filtrar para mostrar apenas usuários cadastrados no sistema e primeira movimentação por equipamento/tipo/data
+        const filteredData = data?.filter(movement => 
+          movement.usuario_responsavel && 
+          movement.usuario_responsavel !== 'Sistema' && 
+          movement.usuario_responsavel !== 'Usuário não identificado'
+        ) || [];
+        
+        const uniqueMovements = filteredData.filter((movement, index, array) => {
           const key = `${movement.id_equipamento}-${movement.tipo_movimento}-${movement.data_movimento}`;
           return array.findIndex(m => 
             `${m.id_equipamento}-${m.tipo_movimento}-${m.data_movimento}` === key
           ) === index;
-        }) || [];
+        });
         
         setMovements(uniqueMovements as Movement[]);
       }
