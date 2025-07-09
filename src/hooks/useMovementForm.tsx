@@ -238,6 +238,24 @@ export const useMovementForm = () => {
           });
           continue; // Pula este equipamento
         }
+
+        // Verificar se já existe uma movimentação exatamente igual hoje
+        const { data: existingMovements } = await supabase
+          .from('movimentacoes')
+          .select('id')
+          .eq('id_equipamento', equipment.id)
+          .eq('data_movimento', movementData.data_movimento)
+          .eq('tipo_movimento', movementData.tipo_movimento);
+
+        if (existingMovements && existingMovements.length > 0) {
+          console.log(`⚠️ Já existe uma movimentação do tipo "${movementData.tipo_movimento}" hoje para equipamento ${equipment.numero_serie}`);
+          toast({
+            title: "Aviso",
+            description: `Já existe uma movimentação do tipo "${movementData.tipo_movimento}" hoje para o equipamento ${equipment.numero_serie}. Use um tipo diferente ou altere a data.`,
+            variant: "destructive",
+          });
+          continue; // Pula este equipamento
+        }
         
         const movimentationData: any = {
           id_equipamento: equipment.id,
