@@ -225,6 +225,20 @@ export const useMovementForm = () => {
       console.log('Dados da movimentação:', movementData);
       console.log('Usuário logado:', user);
 
+      // Buscar nome completo do usuário logado
+      let currentUserName = 'Sistema';
+      if (user?.id) {
+        const { data: userData } = await supabase
+          .from('usuarios')
+          .select('nome, sobrenome')
+          .eq('id', user.id)
+          .single();
+        
+        if (userData) {
+          currentUserName = `${userData.nome} ${userData.sobrenome}`;
+        }
+      }
+
       for (const equipment of selectedEquipments) {
         console.log(`=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
         
@@ -274,7 +288,7 @@ export const useMovementForm = () => {
           tipo_movimento: movementData.tipo_movimento,
           data_movimento: movementData.data_movimento,
           observacoes: movementData.observacoes || null,
-          usuario_responsavel: user?.username || 'Sistema'
+          usuario_responsavel: currentUserName
         };
 
         if ((movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') 

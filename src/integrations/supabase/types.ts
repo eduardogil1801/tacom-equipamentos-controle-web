@@ -582,6 +582,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_full_name: {
+        Args: { user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       user_type: "administrador" | "operacional"
