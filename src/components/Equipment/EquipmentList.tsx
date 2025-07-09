@@ -68,6 +68,7 @@ const EquipmentList: React.FC = () => {
         .order('name');
 
       if (companiesError) throw companiesError;
+      console.log('Companies loaded in equipment list:', companiesData);
       setCompanies(companiesData || []);
 
       // Load equipments with company data

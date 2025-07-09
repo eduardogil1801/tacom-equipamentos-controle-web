@@ -52,6 +52,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
         .order('name');
 
       if (companiesError) throw companiesError;
+      console.log('Companies loaded in filters:', companiesData);
       setCompanies(companiesData || []);
 
       // Load equipment data for filter options
