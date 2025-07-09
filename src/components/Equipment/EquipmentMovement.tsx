@@ -95,13 +95,7 @@ const EquipmentMovement = () => {
                   minute: '2-digit'
                 })}
               </td>
-              <td className="py-2 px-4 border-b">
-                {movement.usuario_responsavel === 'Sistema' || 
-                 movement.usuario_responsavel === 'Usuário não identificado' || 
-                 !movement.usuario_responsavel 
-                  ? currentUserName 
-                  : movement.usuario_responsavel}
-              </td>
+              <td className="py-2 px-4 border-b">{movement.usuario_responsavel || 'N/A'}</td>
               <td className="py-2 px-4 border-b">{movement.observacoes || '-'}</td>
             </tr>
           ))}
