@@ -165,7 +165,13 @@ export const useMovementForm = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('=== VALIDAÇÃO INICIAL ===');
+    console.log('selectedEquipments:', selectedEquipments);
+    console.log('movementData:', movementData);
+    console.log('isDestinationTacom():', isDestinationTacom());
+    
     if (selectedEquipments.length === 0 || !movementData.tipo_movimento || !movementData.data_movimento) {
+      console.log('❌ Erro: Campos obrigatórios não preenchidos');
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios e selecione pelo menos um equipamento.",
