@@ -48,7 +48,15 @@ const EquipmentMovement = () => {
       if (error) {
         console.error('Erro ao buscar movimentos:', error);
       } else {
-        setMovements(data as Movement[]);
+        // Filtrar movimentações duplicadas baseado em equipamento + tipo + data
+        const uniqueMovements = data?.filter((movement, index, array) => {
+          const key = `${movement.id_equipamento}-${movement.tipo_movimento}-${movement.data_movimento}`;
+          return array.findIndex(m => 
+            `${m.id_equipamento}-${m.tipo_movimento}-${m.data_movimento}` === key
+          ) === index;
+        }) || [];
+        
+        setMovements(uniqueMovements as Movement[]);
       }
     };
 
