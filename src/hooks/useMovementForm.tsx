@@ -208,7 +208,7 @@ export const useMovementForm = () => {
           tipo_movimento: movementData.tipo_movimento,
           data_movimento: movementData.data_movimento,
           observacoes: movementData.observacoes || null,
-          usuario_responsavel: user?.name ? `${user.name} ${user.surname || ''}`.trim() : user?.username || 'Sistema'
+          usuario_responsavel: user?.username || 'Sistema'
         };
 
         if ((movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') 

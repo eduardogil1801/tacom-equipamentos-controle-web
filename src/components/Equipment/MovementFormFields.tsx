@@ -53,136 +53,139 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 }) => {
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Primeira linha - campos principais */}
-        <div>
-          <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
-          <Select
-            value={movementData.tipo_movimento}
-            onValueChange={(value) => onInputChange('tipo_movimento', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="movimentacao">Alocação</SelectItem>
-              <SelectItem value="manutencao">Manutenção</SelectItem>
-              <SelectItem value="devolucao">Devolução</SelectItem>
-              <SelectItem value="retorno_manutencao">Retorno de Manutenção</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Lado Esquerdo */}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="tipo_movimento">Tipo de Movimentação *</Label>
+            <Select
+              value={movementData.tipo_movimento}
+              onValueChange={(value) => onInputChange('tipo_movimento', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="movimentacao">Alocação</SelectItem>
+                <SelectItem value="manutencao">Manutenção</SelectItem>
+                <SelectItem value="devolucao">Devolução</SelectItem>
+                <SelectItem value="retorno_manutencao">Retorno de Manutenção</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
+            <Select
+              value={movementData.tipo_equipamento}
+              onValueChange={(value) => onInputChange('tipo_equipamento', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {equipmentTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.nome}>
+                    {type.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="empresa_origem">Empresa Origem</Label>
+            <Input
+              id="empresa_origem"
+              value={movementData.empresa_origem || ''}
+              readOnly
+              placeholder="Será preenchido automaticamente"
+              className="bg-gray-50"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="empresa_destino">
+              Empresa Destino {movementData.tipo_movimento === 'movimentacao' && '*'}
+            </Label>
+            <Select
+              value={movementData.empresa_destino}
+              onValueChange={(value) => onInputChange('empresa_destino', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a empresa destino" />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {movementData.tipo_movimento === 'movimentacao' && (
+              <p className="text-xs text-gray-600 mt-1">
+                ⚠️ Obrigatório para movimentações entre empresas
+              </p>
+            )}
+          </div>
         </div>
 
-        <div>
-          <Label htmlFor="data_movimento">Data da Movimentação *</Label>
-          <Input
-            id="data_movimento"
-            type="date"
-            value={movementData.data_movimento}
-            onChange={(e) => onInputChange('data_movimento', e.target.value)}
-            required
-          />
-        </div>
+        {/* Lado Direito */}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="data_movimento">Data da Movimentação *</Label>
+            <Input
+              id="data_movimento"
+              type="date"
+              value={movementData.data_movimento}
+              onChange={(e) => onInputChange('data_movimento', e.target.value)}
+              required
+            />
+          </div>
 
-        <div>
-          <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
-          <Select
-            value={movementData.tipo_equipamento}
-            onValueChange={(value) => onInputChange('tipo_equipamento', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              {equipmentTypes.map((type) => (
-                <SelectItem key={type.id} value={type.nome}>
-                  {type.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div>
+            <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
+            <Select
+              value={movementData.tipo_manutencao_id}
+              onValueChange={(value) => onInputChange('tipo_manutencao_id', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo de manutenção" />
+              </SelectTrigger>
+              <SelectContent>
+                {maintenanceTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    {type.descricao} ({type.codigo})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Segunda linha - empresa origem e destino */}
-        <div>
-          <Label htmlFor="empresa_origem">Empresa Origem</Label>
-          <Input
-            id="empresa_origem"
-            value={movementData.empresa_origem || ''}
-            readOnly
-            placeholder="Será preenchido automaticamente"
-            className="bg-gray-50"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="empresa_destino">
-            Empresa Destino {movementData.tipo_movimento === 'movimentacao' && '*'}
-          </Label>
-          <Select
-            value={movementData.empresa_destino}
-            onValueChange={(value) => onInputChange('empresa_destino', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a empresa destino" />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {movementData.tipo_movimento === 'movimentacao' && (
+          <div>
+            <Label htmlFor="modelo_equipamento">Modelo do Equipamento</Label>
+            <Input
+              id="modelo_equipamento"
+              value={movementData.modelo_equipamento}
+              onChange={(e) => onInputChange('modelo_equipamento', e.target.value)}
+              placeholder="Ex: Com DVR, Sem DVR, etc."
+            />
             <p className="text-xs text-gray-600 mt-1">
-              ⚠️ Obrigatório para movimentações entre empresas
+              Opcional - para especificar variações do equipamento
             </p>
+          </div>
+
+          {/* CORREÇÃO: Só mostrar campo de status se for TACOM */}
+          {(movementData.tipo_movimento === 'movimentacao' && isDestinationTacom) && (
+            <MovementStatusSelector
+              isRequired={true}
+              value={movementData.status_equipamento}
+              onChange={(value) => onInputChange('status_equipamento', value)}
+              label="Status para TACOM"
+            />
           )}
         </div>
-
-        <div>
-          <Label htmlFor="modelo_equipamento">Modelo do Equipamento</Label>
-          <Input
-            id="modelo_equipamento"
-            value={movementData.modelo_equipamento}
-            onChange={(e) => onInputChange('modelo_equipamento', e.target.value)}
-            placeholder="Ex: Com DVR, Sem DVR, etc."
-          />
-          <p className="text-xs text-gray-600 mt-1">
-            Opcional - para especificar variações do equipamento
-          </p>
-        </div>
-
-        {/* Terceira linha - campos específicos */}
-        <div>
-          <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
-          <Select
-            value={movementData.tipo_manutencao_id}
-            onValueChange={(value) => onInputChange('tipo_manutencao_id', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o tipo de manutenção" />
-            </SelectTrigger>
-            <SelectContent>
-              {maintenanceTypes.map((type) => (
-                <SelectItem key={type.id} value={type.id}>
-                  {type.descricao} ({type.codigo})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* CORREÇÃO: Só mostrar campo de status se for TACOM */}
-        {(movementData.tipo_movimento === 'movimentacao' && isDestinationTacom) && (
-          <MovementStatusSelector
-            isRequired={true}
-            value={movementData.status_equipamento}
-            onChange={(value) => onInputChange('status_equipamento', value)}
-            label="Status para TACOM"
-          />
-        )}
       </div>
 
       <div>
