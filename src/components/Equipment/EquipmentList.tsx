@@ -205,7 +205,7 @@ const EquipmentList: React.FC = () => {
       case 'danificado':
         return <Badge className="bg-red-500 text-white hover:bg-red-600">Danificado</Badge>;
       case 'indisponivel':
-        return <Badge className="bg-red-700 text-white hover:bg-red-800">Indisponível</Badge>;
+        return <Badge className="bg-black text-white hover:bg-gray-800">Indisponível</Badge>;
       default:
         return <Badge className="bg-gray-500 text-white hover:bg-gray-600">Status Desconhecido</Badge>;
     }
