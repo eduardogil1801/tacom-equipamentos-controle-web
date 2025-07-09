@@ -75,7 +75,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
           </div>
 
           <div>
-            <Label htmlFor="tipo_equipamento">Tipo de Equipamento</Label>
+            <Label htmlFor="tipo_equipamento">Tipo de Equipamento *</Label>
             <Select
               value={movementData.tipo_equipamento}
               onValueChange={(value) => onInputChange('tipo_equipamento', value)}
@@ -145,7 +145,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
           </div>
 
           <div>
-            <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção</Label>
+            <Label htmlFor="tipo_manutencao_id">Tipo de Manutenção *</Label>
             <Select
               value={movementData.tipo_manutencao_id}
               onValueChange={(value) => onInputChange('tipo_manutencao_id', value)}

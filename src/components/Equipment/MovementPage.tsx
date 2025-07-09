@@ -67,12 +67,20 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
               onInputChange={handleInputChange}
             />
 
-            <MovementEquipmentSelector
-              selectedEquipments={selectedEquipments}
-              onEquipmentSelect={handleEquipmentSelect}
-              onRemoveEquipment={removeEquipment}
-              equipmentType={movementData.tipo_equipamento}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Equipamentos Selecionados no lado esquerdo, abaixo dos outros campos */}
+              <div>
+                <MovementEquipmentSelector
+                  selectedEquipments={selectedEquipments}
+                  onEquipmentSelect={handleEquipmentSelect}
+                  onRemoveEquipment={removeEquipment}
+                  equipmentType={movementData.tipo_equipamento}
+                />
+              </div>
+              <div>
+                {/* Espaço vazio para manter o alinhamento */}
+              </div>
+            </div>
 
             <div className="flex justify-end gap-4">
               <Button type="button" variant="outline" onClick={() => onBack ? onBack() : navigate(-1)}>

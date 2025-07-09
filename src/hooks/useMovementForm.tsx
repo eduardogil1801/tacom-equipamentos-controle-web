@@ -174,6 +174,24 @@ export const useMovementForm = () => {
       return false;
     }
 
+    if (!movementData.tipo_equipamento) {
+      toast({
+        title: "Erro",
+        description: "Tipo de equipamento é obrigatório.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!movementData.tipo_manutencao_id) {
+      toast({
+        title: "Erro",
+        description: "Tipo de manutenção é obrigatório.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     if (movementData.tipo_movimento === 'movimentacao' && !movementData.empresa_destino) {
       toast({
         title: "Erro",
