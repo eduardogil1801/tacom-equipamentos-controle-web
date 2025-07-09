@@ -39,6 +39,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔄 Botão de movimentação clicado!');
     await handleSubmit();
   };
 
