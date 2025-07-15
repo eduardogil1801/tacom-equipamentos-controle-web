@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardFilters from './DashboardFilters';
 import DashboardStats from './DashboardStats';
 import DashboardCharts from './DashboardCharts';
+import EquipmentTable from './EquipmentTable';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useDashboardCalculations } from '@/hooks/useDashboardCalculations';
 
@@ -22,6 +23,7 @@ const Dashboard: React.FC = () => {
   // Filtros
   const [selectedCompany, setSelectedCompany] = useState('all');
   const [selectedEquipmentType, setSelectedEquipmentType] = useState('all');
+  const [selectedMaintenanceType, setSelectedMaintenanceType] = useState('all');
 
   const calculations = useDashboardCalculations(
     equipments,
@@ -53,10 +55,13 @@ const Dashboard: React.FC = () => {
       <DashboardFilters
         companies={companies}
         equipmentTypes={equipmentTypes}
+        maintenanceTypes={[]} // Será implementado posteriormente
         selectedCompany={selectedCompany}
         selectedEquipmentType={selectedEquipmentType}
+        selectedMaintenanceType={selectedMaintenanceType}
         onCompanyChange={setSelectedCompany}
         onEquipmentTypeChange={setSelectedEquipmentType}
+        onMaintenanceTypeChange={setSelectedMaintenanceType}
         onRefresh={loadData}
         loading={loading}
       />
@@ -79,6 +84,12 @@ const Dashboard: React.FC = () => {
         isCompanyFiltered={calculations.isCompanyFiltered}
         isTacomFiltered={calculations.isTacomFiltered}
         ensureValidNumber={calculations.ensureValidNumber}
+      />
+
+      <EquipmentTable
+        equipments={equipments}
+        maintenanceMovements={maintenanceMovements}
+        selectedMaintenanceType={selectedMaintenanceType}
       />
     </div>
   );

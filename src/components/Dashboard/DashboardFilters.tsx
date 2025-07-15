@@ -15,13 +15,22 @@ interface EquipmentType {
   nome: string;
 }
 
+interface MaintenanceType {
+  id: string;
+  codigo: string;
+  descricao: string;
+}
+
 interface DashboardFiltersProps {
   companies: Company[];
   equipmentTypes: EquipmentType[];
+  maintenanceTypes: MaintenanceType[];
   selectedCompany: string;
   selectedEquipmentType: string;
+  selectedMaintenanceType: string;
   onCompanyChange: (value: string) => void;
   onEquipmentTypeChange: (value: string) => void;
+  onMaintenanceTypeChange: (value: string) => void;
   onRefresh: () => void;
   loading: boolean;
 }
@@ -29,10 +38,13 @@ interface DashboardFiltersProps {
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   companies,
   equipmentTypes,
+  maintenanceTypes,
   selectedCompany,
   selectedEquipmentType,
+  selectedMaintenanceType,
   onCompanyChange,
   onEquipmentTypeChange,
+  onMaintenanceTypeChange,
   onRefresh,
   loading
 }) => {
@@ -42,7 +54,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
         <CardTitle>Filtros</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Empresa</label>
             <Select value={selectedCompany} onValueChange={onCompanyChange}>
@@ -73,6 +85,22 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     {type.nome}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium mb-2 block">Tipo de Manutenção</label>
+            <Select value={selectedMaintenanceType} onValueChange={onMaintenanceTypeChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as manutenções" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as manutenções</SelectItem>
+                <SelectItem value="preventiva">Preventiva</SelectItem>
+                <SelectItem value="corretiva">Corretiva</SelectItem>
+                <SelectItem value="preditiva">Preditiva</SelectItem>
+                <SelectItem value="emergencial">Emergencial</SelectItem>
               </SelectContent>
             </Select>
           </div>
