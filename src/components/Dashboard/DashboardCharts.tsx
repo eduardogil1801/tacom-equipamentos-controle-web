@@ -40,7 +40,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
         </CardHeader>
         <CardContent>
           {barChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
@@ -66,7 +66,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[350px] text-gray-500">
+            <div className="flex items-center justify-center h-[280px] text-gray-500">
               <div className="text-center">
                 <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>Nenhum equipamento encontrado</p>
@@ -84,13 +84,13 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
           </CardHeader>
           <CardContent>
             {maintenanceTypesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={maintenanceTypesData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                     label={({ name, value }) => `${name}: ${ensureValidNumber(value)}`}
@@ -106,7 +106,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
                 </PieChart>
                 </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500">
+              <div className="flex items-center justify-center h-[250px] text-gray-500">
                 <div className="text-center">
                   <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Nenhum equipamento em manutenção</p>
