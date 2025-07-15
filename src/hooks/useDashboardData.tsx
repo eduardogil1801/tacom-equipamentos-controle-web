@@ -30,6 +30,13 @@ interface EquipmentType {
   ativo: boolean;
 }
 
+interface MaintenanceType {
+  id: string;
+  codigo: string;
+  descricao: string;
+  ativo: boolean;
+}
+
 interface MaintenanceMovement {
   id: string;
   tipo_movimento: string;
@@ -47,6 +54,7 @@ export const useDashboardData = () => {
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
   const [maintenanceMovements, setMaintenanceMovements] = useState<MaintenanceMovement[]>([]);
   const [tacomCompany, setTacomCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +89,19 @@ export const useDashboardData = () => {
         throw equipmentTypesError;
       }
       setEquipmentTypes(equipmentTypesData || []);
+
+      // Load maintenance types
+      const { data: maintenanceTypesData, error: maintenanceTypesError } = await supabase
+        .from('tipos_manutencao')
+        .select('id, codigo, descricao, ativo')
+        .eq('ativo', true)
+        .order('codigo');
+
+      if (maintenanceTypesError) {
+        console.error('Error loading maintenance types:', maintenanceTypesError);
+        throw maintenanceTypesError;
+      }
+      setMaintenanceTypes(maintenanceTypesData || []);
 
       // Find Tacom company
       const tacom = companiesData?.find(company => 
@@ -160,6 +181,7 @@ export const useDashboardData = () => {
     allEquipments,
     companies,
     equipmentTypes,
+    maintenanceTypes,
     maintenanceMovements,
     tacomCompany,
     loading,

@@ -97,10 +97,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as manutenções</SelectItem>
-                <SelectItem value="preventiva">Preventiva</SelectItem>
-                <SelectItem value="corretiva">Corretiva</SelectItem>
-                <SelectItem value="preditiva">Preditiva</SelectItem>
-                <SelectItem value="emergencial">Emergencial</SelectItem>
+                {maintenanceTypes.map(type => (
+                  <SelectItem key={type.id} value={type.codigo}>
+                    {type.descricao} ({type.codigo})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

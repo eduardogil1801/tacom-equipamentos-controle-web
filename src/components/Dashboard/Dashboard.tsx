@@ -13,6 +13,7 @@ const Dashboard: React.FC = () => {
     allEquipments,
     companies,
     equipmentTypes,
+    maintenanceTypes,
     maintenanceMovements,
     tacomCompany,
     loading,
@@ -55,7 +56,7 @@ const Dashboard: React.FC = () => {
       <DashboardFilters
         companies={companies}
         equipmentTypes={equipmentTypes}
-        maintenanceTypes={[]} // Será implementado posteriormente
+        maintenanceTypes={maintenanceTypes}
         selectedCompany={selectedCompany}
         selectedEquipmentType={selectedEquipmentType}
         selectedMaintenanceType={selectedMaintenanceType}
