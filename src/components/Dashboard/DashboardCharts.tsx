@@ -34,11 +34,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Equipment Types in Stock Bar Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribuição por Tipo</CardTitle>
+      <Card className="p-3">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Distribuição por Tipo</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0">
           {barChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={barChartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
@@ -78,11 +78,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
 
       {/* Maintenance Types Chart - Only show for TACOM or when no filter is applied */}
       {(!isCompanyFiltered || isTacomFiltered) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Equipamentos em Manutenção por Tipo</CardTitle>
+        <Card className="p-3">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Equipamentos em Manutenção por Tipo</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0">
             {maintenanceTypesData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
