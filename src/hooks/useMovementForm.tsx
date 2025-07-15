@@ -199,7 +199,7 @@ export const useMovementForm = () => {
       return false;
     }
 
-    if (movementData.tipo_movimento === 'movimentacao' && !movementData.empresa_destino) {
+    if ((movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao') && !movementData.empresa_destino) {
       toast({
         title: "Erro",
         description: "Para movimentações entre empresas, selecione a empresa de destino.",
@@ -260,8 +260,8 @@ export const useMovementForm = () => {
           continue; // Pula este equipamento
         }
 
-        // Para movimentações, verificar se não é uma movimentação duplicada para a MESMA empresa
-        if (movementData.tipo_movimento === 'movimentacao') {
+        // Para movimentações e devoluções, verificar se não é uma movimentação duplicada para a MESMA empresa
+        if (movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao') {
           const { data: existingMovements } = await supabase
             .from('movimentacoes')
             .select(`
@@ -345,7 +345,7 @@ export const useMovementForm = () => {
         } else if (movementData.tipo_movimento === 'entrada') {
           updateData.data_saida = null;
           updateData.status = 'disponivel';
-        } else if (movementData.tipo_movimento === 'movimentacao') {
+        } else if (movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao') {
           if (movementData.empresa_destino) {
             updateData.id_empresa = movementData.empresa_destino;
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
@@ -355,13 +355,19 @@ export const useMovementForm = () => {
             console.log(`Nova empresa: ${newCompany?.name}`);
           }
           
-          // CORREÇÃO: Aplicar regras de status por empresa
-          if (isDestinationTacom() && movementData.status_equipamento) {
-            updateData.status = movementData.status_equipamento;
-            console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
-          } else if (!isDestinationTacom()) {
-            updateData.status = 'em_uso'; // CORREÇÃO: Equipamentos não-TACOM ficam "em_uso"
-            console.log(`Status definido para empresa não-TACOM: "em_uso"`);
+          // Definir status baseado no tipo de movimento
+          if (movementData.tipo_movimento === 'devolucao') {
+            updateData.status = 'devolvido';
+            console.log('Status definido para devolução: "devolvido"');
+          } else {
+            // CORREÇÃO: Aplicar regras de status por empresa para movimentações
+            if (isDestinationTacom() && movementData.status_equipamento) {
+              updateData.status = movementData.status_equipamento;
+              console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
+            } else if (!isDestinationTacom()) {
+              updateData.status = 'em_uso'; // CORREÇÃO: Equipamentos não-TACOM ficam "em_uso"
+              console.log(`Status definido para empresa não-TACOM: "em_uso"`);
+            }
           }
         } else if (movementData.tipo_movimento === 'manutencao') {
           updateData.status = 'manutencao';
