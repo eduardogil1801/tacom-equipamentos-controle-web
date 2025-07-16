@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Upload, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import EquipmentExport from './EquipmentExport';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -53,6 +52,8 @@ const EquipmentList: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     loadData();
@@ -225,6 +226,42 @@ const EquipmentList: React.FC = () => {
     loadData(); // Recarregar dados após salvar
   };
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field: string) => {
+    if (sortField !== field) {
+      return <ChevronsUpDown className="h-4 w-4 inline ml-1" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ChevronUp className="h-4 w-4 inline ml-1" />
+      : <ChevronDown className="h-4 w-4 inline ml-1" />;
+  };
+
+  const sortedEquipments = React.useMemo(() => {
+    if (!sortField) return filteredEquipments;
+    
+    return [...filteredEquipments].sort((a, b) => {
+      let aValue = a[sortField as keyof Equipment];
+      let bValue = b[sortField as keyof Equipment];
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredEquipments, sortField, sortDirection]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -276,15 +313,20 @@ const EquipmentList: React.FC = () => {
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Equipamentos Cadastrados ({filteredEquipments.length})</CardTitle>
-            <EquipmentExport data={filteredEquipments} />
+            <CardTitle>Equipamentos Cadastrados ({sortedEquipments.length})</CardTitle>
+            <EquipmentExport data={sortedEquipments} />
           </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Número de Série</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50" 
+                  onClick={() => handleSort('numero_serie')}
+                >
+                  Número de Série {getSortIcon('numero_serie')}
+                </TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Modelo</TableHead>
                 <TableHead>Empresa</TableHead>
@@ -295,7 +337,7 @@ const EquipmentList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEquipments.map((equipment) => (
+              {sortedEquipments.map((equipment) => (
                 <TableRow key={equipment.id}>
                   <TableCell className="font-medium">{equipment.numero_serie}</TableCell>
                   <TableCell>{equipment.tipo}</TableCell>

@@ -190,28 +190,32 @@ export const useMovementForm = () => {
       return false;
     }
 
-    if (movementData.tipo_movimento === 'manutencao' && !movementData.tipo_manutencao_id) {
+    if ((movementData.tipo_movimento === 'manutencao' || 
+         movementData.tipo_movimento === 'movimentacao_interna' || 
+         movementData.tipo_movimento === 'envio_manutencao') && !movementData.tipo_manutencao_id) {
       toast({
         title: "Erro",
-        description: "Tipo de manutenção é obrigatório para movimentações de manutenção.",
+        description: "Tipo de manutenção é obrigatório para este tipo de movimentação.",
         variant: "destructive",
       });
       return false;
     }
 
-    if ((movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao') && !movementData.empresa_destino) {
+    if (!movementData.empresa_destino) {
       toast({
         title: "Erro",
-        description: "Para movimentações entre empresas, selecione a empresa de destino.",
+        description: "Empresa de destino é obrigatória.",
         variant: "destructive",
       });
       return false;
     }
 
-    if (isDestinationTacom() && !movementData.status_equipamento) {
+    if ((isDestinationTacom() || 
+         movementData.tipo_movimento === 'movimentacao_interna' || 
+         movementData.tipo_movimento === 'envio_manutencao') && !movementData.status_equipamento) {
       toast({
         title: "Erro",
-        description: "Status do equipamento é obrigatório para movimentações para TACOM.",
+        description: "Status do equipamento é obrigatório para este tipo de movimentação.",
         variant: "destructive",
       });
       return false;
@@ -298,7 +302,10 @@ export const useMovementForm = () => {
           usuario_responsavel: currentUserName
         };
 
-        if ((movementData.tipo_movimento === 'manutencao' || movementData.tipo_movimento === 'aguardando_manutencao') 
+        if ((movementData.tipo_movimento === 'manutencao' || 
+             movementData.tipo_movimento === 'aguardando_manutencao' ||
+             movementData.tipo_movimento === 'movimentacao_interna' ||
+             movementData.tipo_movimento === 'envio_manutencao') 
             && movementData.tipo_manutencao_id) {
           movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
         }
@@ -345,7 +352,10 @@ export const useMovementForm = () => {
         } else if (movementData.tipo_movimento === 'entrada') {
           updateData.data_saida = null;
           updateData.status = 'disponivel';
-        } else if (movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao') {
+        } else if (movementData.tipo_movimento === 'movimentacao' || 
+                   movementData.tipo_movimento === 'devolucao' ||
+                   movementData.tipo_movimento === 'movimentacao_interna' ||
+                   movementData.tipo_movimento === 'envio_manutencao') {
           if (movementData.empresa_destino) {
             updateData.id_empresa = movementData.empresa_destino;
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
@@ -361,10 +371,14 @@ export const useMovementForm = () => {
             console.log('Status definido para devolução: "devolvido"');
           } else {
             // CORREÇÃO: Aplicar regras de status por empresa para movimentações
-            if (isDestinationTacom() && movementData.status_equipamento) {
+            if ((isDestinationTacom() || 
+                 movementData.tipo_movimento === 'movimentacao_interna' || 
+                 movementData.tipo_movimento === 'envio_manutencao') && movementData.status_equipamento) {
               updateData.status = movementData.status_equipamento;
-              console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
-            } else if (!isDestinationTacom()) {
+              console.log(`Status definido: ${movementData.status_equipamento}`);
+            } else if (!isDestinationTacom() && 
+                       movementData.tipo_movimento !== 'movimentacao_interna' && 
+                       movementData.tipo_movimento !== 'envio_manutencao') {
               updateData.status = 'em_uso'; // CORREÇÃO: Equipamentos não-TACOM ficam "em_uso"
               console.log(`Status definido para empresa não-TACOM: "em_uso"`);
             }

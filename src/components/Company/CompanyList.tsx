@@ -23,6 +23,7 @@ const CompanyList: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
+  const [estados, setEstados] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     cnpj: '',
@@ -32,39 +33,30 @@ const CompanyList: React.FC = () => {
 
   const { formatCNPJ, formatPhone } = useMask();
 
-  const estados = [
-    'Acre',
-    'Alagoas',
-    'Amapá',
-    'Amazonas',
-    'Bahia',
-    'Ceará',
-    'Distrito Federal',
-    'Espírito Santo',
-    'Goiás',
-    'Maranhão',
-    'Mato Grosso',
-    'Mato Grosso do Sul',
-    'Minas Gerais',
-    'Pará',
-    'Paraíba',
-    'Paraná',
-    'Pernambuco',
-    'Piauí',
-    'Rio de Janeiro',
-    'Rio Grande do Norte',
-    'Rio Grande do Sul',
-    'Rondônia',
-    'Roraima',
-    'Santa Catarina',
-    'São Paulo',
-    'Sergipe',
-    'Tocantins'
-  ];
-
   useEffect(() => {
     loadCompanies();
+    loadEstados();
   }, []);
+
+  const loadEstados = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('estados')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (error) throw error;
+      setEstados(data?.map(estado => estado.nome) || []);
+    } catch (error) {
+      console.error('Error loading estados:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar estados",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadCompanies = async () => {
     try {
@@ -159,6 +151,10 @@ const CompanyList: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta empresa?')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('empresas')

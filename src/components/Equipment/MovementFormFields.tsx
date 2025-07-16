@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,6 +57,33 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   onEquipmentSelect,
   onRemoveEquipment
 }) => {
+  
+  const getDestinationCompanies = () => {
+    if (movementData.tipo_movimento === 'envio_manutencao') {
+      return companies.filter(c => c.name === 'TACOM PROJETOS (CTG)');
+    }
+    return companies;
+  };
+
+  const getOriginCompanies = () => {
+    if (movementData.tipo_movimento === 'envio_manutencao') {
+      return companies.filter(c => 
+        c.name === 'TACOM SISTEMAS POA' || c.name === 'TACOM PROJETOS SC'
+      );
+    }
+    return companies;
+  };
+
+  // Auto-preencher campos para movimentação interna
+  React.useEffect(() => {
+    if (movementData.tipo_movimento === 'movimentacao_interna') {
+      const tacomCompany = companies.find(c => c.name === 'TACOM SISTEMAS POA');
+      if (tacomCompany) {
+        onInputChange('empresa_destino', tacomCompany.id);
+      }
+    }
+  }, [movementData.tipo_movimento, companies, onInputChange]);
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -77,6 +103,8 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
                 <SelectItem value="manutencao">Manutenção</SelectItem>
                 <SelectItem value="devolucao">Devolução</SelectItem>
                 <SelectItem value="retorno_manutencao">Retorno de Manutenção</SelectItem>
+                <SelectItem value="movimentacao_interna">Movimentação Interna</SelectItem>
+                <SelectItem value="envio_manutencao">Envio Manutenção</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -120,17 +148,18 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 
           <div>
             <Label htmlFor="empresa_destino">
-              Empresa Destino {movementData.tipo_movimento === 'movimentacao' && '*'}
+              Empresa Destino *
             </Label>
             <Select
               value={movementData.empresa_destino}
               onValueChange={(value) => onInputChange('empresa_destino', value)}
+              disabled={movementData.tipo_movimento === 'movimentacao_interna'}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a empresa destino" />
               </SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {companies.map((company) => (
+                {getDestinationCompanies().map((company) => (
                   <SelectItem 
                     key={company.id} 
                     value={company.id}
@@ -143,11 +172,6 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            {movementData.tipo_movimento === 'movimentacao' && (
-              <p className="text-xs text-gray-600 mt-1">
-                ⚠️ Obrigatório para movimentações entre empresas
-              </p>
-            )}
           </div>
         </div>
 
@@ -166,7 +190,9 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 
           <div>
             <Label htmlFor="tipo_manutencao_id">
-              Tipo de Manutenção {movementData.tipo_movimento === 'manutencao' && '*'}
+              Tipo de Manutenção {(movementData.tipo_movimento === 'manutencao' || 
+                                   movementData.tipo_movimento === 'movimentacao_interna' || 
+                                   movementData.tipo_movimento === 'envio_manutencao') && '*'}
             </Label>
             <Select
               value={movementData.tipo_manutencao_id}
@@ -198,13 +224,15 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             </p>
           </div>
 
-          {/* Campo de status sempre aparece quando destino é TACOM */}
-          {isDestinationTacom && (
+          {/* Campo de status sempre aparece quando destino é TACOM ou para movimentação interna/envio manutenção */}
+          {(isDestinationTacom || 
+            movementData.tipo_movimento === 'movimentacao_interna' || 
+            movementData.tipo_movimento === 'envio_manutencao') && (
             <MovementStatusSelector
               isRequired={true}
               value={movementData.status_equipamento}
               onChange={(value) => onInputChange('status_equipamento', value)}
-              label="Status para TACOM"
+              label="Status do Equipamento"
             />
           )}
         </div>
