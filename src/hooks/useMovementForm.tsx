@@ -210,9 +210,12 @@ export const useMovementForm = () => {
       return false;
     }
 
+    // Status obrigatório apenas para TACOM, movimentação interna ou envio manutenção (não para devolução)
     if ((isDestinationTacom() || 
          movementData.tipo_movimento === 'movimentacao_interna' || 
-         movementData.tipo_movimento === 'envio_manutencao') && !movementData.status_equipamento) {
+         movementData.tipo_movimento === 'envio_manutencao') && 
+         movementData.tipo_movimento !== 'devolucao' && 
+         !movementData.status_equipamento) {
       toast({
         title: "Erro",
         description: "Status do equipamento é obrigatório para este tipo de movimentação.",

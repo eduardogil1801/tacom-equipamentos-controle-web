@@ -249,10 +249,11 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             </p>
           </div>
 
-          {/* Campo de status sempre aparece quando destino é TACOM ou para movimentação interna/envio manutenção */}
+          {/* Campo de status sempre aparece quando destino é TACOM ou para movimentação interna/envio manutenção, EXCETO para devolução */}
           {(isDestinationTacom || 
             movementData.tipo_movimento === 'movimentacao_interna' || 
-            movementData.tipo_movimento === 'envio_manutencao') && (
+            movementData.tipo_movimento === 'envio_manutencao') && 
+           movementData.tipo_movimento !== 'devolucao' && (
             <MovementStatusSelector
               isRequired={true}
               value={movementData.status_equipamento}
@@ -260,6 +261,18 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               label="Status do Equipamento"
               isDestinationTacom={isDestinationTacom}
             />
+          )}
+
+          {/* Aviso para devolução sobre status automático */}
+          {movementData.tipo_movimento === 'devolucao' && (
+            <div className="space-y-2">
+              <Label>Status do Equipamento</Label>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  ℹ️ Para devoluções, o status será automaticamente definido como "Devolvido"
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>
