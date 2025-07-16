@@ -248,12 +248,31 @@ const EquipmentList: React.FC = () => {
     if (!sortField) return filteredEquipments;
     
     return [...filteredEquipments].sort((a, b) => {
-      let aValue = a[sortField as keyof Equipment];
-      let bValue = b[sortField as keyof Equipment];
+      let aValue: any;
+      let bValue: any;
       
+      // Handle special cases for nested fields
+      if (sortField === 'empresa') {
+        aValue = a.empresas?.name || '';
+        bValue = b.empresas?.name || '';
+      } else if (sortField === 'estado_empresa') {
+        aValue = a.empresas?.estado || a.estado || '';
+        bValue = b.empresas?.estado || b.estado || '';
+      } else {
+        aValue = a[sortField as keyof Equipment] || '';
+        bValue = b[sortField as keyof Equipment] || '';
+      }
+      
+      // Convert strings to lowercase for comparison
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         aValue = aValue.toLowerCase();
         bValue = bValue.toLowerCase();
+      }
+      
+      // Handle dates
+      if (sortField === 'data_entrada') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
       }
       
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
@@ -327,12 +346,42 @@ const EquipmentList: React.FC = () => {
                 >
                   Número de Série {getSortIcon('numero_serie')}
                 </TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Modelo</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Data Entrada</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
+                  onClick={() => handleSort('tipo')}
+                >
+                  Tipo {getSortIcon('tipo')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
+                  onClick={() => handleSort('modelo')}
+                >
+                  Modelo {getSortIcon('modelo')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
+                  onClick={() => handleSort('empresa')}
+                >
+                  Empresa {getSortIcon('empresa')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
+                  onClick={() => handleSort('estado_empresa')}
+                >
+                  Estado {getSortIcon('estado_empresa')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
+                  onClick={() => handleSort('status')}
+                >
+                  Status {getSortIcon('status')}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
+                  onClick={() => handleSort('data_entrada')}
+                >
+                  Data Entrada {getSortIcon('data_entrada')}
+                </TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
