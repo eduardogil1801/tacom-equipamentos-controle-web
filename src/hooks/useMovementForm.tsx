@@ -190,9 +190,11 @@ export const useMovementForm = () => {
       return false;
     }
 
+    // Tipo de manutenção obrigatório para manutenção, movimentação interna, envio manutenção E devolução
     if ((movementData.tipo_movimento === 'manutencao' || 
          movementData.tipo_movimento === 'movimentacao_interna' || 
-         movementData.tipo_movimento === 'envio_manutencao') && !movementData.tipo_manutencao_id) {
+         movementData.tipo_movimento === 'envio_manutencao' ||
+         movementData.tipo_movimento === 'devolucao') && !movementData.tipo_manutencao_id) {
       toast({
         title: "Erro",
         description: "Tipo de manutenção é obrigatório para este tipo de movimentação.",
@@ -210,11 +212,11 @@ export const useMovementForm = () => {
       return false;
     }
 
-    // Status obrigatório apenas para TACOM, movimentação interna ou envio manutenção (não para devolução)
+    // Status obrigatório para TACOM, movimentação interna, envio manutenção E devolução
     if ((isDestinationTacom() || 
          movementData.tipo_movimento === 'movimentacao_interna' || 
-         movementData.tipo_movimento === 'envio_manutencao') && 
-         movementData.tipo_movimento !== 'devolucao' && 
+         movementData.tipo_movimento === 'envio_manutencao' ||
+         movementData.tipo_movimento === 'devolucao') && 
          !movementData.status_equipamento) {
       toast({
         title: "Erro",
@@ -308,7 +310,8 @@ export const useMovementForm = () => {
         if ((movementData.tipo_movimento === 'manutencao' || 
              movementData.tipo_movimento === 'aguardando_manutencao' ||
              movementData.tipo_movimento === 'movimentacao_interna' ||
-             movementData.tipo_movimento === 'envio_manutencao') 
+             movementData.tipo_movimento === 'envio_manutencao' ||
+             movementData.tipo_movimento === 'devolucao') 
             && movementData.tipo_manutencao_id) {
           movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
         }
@@ -370,8 +373,11 @@ export const useMovementForm = () => {
           
           // Definir status baseado no tipo de movimento
           if (movementData.tipo_movimento === 'devolucao') {
-            updateData.status = 'devolvido';
-            console.log('Status definido para devolução: "devolvido"');
+            // Para devolução, usar o status selecionado pelo usuário
+            if (movementData.status_equipamento) {
+              updateData.status = movementData.status_equipamento;
+              console.log(`Status definido para devolução: "${movementData.status_equipamento}"`);
+            }
           } else {
             // CORREÇÃO: Aplicar regras de status rigorosas por empresa
             if (isDestinationTacom() && movementData.status_equipamento) {

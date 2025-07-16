@@ -217,7 +217,8 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             <Label htmlFor="tipo_manutencao_id">
               Tipo de Manutenção {(movementData.tipo_movimento === 'manutencao' || 
                                    movementData.tipo_movimento === 'movimentacao_interna' || 
-                                   movementData.tipo_movimento === 'envio_manutencao') && '*'}
+                                   movementData.tipo_movimento === 'envio_manutencao' ||
+                                   movementData.tipo_movimento === 'devolucao') && '*'}
             </Label>
             <Select
               value={movementData.tipo_manutencao_id}
@@ -249,30 +250,18 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             </p>
           </div>
 
-          {/* Campo de status sempre aparece quando destino é TACOM ou para movimentação interna/envio manutenção, EXCETO para devolução */}
+          {/* Campo de status sempre aparece quando destino é TACOM, movimentação interna, envio manutenção OU devolução */}
           {(isDestinationTacom || 
             movementData.tipo_movimento === 'movimentacao_interna' || 
-            movementData.tipo_movimento === 'envio_manutencao') && 
-           movementData.tipo_movimento !== 'devolucao' && (
+            movementData.tipo_movimento === 'envio_manutencao' ||
+            movementData.tipo_movimento === 'devolucao') && (
             <MovementStatusSelector
               isRequired={true}
               value={movementData.status_equipamento}
               onChange={(value) => onInputChange('status_equipamento', value)}
               label="Status do Equipamento"
-              isDestinationTacom={isDestinationTacom}
+              isDestinationTacom={isDestinationTacom || movementData.tipo_movimento === 'devolucao'}
             />
-          )}
-
-          {/* Aviso para devolução sobre status automático */}
-          {movementData.tipo_movimento === 'devolucao' && (
-            <div className="space-y-2">
-              <Label>Status do Equipamento</Label>
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-800">
-                  ℹ️ Para devoluções, o status será automaticamente definido como "Devolvido"
-                </p>
-              </div>
-            </div>
           )}
         </div>
       </div>
