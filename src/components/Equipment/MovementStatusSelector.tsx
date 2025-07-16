@@ -8,13 +8,15 @@ interface MovementStatusSelectorProps {
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  isDestinationTacom?: boolean;
 }
 
 const MovementStatusSelector: React.FC<MovementStatusSelectorProps> = ({
   isRequired,
   value,
   onChange,
-  label = "Status do Equipamento"
+  label = "Status do Equipamento",
+  isDestinationTacom = true
 }) => {
   return (
     <div className="space-y-2">
@@ -28,8 +30,12 @@ const MovementStatusSelector: React.FC<MovementStatusSelectorProps> = ({
         <SelectContent>
           <SelectItem value="disponivel">Disponível</SelectItem>
           <SelectItem value="em_uso">Em Uso</SelectItem>
-          <SelectItem value="manutencao">Manutenção</SelectItem>
-          <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
+          {isDestinationTacom && (
+            <>
+              <SelectItem value="manutencao">Manutenção</SelectItem>
+              <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
+            </>
+          )}
           <SelectItem value="danificado">Danificado</SelectItem>
           <SelectItem value="indisponivel">Indisponível</SelectItem>
           <SelectItem value="devolvido">Devolvido</SelectItem>
@@ -38,6 +44,11 @@ const MovementStatusSelector: React.FC<MovementStatusSelectorProps> = ({
       {isRequired && (
         <p className="text-xs text-red-600">
           ⚠️ Status obrigatório para movimentações para TACOM
+        </p>
+      )}
+      {!isDestinationTacom && (
+        <p className="text-xs text-amber-600">
+          ⚠️ Status "Manutenção" não disponível para empresas não-TACOM
         </p>
       )}
     </div>

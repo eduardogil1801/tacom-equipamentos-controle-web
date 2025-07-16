@@ -258,6 +258,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               value={movementData.status_equipamento}
               onChange={(value) => onInputChange('status_equipamento', value)}
               label="Status do Equipamento"
+              isDestinationTacom={isDestinationTacom}
             />
           )}
         </div>

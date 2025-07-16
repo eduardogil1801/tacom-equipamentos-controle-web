@@ -370,17 +370,23 @@ export const useMovementForm = () => {
             updateData.status = 'devolvido';
             console.log('Status definido para devolução: "devolvido"');
           } else {
-            // CORREÇÃO: Aplicar regras de status por empresa para movimentações
-            if ((isDestinationTacom() || 
-                 movementData.tipo_movimento === 'movimentacao_interna' || 
-                 movementData.tipo_movimento === 'envio_manutencao') && movementData.status_equipamento) {
+            // CORREÇÃO: Aplicar regras de status rigorosas por empresa
+            if (isDestinationTacom() && movementData.status_equipamento) {
+              // Para TACOM: permitir qualquer status selecionado pelo usuário
               updateData.status = movementData.status_equipamento;
-              console.log(`Status definido: ${movementData.status_equipamento}`);
-            } else if (!isDestinationTacom() && 
-                       movementData.tipo_movimento !== 'movimentacao_interna' && 
-                       movementData.tipo_movimento !== 'envio_manutencao') {
-              updateData.status = 'em_uso'; // CORREÇÃO: Equipamentos não-TACOM ficam "em_uso"
-              console.log(`Status definido para empresa não-TACOM: "em_uso"`);
+              console.log(`Status definido para TACOM: ${movementData.status_equipamento}`);
+            } else if (!isDestinationTacom()) {
+              // Para empresas NÃO-TACOM: NUNCA permitir status "manutenção"
+              if (movementData.status_equipamento === 'manutencao') {
+                updateData.status = 'em_uso'; // Forçar "em_uso" se tentou usar "manutenção"
+                console.log(`⚠️ CORREÇÃO: Status "manutenção" não permitido para empresa não-TACOM, alterado para "em_uso"`);
+              } else if (movementData.status_equipamento) {
+                updateData.status = movementData.status_equipamento;
+                console.log(`Status definido para empresa não-TACOM: ${movementData.status_equipamento}`);
+              } else {
+                updateData.status = 'em_uso'; // Status padrão para empresas não-TACOM
+                console.log(`Status padrão definido para empresa não-TACOM: "em_uso"`);
+              }
             }
           }
         } else if (movementData.tipo_movimento === 'manutencao') {
