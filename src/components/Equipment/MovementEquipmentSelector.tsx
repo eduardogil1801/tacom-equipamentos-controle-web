@@ -20,13 +20,15 @@ interface MovementEquipmentSelectorProps {
   onEquipmentSelect: (equipments: Equipment[]) => void;
   onRemoveEquipment: (equipmentId: string) => void;
   equipmentType: string;
+  companyFilter?: string;
 }
 
 const MovementEquipmentSelector: React.FC<MovementEquipmentSelectorProps> = ({
   selectedEquipments,
   onEquipmentSelect,
   onRemoveEquipment,
-  equipmentType
+  equipmentType,
+  companyFilter
 }) => {
   const [showSearch, setShowSearch] = useState(false);
 
@@ -85,6 +87,7 @@ const MovementEquipmentSelector: React.FC<MovementEquipmentSelectorProps> = ({
           onClose={() => setShowSearch(false)}
           onConfirm={handleEquipmentSelect}
           equipmentType={equipmentType}
+          companyFilter={companyFilter}
         />
       )}
     </>

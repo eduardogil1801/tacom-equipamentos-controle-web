@@ -322,7 +322,7 @@ const EquipmentList: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead 
-                  className="cursor-pointer hover:bg-gray-50" 
+                  className="cursor-pointer hover:bg-gray-50 select-none" 
                   onClick={() => handleSort('numero_serie')}
                 >
                   Número de Série {getSortIcon('numero_serie')}

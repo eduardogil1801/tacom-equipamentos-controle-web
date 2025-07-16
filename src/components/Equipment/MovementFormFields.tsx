@@ -74,12 +74,18 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
     return companies;
   };
 
-  // Auto-preencher campos para movimentação interna
+  // Auto-preencher campos para movimentação interna e envio manutenção
   React.useEffect(() => {
     if (movementData.tipo_movimento === 'movimentacao_interna') {
       const tacomCompany = companies.find(c => c.name === 'TACOM SISTEMAS POA');
       if (tacomCompany) {
         onInputChange('empresa_destino', tacomCompany.id);
+        onInputChange('empresa_origem', tacomCompany.name);
+      }
+    } else if (movementData.tipo_movimento === 'envio_manutencao') {
+      const tacomCtgCompany = companies.find(c => c.name === 'TACOM PROJETOS (CTG)');
+      if (tacomCtgCompany) {
+        onInputChange('empresa_destino', tacomCtgCompany.id);
       }
     }
   }, [movementData.tipo_movimento, companies, onInputChange]);
@@ -133,17 +139,36 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             onEquipmentSelect={onEquipmentSelect}
             onRemoveEquipment={onRemoveEquipment}
             equipmentType={movementData.tipo_equipamento}
+            companyFilter={movementData.tipo_movimento === 'movimentacao_interna' ? 'TACOM SISTEMAS POA' : undefined}
           />
 
           <div>
             <Label htmlFor="empresa_origem">Empresa Origem</Label>
-            <Input
-              id="empresa_origem"
-              value={movementData.empresa_origem || ''}
-              readOnly
-              placeholder="Será preenchido automaticamente"
-              className="bg-gray-50"
-            />
+            {movementData.tipo_movimento === 'envio_manutencao' ? (
+              <Select
+                value={movementData.empresa_origem}
+                onValueChange={(value) => onInputChange('empresa_origem', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getOriginCompanies().map((company) => (
+                    <SelectItem key={company.id} value={company.name}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                id="empresa_origem"
+                value={movementData.empresa_origem || ''}
+                readOnly
+                placeholder="Será preenchido automaticamente"
+                className="bg-gray-50"
+              />
+            )}
           </div>
 
           <div>
@@ -153,7 +178,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             <Select
               value={movementData.empresa_destino}
               onValueChange={(value) => onInputChange('empresa_destino', value)}
-              disabled={movementData.tipo_movimento === 'movimentacao_interna'}
+              disabled={movementData.tipo_movimento === 'movimentacao_interna' || movementData.tipo_movimento === 'envio_manutencao'}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a empresa destino" />

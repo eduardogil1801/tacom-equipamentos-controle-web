@@ -22,13 +22,15 @@ interface EquipmentSearchDialogProps {
   onClose: () => void;
   onConfirm: (equipments: Equipment[]) => void;
   equipmentType?: string;
+  companyFilter?: string;
 }
 
 const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  equipmentType
+  equipmentType,
+  companyFilter
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
@@ -98,6 +100,11 @@ const EquipmentSearchDialog: React.FC<EquipmentSearchDialogProps> = ({
       // Filter by equipment type if specified
       if (equipmentType) {
         query = query.eq('tipo', equipmentType);
+      }
+
+      // Filter by company if specified
+      if (companyFilter) {
+        query = query.eq('empresas.name', companyFilter);
       }
 
       const { data, error } = await query;
