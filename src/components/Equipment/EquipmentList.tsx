@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -244,7 +244,7 @@ const EquipmentList: React.FC = () => {
       : <ChevronDown className="h-4 w-4 inline ml-1" />;
   };
 
-  const sortedEquipments = React.useMemo(() => {
+  const sortedEquipments = useMemo(() => {
     if (!sortField) return filteredEquipments;
     
     return [...filteredEquipments].sort((a, b) => {

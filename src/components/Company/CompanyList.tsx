@@ -310,7 +310,12 @@ const CompanyList: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleEdit(company)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleEdit(company);
+                          }}
+                          className="hover:bg-primary/10"
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
