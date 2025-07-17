@@ -171,6 +171,8 @@ export const useMovementForm = () => {
     console.log('movementData:', movementData);
     console.log('isDestinationTacom():', isDestinationTacom());
     
+    try {
+    
     if (selectedEquipments.length === 0 || !movementData.tipo_movimento || !movementData.data_movimento) {
       console.log('❌ Erro: Campos obrigatórios não preenchidos');
       toast({
@@ -323,11 +325,22 @@ export const useMovementForm = () => {
         let movementError;
         
         do {
+          console.log('=== TENTANDO INSERIR MOVIMENTAÇÃO ===');
+          console.log('Dados da movimentação:', movimentationData);
+          
           const { error } = await supabase
             .from('movimentacoes')
             .insert(movimentationData);
           
           movementError = error;
+          
+          if (movementError) {
+            console.error('=== ERRO AO INSERIR MOVIMENTAÇÃO ===');
+            console.error('Código:', movementError.code);
+            console.error('Mensagem:', movementError.message);
+            console.error('Detalhes:', movementError.details);
+            console.error('Dados tentando inserir:', movimentationData);
+          }
           
           if (movementError?.code === '23505') {
             attemptCount++;
@@ -339,7 +352,7 @@ export const useMovementForm = () => {
         } while (movementError?.code === '23505' && attemptCount < 3);
 
         if (movementError) {
-          console.error('Erro ao inserir movimentação:', movementError);
+          console.error('Erro final ao inserir movimentação:', movementError);
           throw movementError;
         }
 
@@ -493,15 +506,34 @@ export const useMovementForm = () => {
 
       return true;
     } catch (error) {
+      console.error('=== ERRO GERAL ===');
       console.error('Erro ao processar movimentação:', error);
+      console.error('Stack trace:', error.stack);
+      
+      let errorMessage = "Erro ao registrar movimentação.";
+      if (error.message) {
+        errorMessage = `Erro: ${error.message}`;
+      }
+      
       toast({
         title: "Erro",
-        description: "Erro ao registrar movimentação.",
+        description: errorMessage,
         variant: "destructive",
       });
       return false;
     } finally {
       setLoading(false);
+    }
+    } catch (error) {
+      console.error('=== ERRO NA VALIDAÇÃO INICIAL ===');
+      console.error('Erro:', error);
+      toast({
+        title: "Erro de Validação",
+        description: `Erro na validação inicial: ${error.message}`,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return false;
     }
   };
 
