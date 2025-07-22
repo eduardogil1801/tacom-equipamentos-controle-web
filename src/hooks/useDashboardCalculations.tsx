@@ -107,9 +107,17 @@ export const useDashboardCalculations = (
     return true;
   });
   
+  // Quando uma empresa específica está filtrada, usar equipments filtrados já aplicando a regra de exclusão
+  // Quando não há filtro de empresa, usar array vazio
   const filteredCompanyEquipments = isCompanyFiltered ? equipmentsForCalculation : [];
-  const filteredCompanyTotal = ensureValidNumber(filteredCompanyEquipments.length);
-  const filteredCompanyInStock = ensureValidNumber(filteredCompanyEquipments.filter(eq => !eq.data_saida).length);
+  
+  // Se a empresa filtrada for TACOM Projetos (CTG), aplicar a regra de exclusão novamente
+  const finalFilteredEquipments = isCompanyFiltered && selectedCompanyData?.name === 'TACOM Projetos (CTG)' 
+    ? filteredCompanyEquipments.filter(eq => eq.status !== 'indisponivel')
+    : filteredCompanyEquipments;
+    
+  const filteredCompanyTotal = ensureValidNumber(finalFilteredEquipments.length);
+  const filteredCompanyInStock = ensureValidNumber(finalFilteredEquipments.filter(eq => !eq.data_saida).length);
   const filteredCompanyWithdrawn = ensureValidNumber(filteredCompanyTotal - filteredCompanyInStock);
 
   // Check if filtered company is TACOM
