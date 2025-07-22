@@ -157,7 +157,7 @@ export const useDashboardData = () => {
     }
   };
 
-  const applyFilters = (selectedCompany: string, selectedEquipmentType: string) => {
+  const applyFilters = (selectedCompany: string, selectedEquipmentType: string, selectedStatus: string = 'all') => {
     let filteredEquipments = [...allEquipments];
 
     if (selectedCompany !== 'all') {
@@ -166,6 +166,10 @@ export const useDashboardData = () => {
 
     if (selectedEquipmentType !== 'all') {
       filteredEquipments = filteredEquipments.filter(eq => eq.tipo === selectedEquipmentType);
+    }
+
+    if (selectedStatus !== 'all') {
+      filteredEquipments = filteredEquipments.filter(eq => eq.status === selectedStatus);
     }
 
     console.log('Filtered equipments:', filteredEquipments.length);

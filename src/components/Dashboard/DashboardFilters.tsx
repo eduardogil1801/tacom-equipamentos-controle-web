@@ -28,9 +28,11 @@ interface DashboardFiltersProps {
   selectedCompany: string;
   selectedEquipmentType: string;
   selectedMaintenanceType: string;
+  selectedStatus: string;
   onCompanyChange: (value: string) => void;
   onEquipmentTypeChange: (value: string) => void;
   onMaintenanceTypeChange: (value: string) => void;
+  onStatusChange: (value: string) => void;
   onRefresh: () => void;
   loading: boolean;
 }
@@ -42,9 +44,11 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
   selectedCompany,
   selectedEquipmentType,
   selectedMaintenanceType,
+  selectedStatus,
   onCompanyChange,
   onEquipmentTypeChange,
   onMaintenanceTypeChange,
+  onStatusChange,
   onRefresh,
   loading
 }) => {
@@ -54,7 +58,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
         <CardTitle>Filtros</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Empresa</label>
             <Select value={selectedCompany} onValueChange={onCompanyChange}>
@@ -102,6 +106,26 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                     {type.descricao} ({type.codigo})
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          
+          <div>
+            <label className="text-sm font-medium mb-2 block">Status</label>
+            <Select value={selectedStatus} onValueChange={onStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="disponivel">Disponível</SelectItem>
+                <SelectItem value="em_uso">Em Uso</SelectItem>
+                <SelectItem value="manutencao">Manutenção</SelectItem>
+                <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
+                <SelectItem value="danificado">Danificado</SelectItem>
+                <SelectItem value="indisponivel">Indisponível</SelectItem>
+                <SelectItem value="devolvido">Devolvido</SelectItem>
               </SelectContent>
             </Select>
           </div>

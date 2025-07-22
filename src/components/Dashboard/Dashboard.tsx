@@ -25,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState('all');
   const [selectedEquipmentType, setSelectedEquipmentType] = useState('all');
   const [selectedMaintenanceType, setSelectedMaintenanceType] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   const calculations = useDashboardCalculations(
     equipments,
@@ -36,8 +37,8 @@ const Dashboard: React.FC = () => {
   );
 
   useEffect(() => {
-    applyFilters(selectedCompany, selectedEquipmentType);
-  }, [selectedCompany, selectedEquipmentType, allEquipments, applyFilters]);
+    applyFilters(selectedCompany, selectedEquipmentType, selectedStatus);
+  }, [selectedCompany, selectedEquipmentType, selectedStatus, allEquipments, applyFilters]);
 
   const selectedCompanyName = companies.find(c => c.id === selectedCompany)?.name;
 
@@ -60,9 +61,11 @@ const Dashboard: React.FC = () => {
         selectedCompany={selectedCompany}
         selectedEquipmentType={selectedEquipmentType}
         selectedMaintenanceType={selectedMaintenanceType}
+        selectedStatus={selectedStatus}
         onCompanyChange={setSelectedCompany}
         onEquipmentTypeChange={setSelectedEquipmentType}
         onMaintenanceTypeChange={setSelectedMaintenanceType}
+        onStatusChange={setSelectedStatus}
         onRefresh={loadData}
         loading={loading}
       />
