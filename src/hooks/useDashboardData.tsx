@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Equipment {
@@ -157,7 +157,7 @@ export const useDashboardData = () => {
     }
   };
 
-  const applyFilters = (selectedCompany: string, selectedEquipmentType: string, selectedStatus: string = 'all') => {
+  const applyFilters = useCallback((selectedCompany: string, selectedEquipmentType: string, selectedStatus: string = 'all') => {
     let filteredEquipments = [...allEquipments];
 
     if (selectedCompany !== 'all') {
@@ -174,7 +174,7 @@ export const useDashboardData = () => {
 
     console.log('Filtered equipments:', filteredEquipments.length);
     setEquipments(filteredEquipments);
-  };
+  }, [allEquipments]);
 
   useEffect(() => {
     loadData();
