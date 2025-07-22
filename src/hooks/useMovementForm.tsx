@@ -375,7 +375,8 @@ export const useMovementForm = () => {
         } else if (movementData.tipo_movimento === 'movimentacao' || 
                    movementData.tipo_movimento === 'devolucao' ||
                    movementData.tipo_movimento === 'movimentacao_interna' ||
-                   movementData.tipo_movimento === 'envio_manutencao') {
+                   movementData.tipo_movimento === 'envio_manutencao' ||
+                   movementData.tipo_movimento === 'manutencao') {
           if (movementData.empresa_destino) {
             updateData.id_empresa = movementData.empresa_destino;
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
