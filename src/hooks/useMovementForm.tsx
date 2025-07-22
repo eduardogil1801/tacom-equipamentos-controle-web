@@ -214,11 +214,12 @@ export const useMovementForm = () => {
       return false;
     }
 
-    // Status obrigatório para TACOM, movimentação interna, envio manutenção E devolução
+    // Status obrigatório para TACOM, movimentação interna, envio manutenção, devolução E manutenção
     if ((isDestinationTacom() || 
          movementData.tipo_movimento === 'movimentacao_interna' || 
          movementData.tipo_movimento === 'envio_manutencao' ||
-         movementData.tipo_movimento === 'devolucao') && 
+         movementData.tipo_movimento === 'devolucao' ||
+         movementData.tipo_movimento === 'manutencao') && 
          !movementData.status_equipamento) {
       toast({
         title: "Erro",
@@ -412,7 +413,13 @@ export const useMovementForm = () => {
             }
           }
         } else if (movementData.tipo_movimento === 'manutencao') {
-          updateData.status = 'manutencao';
+          // Para manutenção, usar o status selecionado pelo usuário se disponível
+          if (movementData.status_equipamento) {
+            updateData.status = movementData.status_equipamento;
+            console.log(`Status definido para manutenção: "${movementData.status_equipamento}"`);
+          } else {
+            updateData.status = 'manutencao'; // fallback
+          }
         } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
           updateData.status = 'aguardando_manutencao';
         } else if (movementData.tipo_movimento === 'danificado') {

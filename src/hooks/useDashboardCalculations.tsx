@@ -71,8 +71,15 @@ export const useDashboardCalculations = (
       });
   };
 
-  // Calculate statistics
-  const totalEquipments = ensureValidNumber(allEquipments.length);
+  // Calculate statistics - excluir equipamentos indisponíveis de TACOM Projetos (CTG)
+  const equipmentsForTotal = allEquipments.filter(eq => {
+    // Se for de TACOM Projetos (CTG) e status indisponível, excluir do total
+    if (eq.empresas?.name === 'TACOM Projetos (CTG)' && eq.status === 'indisponivel') {
+      return false;
+    }
+    return true;
+  });
+  const totalEquipments = ensureValidNumber(equipmentsForTotal.length);
   
   const tacomEquipmentsInStock = tacomCompany 
     ? allEquipments.filter(eq => eq.id_empresa === tacomCompany.id && !eq.data_saida)
