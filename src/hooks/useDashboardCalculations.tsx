@@ -94,10 +94,20 @@ export const useDashboardCalculations = (
   );
   const equipmentsInMaintenanceCount = ensureValidNumber(equipmentsInMaintenance.length);
 
-  // Statistics for filtered company
+  // Statistics for filtered company - excluir equipamentos indisponíveis de TACOM Projetos (CTG)
   const isCompanyFiltered = selectedCompany !== 'all';
   const selectedCompanyData = isCompanyFiltered ? companies.find(c => c.id === selectedCompany) : null;
-  const filteredCompanyEquipments = isCompanyFiltered ? equipments : [];
+  
+  // Filtrar equipamentos removendo indisponíveis de TACOM Projetos (CTG)
+  const equipmentsForCalculation = equipments.filter(eq => {
+    // Se for de TACOM Projetos (CTG) e status indisponível, excluir dos cálculos
+    if (eq.empresas?.name === 'TACOM Projetos (CTG)' && eq.status === 'indisponivel') {
+      return false;
+    }
+    return true;
+  });
+  
+  const filteredCompanyEquipments = isCompanyFiltered ? equipmentsForCalculation : [];
   const filteredCompanyTotal = ensureValidNumber(filteredCompanyEquipments.length);
   const filteredCompanyInStock = ensureValidNumber(filteredCompanyEquipments.filter(eq => !eq.data_saida).length);
   const filteredCompanyWithdrawn = ensureValidNumber(filteredCompanyTotal - filteredCompanyInStock);
@@ -105,9 +115,9 @@ export const useDashboardCalculations = (
   // Check if filtered company is TACOM
   const isTacomFiltered = selectedCompanyData && tacomCompany && selectedCompanyData.id === tacomCompany.id;
 
-  // Data for pie chart
+  // Data for pie chart - excluir equipamentos indisponíveis de TACOM Projetos (CTG)
   const pieChartData = validateChartData(
-    equipments
+    equipmentsForCalculation
       .filter(eq => !eq.data_saida && eq.tipo)
       .reduce((acc: any[], equipment) => {
         const existing = acc.find(item => item.name === equipment.tipo);
