@@ -182,66 +182,63 @@ export const useMovementForm = () => {
     console.log('Tipo equipamento:', movementData.tipo_equipamento);
     
     try {
-    
-    if (selectedEquipments.length === 0 || !movementData.tipo_movimento || !movementData.data_movimento) {
-      console.log('❌ Erro: Campos obrigatórios não preenchidos');
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos obrigatórios e selecione pelo menos um equipamento.",
-        variant: "destructive",
-      });
-      return false;
-    }
+      if (selectedEquipments.length === 0 || !movementData.tipo_movimento || !movementData.data_movimento) {
+        console.log('❌ Erro: Campos obrigatórios não preenchidos');
+        toast({
+          title: "Erro",
+          description: "Preencha todos os campos obrigatórios e selecione pelo menos um equipamento.",
+          variant: "destructive",
+        });
+        return false;
+      }
 
-    if (!movementData.tipo_equipamento) {
-      toast({
-        title: "Erro",
-        description: "Tipo de equipamento é obrigatório.",
-        variant: "destructive",
-      });
-      return false;
-    }
+      if (!movementData.tipo_equipamento) {
+        toast({
+          title: "Erro",
+          description: "Tipo de equipamento é obrigatório.",
+          variant: "destructive",
+        });
+        return false;
+      }
 
-    // Tipo de manutenção obrigatório para manutenção, movimentação interna, envio manutenção E devolução
-    if ((movementData.tipo_movimento === 'manutencao' || 
-         movementData.tipo_movimento === 'movimentacao_interna' || 
-         movementData.tipo_movimento === 'envio_manutencao' ||
-         movementData.tipo_movimento === 'devolucao') && !movementData.tipo_manutencao_id) {
-      toast({
-        title: "Erro",
-        description: "Tipo de manutenção é obrigatório para este tipo de movimentação.",
-        variant: "destructive",
-      });
-      return false;
-    }
+      // Tipo de manutenção obrigatório para manutenção, movimentação interna, envio manutenção E devolução
+      if ((movementData.tipo_movimento === 'manutencao' || 
+           movementData.tipo_movimento === 'movimentacao_interna' || 
+           movementData.tipo_movimento === 'envio_manutencao' ||
+           movementData.tipo_movimento === 'devolucao') && !movementData.tipo_manutencao_id) {
+        toast({
+          title: "Erro",
+          description: "Tipo de manutenção é obrigatório para este tipo de movimentação.",
+          variant: "destructive",
+        });
+        return false;
+      }
 
-    if (!movementData.empresa_destino) {
-      toast({
-        title: "Erro",
-        description: "Empresa de destino é obrigatória.",
-        variant: "destructive",
-      });
-      return false;
-    }
+      if (!movementData.empresa_destino) {
+        toast({
+          title: "Erro",
+          description: "Empresa de destino é obrigatória.",
+          variant: "destructive",
+        });
+        return false;
+      }
 
-    // Status obrigatório para TACOM, movimentação interna, envio manutenção, devolução E manutenção
-    if ((isDestinationTacom() || 
-         movementData.tipo_movimento === 'movimentacao_interna' || 
-         movementData.tipo_movimento === 'envio_manutencao' ||
-         movementData.tipo_movimento === 'devolucao' ||
-         movementData.tipo_movimento === 'manutencao') && 
-         !movementData.status_equipamento) {
-      toast({
-        title: "Erro",
-        description: "Status do equipamento é obrigatório para este tipo de movimentação.",
-        variant: "destructive",
-      });
-      return false;
-    }
+      // Status obrigatório para TACOM, movimentação interna, envio manutenção, devolução E manutenção
+      if ((isDestinationTacom() || 
+           movementData.tipo_movimento === 'movimentacao_interna' || 
+           movementData.tipo_movimento === 'envio_manutencao' ||
+           movementData.tipo_movimento === 'devolucao' ||
+           movementData.tipo_movimento === 'manutencao') && 
+           !movementData.status_equipamento) {
+        toast({
+          title: "Erro",
+          description: "Status do equipamento é obrigatório para este tipo de movimentação.",
+          variant: "destructive",
+        });
+        return false;
+      }
 
-    setLoading(true);
-
-    try {
+      setLoading(true);
       console.log('=== PROCESSANDO MOVIMENTAÇÃO ===');
       console.log('Equipamentos selecionados:', selectedEquipments);
       console.log('Dados da movimentação:', movementData);
@@ -541,17 +538,6 @@ export const useMovementForm = () => {
       return false;
     } finally {
       setLoading(false);
-    }
-    } catch (error) {
-      console.error('=== ERRO NA VALIDAÇÃO INICIAL ===');
-      console.error('Erro:', error);
-      toast({
-        title: "Erro de Validação",
-        description: `Erro na validação inicial: ${error.message}`,
-        variant: "destructive",
-      });
-      setLoading(false);
-      return false;
     }
   };
 
