@@ -172,16 +172,9 @@ export const useMovementForm = () => {
     console.log('movementData:', movementData);
     console.log('isDestinationTacom():', isDestinationTacom());
     
-    // Log adicional para debug
-    console.log('=== DADOS COMPLETOS PARA DEBUG ===');
-    console.log('Quantidade de equipamentos selecionados:', selectedEquipments.length);
-    console.log('Tipo movimento:', movementData.tipo_movimento);
-    console.log('Data movimento:', movementData.data_movimento);
-    console.log('Empresa destino:', movementData.empresa_destino);
-    console.log('Status equipamento:', movementData.status_equipamento);
-    console.log('Tipo equipamento:', movementData.tipo_equipamento);
-    
     try {
+      setLoading(true);
+
       if (selectedEquipments.length === 0 || !movementData.tipo_movimento || !movementData.data_movimento) {
         console.log('❌ Erro: Campos obrigatórios não preenchidos');
         toast({
@@ -238,7 +231,6 @@ export const useMovementForm = () => {
         return false;
       }
 
-      setLoading(true);
       console.log('=== PROCESSANDO MOVIMENTAÇÃO ===');
       console.log('Equipamentos selecionados:', selectedEquipments);
       console.log('Dados da movimentação:', movementData);
@@ -384,6 +376,8 @@ export const useMovementForm = () => {
                    movementData.tipo_movimento === 'movimentacao_interna' ||
                    movementData.tipo_movimento === 'envio_manutencao' ||
                    movementData.tipo_movimento === 'manutencao') {
+          
+          // Atualizar empresa
           if (movementData.empresa_destino) {
             updateData.id_empresa = movementData.empresa_destino;
             console.log('=== ATUALIZANDO EMPRESA DO EQUIPAMENTO ===');
@@ -395,13 +389,24 @@ export const useMovementForm = () => {
           
           // Definir status baseado no tipo de movimento
           if (movementData.tipo_movimento === 'devolucao') {
-            // Para devolução, usar o status selecionado pelo usuário
+            // Para devolução, sempre usar o status selecionado pelo usuário
             if (movementData.status_equipamento) {
               updateData.status = movementData.status_equipamento;
               console.log(`Status definido para devolução: "${movementData.status_equipamento}"`);
+            } else {
+              updateData.status = 'disponivel'; // fallback para devolução
+              console.log(`Status fallback para devolução: "disponivel"`);
+            }
+          } else if (movementData.tipo_movimento === 'manutencao') {
+            // Para manutenção, usar o status selecionado pelo usuário se disponível
+            if (movementData.status_equipamento) {
+              updateData.status = movementData.status_equipamento;
+              console.log(`Status definido para manutenção: "${movementData.status_equipamento}"`);
+            } else {
+              updateData.status = 'manutencao'; // fallback
             }
           } else {
-            // CORREÇÃO: Aplicar regras de status rigorosas por empresa
+            // Para outros tipos de movimento (movimentacao, movimentacao_interna, envio_manutencao)
             if (isDestinationTacom() && movementData.status_equipamento) {
               // Para TACOM: permitir qualquer status selecionado pelo usuário
               updateData.status = movementData.status_equipamento;
@@ -419,14 +424,6 @@ export const useMovementForm = () => {
                 console.log(`Status padrão definido para empresa não-TACOM: "em_uso"`);
               }
             }
-          }
-        } else if (movementData.tipo_movimento === 'manutencao') {
-          // Para manutenção, usar o status selecionado pelo usuário se disponível
-          if (movementData.status_equipamento) {
-            updateData.status = movementData.status_equipamento;
-            console.log(`Status definido para manutenção: "${movementData.status_equipamento}"`);
-          } else {
-            updateData.status = 'manutencao'; // fallback
           }
         } else if (movementData.tipo_movimento === 'aguardando_manutencao') {
           updateData.status = 'aguardando_manutencao';
@@ -458,58 +455,33 @@ export const useMovementForm = () => {
             .eq('id', equipment.id);
 
           if (updateError) {
-            console.error('=== ERRO DETALHADO AO ATUALIZAR EQUIPAMENTO ===');
-            console.error('Código do erro:', updateError.code);
-            console.error('Mensagem do erro:', updateError.message);
-            console.error('Detalhes do erro:', updateError.details);
-            console.error('Dica do erro:', updateError.hint);
-            console.error('Equipamento ID:', equipment.id);
-            console.error('Dados que estavam sendo atualizados:', updateData);
-            
-            // Se for erro 409, tentar novamente após pequeno delay
-            if (updateError.code === '23505' || updateError.message?.includes('409')) {
-              console.log('Tentando novamente após conflito...');
-              await new Promise(resolve => setTimeout(resolve, 200));
-              
-              const { error: retryError } = await supabase
-                .from('equipamentos')
-                .update(updateData)
-                .eq('id', equipment.id);
-                
-              if (retryError) {
-                console.error('Erro persistiu após retry:', retryError);
-                throw retryError;
-              } else {
-                console.log('✅ Atualização bem-sucedida após retry');
-              }
-            } else {
-              throw updateError;
-            }
+            console.error('=== ERRO AO ATUALIZAR EQUIPAMENTO ===');
+            console.error('Código:', updateError.code);
+            console.error('Mensagem:', updateError.message);
+            console.error('Detalhes:', updateError.details);
+            console.error('Dados tentando atualizar:', updateData);
+            throw updateError;
           }
 
-          console.log('✅ Equipamento', equipment.numero_serie, 'atualizado com sucesso');
-          console.log('✅ Status atualizado para:', updateData.status);
-          
-          if (movementData.tipo_movimento === 'movimentacao' && movementData.empresa_destino) {
-            const newCompany = companies.find(c => c.id === movementData.empresa_destino);
-            console.log(`✅ EMPRESA ATUALIZADA: Equipamento ${equipment.numero_serie} agora pertence à empresa: ${newCompany?.name}`);
-          }
+          console.log(`✅ Equipamento ${equipment.numero_serie} atualizado com sucesso:`, updateData);
         } else {
-          console.log('⚠️ Nenhum dado para atualizar no equipamento', equipment.numero_serie);
+          console.log('Nenhuma atualização necessária para o equipamento', equipment.numero_serie);
         }
       }
 
+      console.log('=== MOVIMENTAÇÃO CONCLUÍDA COM SUCESSO ===');
+      
       toast({
         title: "Sucesso",
-        description: `Movimentação registrada com sucesso para ${selectedEquipments.length} equipamento(s)!`,
+        description: `Movimentação ${movementData.tipo_movimento} registrada com sucesso para ${selectedEquipments.length} equipamento(s).`,
+        variant: "default",
       });
 
+      // Reset form
       setSelectedEquipments([]);
-      const dataAtual = getCurrentLocalDate();
-      
       setMovementData({
         tipo_movimento: '',
-        data_movimento: dataAtual,
+        data_movimento: getCurrentLocalDate(),
         observacoes: '',
         empresa_destino: '',
         empresa_origem: '',
@@ -520,19 +492,16 @@ export const useMovementForm = () => {
       });
 
       return true;
+
     } catch (error) {
-      console.error('=== ERRO GERAL ===');
-      console.error('Erro ao processar movimentação:', error);
-      console.error('Stack trace:', error.stack);
-      
-      let errorMessage = "Erro ao registrar movimentação.";
-      if (error.message) {
-        errorMessage = `Erro: ${error.message}`;
-      }
+      console.error('=== ERRO GERAL NA MOVIMENTAÇÃO ===');
+      console.error('Tipo do erro:', typeof error);
+      console.error('Erro:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'Stack não disponível');
       
       toast({
         title: "Erro",
-        description: errorMessage,
+        description: `Erro ao registrar movimentação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
       return false;
@@ -547,11 +516,11 @@ export const useMovementForm = () => {
     companies,
     maintenanceTypes,
     equipmentTypes,
-    movementData,
     loading,
-    isDestinationTacom,
+    movementData,
     handleInputChange,
     handleSubmit,
-    updateOriginCompany
+    updateOriginCompany,
+    isDestinationTacom
   };
 };
