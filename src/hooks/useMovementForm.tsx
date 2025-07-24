@@ -166,10 +166,20 @@ export const useMovementForm = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('=== INICIANDO HANDLESUBMIT ===');
     console.log('=== VALIDAÇÃO INICIAL ===');
     console.log('selectedEquipments:', selectedEquipments);
     console.log('movementData:', movementData);
     console.log('isDestinationTacom():', isDestinationTacom());
+    
+    // Log adicional para debug
+    console.log('=== DADOS COMPLETOS PARA DEBUG ===');
+    console.log('Quantidade de equipamentos selecionados:', selectedEquipments.length);
+    console.log('Tipo movimento:', movementData.tipo_movimento);
+    console.log('Data movimento:', movementData.data_movimento);
+    console.log('Empresa destino:', movementData.empresa_destino);
+    console.log('Status equipamento:', movementData.status_equipamento);
+    console.log('Tipo equipamento:', movementData.tipo_equipamento);
     
     try {
     
