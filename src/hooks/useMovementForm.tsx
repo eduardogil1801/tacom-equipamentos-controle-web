@@ -389,7 +389,7 @@ export const useMovementForm = () => {
           
           // Definir status baseado no tipo de movimento
           if (movementData.tipo_movimento === 'devolucao') {
-            // Para devolução, sempre usar o status selecionado pelo usuário
+            // Para devolução/retorno de manutenção, sempre usar o status selecionado pelo usuário
             if (movementData.status_equipamento) {
               updateData.status = movementData.status_equipamento;
               console.log(`Status definido para devolução: "${movementData.status_equipamento}"`);
