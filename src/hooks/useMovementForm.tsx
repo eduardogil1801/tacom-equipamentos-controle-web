@@ -32,7 +32,7 @@ interface EquipmentType {
 }
 
 interface MovementData {
-  tipo_movimento: string;
+  tipo_movimento: 'movimentacao' | 'devolucao' | 'retorno_manutencao' | 'movimentacao_interna' | 'envio_manutencao' | 'manutencao' | 'entrada' | 'saida' | 'aguardando_manutencao' | 'danificado' | 'indisponivel' | '';
   data_movimento: string;
   observacoes: string;
   empresa_destino: string;
@@ -194,11 +194,12 @@ export const useMovementForm = () => {
         return false;
       }
 
-      // Tipo de manutenção obrigatório para manutenção, movimentação interna, envio manutenção E devolução
+      // Tipo de manutenção obrigatório para manutenção, movimentação interna, envio manutenção, devolução E retorno de manutenção
       if ((movementData.tipo_movimento === 'manutencao' || 
            movementData.tipo_movimento === 'movimentacao_interna' || 
            movementData.tipo_movimento === 'envio_manutencao' ||
-           movementData.tipo_movimento === 'devolucao') && !movementData.tipo_manutencao_id) {
+           movementData.tipo_movimento === 'devolucao' ||
+           movementData.tipo_movimento === 'retorno_manutencao') && !movementData.tipo_manutencao_id) {
         toast({
           title: "Erro",
           description: "Tipo de manutenção é obrigatório para este tipo de movimentação.",
@@ -216,11 +217,12 @@ export const useMovementForm = () => {
         return false;
       }
 
-      // Status obrigatório para TACOM, movimentação interna, envio manutenção, devolução E manutenção
+      // Status obrigatório para TACOM, movimentação interna, envio manutenção, devolução, retorno de manutenção E manutenção
       if ((isDestinationTacom() || 
            movementData.tipo_movimento === 'movimentacao_interna' || 
            movementData.tipo_movimento === 'envio_manutencao' ||
            movementData.tipo_movimento === 'devolucao' ||
+           movementData.tipo_movimento === 'retorno_manutencao' ||
            movementData.tipo_movimento === 'manutencao') && 
            !movementData.status_equipamento) {
         toast({
@@ -271,8 +273,8 @@ export const useMovementForm = () => {
           continue; // Pula este equipamento
         }
 
-        // Para movimentações e devoluções, verificar se não é uma movimentação duplicada para a MESMA empresa
-        if (movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao') {
+        // Para movimentações, devoluções e retornos de manutenção, verificar se não é uma movimentação duplicada para a MESMA empresa
+        if (movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao' || movementData.tipo_movimento === 'retorno_manutencao') {
           const { data: existingMovements } = await supabase
             .from('movimentacoes')
             .select(`
@@ -313,7 +315,8 @@ export const useMovementForm = () => {
              movementData.tipo_movimento === 'aguardando_manutencao' ||
              movementData.tipo_movimento === 'movimentacao_interna' ||
              movementData.tipo_movimento === 'envio_manutencao' ||
-             movementData.tipo_movimento === 'devolucao') 
+             movementData.tipo_movimento === 'devolucao' ||
+             movementData.tipo_movimento === 'retorno_manutencao') 
             && movementData.tipo_manutencao_id) {
           movimentationData.tipo_manutencao_id = movementData.tipo_manutencao_id;
         }
@@ -373,6 +376,7 @@ export const useMovementForm = () => {
           updateData.status = 'disponivel';
         } else if (movementData.tipo_movimento === 'movimentacao' || 
                    movementData.tipo_movimento === 'devolucao' ||
+                   movementData.tipo_movimento === 'retorno_manutencao' ||
                    movementData.tipo_movimento === 'movimentacao_interna' ||
                    movementData.tipo_movimento === 'envio_manutencao' ||
                    movementData.tipo_movimento === 'manutencao') {
@@ -388,14 +392,14 @@ export const useMovementForm = () => {
           }
           
           // Definir status baseado no tipo de movimento
-          if (movementData.tipo_movimento === 'devolucao') {
-            // Para devolução/retorno de manutenção, sempre usar o status selecionado pelo usuário
+          if (movementData.tipo_movimento === 'devolucao' || movementData.tipo_movimento === 'retorno_manutencao') {
+            // Para devolução e retorno de manutenção, sempre usar o status selecionado pelo usuário
             if (movementData.status_equipamento) {
               updateData.status = movementData.status_equipamento;
-              console.log(`Status definido para devolução: "${movementData.status_equipamento}"`);
+              console.log(`Status definido para ${movementData.tipo_movimento}: "${movementData.status_equipamento}"`);
             } else {
-              updateData.status = 'disponivel'; // fallback para devolução
-              console.log(`Status fallback para devolução: "disponivel"`);
+              updateData.status = 'disponivel'; // fallback
+              console.log(`Status fallback para ${movementData.tipo_movimento}: "disponivel"`);
             }
           } else if (movementData.tipo_movimento === 'manutencao') {
             // Para manutenção, usar o status selecionado pelo usuário se disponível
