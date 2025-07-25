@@ -273,34 +273,26 @@ export const useMovementForm = () => {
           continue; // Pula este equipamento
         }
 
-        // Para movimentações, devoluções e retornos de manutenção, verificar se não é uma movimentação duplicada para a MESMA empresa
+        // Para movimentações, devoluções e retornos de manutenção, verificar se não é uma movimentação duplicada
         if (movementData.tipo_movimento === 'movimentacao' || movementData.tipo_movimento === 'devolucao' || movementData.tipo_movimento === 'retorno_manutencao') {
           const { data: existingMovements } = await supabase
             .from('movimentacoes')
-            .select(`
-              id,
-              equipamentos!inner(id_empresa, empresas(name))
-            `)
+            .select('id')
             .eq('id_equipamento', equipment.id)
             .eq('data_movimento', movementData.data_movimento)
             .eq('tipo_movimento', movementData.tipo_movimento);
 
-          // Verificar se já existe movimentação para a mesma empresa de destino hoje
-          const sameDestinationToday = existingMovements?.some(mov => 
-            mov.equipamentos?.id_empresa === movementData.empresa_destino
-          );
-
-          if (sameDestinationToday) {
-            console.log(`⚠️ Já existe uma movimentação para a mesma empresa de destino hoje para equipamento ${equipment.numero_serie}`);
+          if (existingMovements && existingMovements.length > 0) {
+            console.log(`⚠️ Já existe uma movimentação do tipo ${movementData.tipo_movimento} hoje para equipamento ${equipment.numero_serie}`);
             toast({
               title: "Aviso", 
-              description: `Já existe uma movimentação para a mesma empresa de destino hoje para o equipamento ${equipment.numero_serie}.`,
+              description: `Já existe uma movimentação do tipo ${movementData.tipo_movimento} hoje para o equipamento ${equipment.numero_serie}.`,
               variant: "destructive",
             });
             continue; // Pula este equipamento
           }
 
-          console.log(`✅ Permitindo nova movimentação para empresa diferente - Equipamento ${equipment.numero_serie}`);
+          console.log(`✅ Permitindo nova movimentação - Equipamento ${equipment.numero_serie}`);
         }
         
         const movimentationData: any = {
