@@ -31,6 +31,16 @@ export const defaultUsers: UserWithPassword[] = [
     password: '123456',
     role: 'user',
     userType: 'operacional'
+  },
+  {
+    id: '3',
+    email: 'eduardo.gil@teste.com',
+    name: 'Eduardo',
+    surname: 'Gil',
+    username: 'eduardo.gil',
+    password: '12345678',
+    role: 'user',
+    userType: 'operacional'
   }
 ];
 
