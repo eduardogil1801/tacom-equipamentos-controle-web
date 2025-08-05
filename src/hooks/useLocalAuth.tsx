@@ -1,14 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { initializeUsers, type User } from '@/data/users';
 
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  surname?: string;
-  username?: string;
-  role: 'admin' | 'user';
-  userType: 'administrador' | 'operacional';
-}
 
 interface AuthContextType {
   user: User | null;
@@ -34,26 +26,13 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const loadUser = async () => {
     try {
-      // Carregar do localStorage
+      // Initialize default users
+      initializeUsers();
+      
+      // Load current user session
       const savedUser = localStorage.getItem('currentUser');
       if (savedUser) {
         setUser(JSON.parse(savedUser));
-      }
-      
-      // Criar usuário padrão se não existir nenhum
-      const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
-      if (users.length === 0) {
-        const defaultUser = {
-          id: '1',
-          email: 'admin@teste.com',
-          name: 'Administrador',
-          username: 'admin',
-          password: '123456',
-          role: 'admin',
-          userType: 'administrador'
-        };
-        localStorage.setItem('localUsers', JSON.stringify([defaultUser]));
-        console.log('Usuário padrão criado: admin@teste.com / 123456');
       }
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
