@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { isElectron, ElectronDatabase } from '@/utils/electronDatabase';
 
 interface User {
   id: string;
@@ -35,12 +34,26 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const loadUser = async () => {
     try {
-      if (isElectron) {
-        // No Electron, carregar do localStorage ou verificar sessão
-        const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
+      // Carregar do localStorage
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
+      
+      // Criar usuário padrão se não existir nenhum
+      const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
+      if (users.length === 0) {
+        const defaultUser = {
+          id: '1',
+          email: 'admin@teste.com',
+          name: 'Administrador',
+          username: 'admin',
+          password: '123456',
+          role: 'admin',
+          userType: 'administrador'
+        };
+        localStorage.setItem('localUsers', JSON.stringify([defaultUser]));
+        console.log('Usuário padrão criado: admin@teste.com / 123456');
       }
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
@@ -53,22 +66,17 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
     try {
       setIsLoading(true);
       
-      let foundUser = null;
-      
-      if (isElectron) {
-        // Login via Electron/SQLite
-        foundUser = await ElectronDatabase.login(email, password);
-      } else {
-        // Fallback para web/localStorage (desenvolvimento)
-        const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
-        foundUser = users.find((u: any) => u.email === email && u.password === password);
-      }
+      // Buscar usuário no localStorage
+      const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
+      const foundUser = users.find((u: any) => u.email === email && u.password === password);
       
       if (foundUser) {
         const userSession = {
           id: foundUser.id,
           email: foundUser.email,
           name: foundUser.name || foundUser.email,
+          surname: foundUser.surname,
+          username: foundUser.username,
           role: foundUser.role || 'user',
           userType: foundUser.userType || 'administrador'
         };
@@ -94,25 +102,16 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const signUp = async (userData: any) => {
     try {
-      if (isElectron) {
-        const result = await ElectronDatabase.insert('usuarios', {
-          ...userData,
-          id: Date.now().toString(),
-          role: userData.role || 'user'
-        });
-        return { data: result, error: null };
-      } else {
-        // Fallback para localStorage
-        const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
-        const newUser = {
-          ...userData,
-          id: Date.now().toString(),
-          role: userData.role || 'user'
-        };
-        users.push(newUser);
-        localStorage.setItem('localUsers', JSON.stringify(users));
-        return { data: newUser, error: null };
-      }
+      // Usar localStorage
+      const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
+      const newUser = {
+        ...userData,
+        id: Date.now().toString(),
+        role: userData.role || 'user'
+      };
+      users.push(newUser);
+      localStorage.setItem('localUsers', JSON.stringify(users));
+      return { data: newUser, error: null };
     } catch (error) {
       return { data: null, error };
     }
@@ -144,8 +143,13 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
         return { error: { message: 'As senhas não coincidem' } };
       }
       
-      if (user && isElectron) {
-        await ElectronDatabase.update('usuarios', user.id, { password: newPassword });
+      if (user) {
+        // Atualizar no localStorage
+        const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
+        const updatedUsers = users.map((u: any) => 
+          u.id === user.id ? { ...u, password: newPassword } : u
+        );
+        localStorage.setItem('localUsers', JSON.stringify(updatedUsers));
         return { error: null };
       }
       return { error: { message: 'Não foi possível alterar a senha' } };
