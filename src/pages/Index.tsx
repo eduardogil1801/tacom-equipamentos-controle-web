@@ -12,7 +12,7 @@ import SettingsPage from '@/components/Settings/SettingsPage';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
 import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
 import ChatFloat from '@/components/Chat/ChatFloat';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useLocalAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 

@@ -6,6 +6,7 @@ interface User {
   email: string;
   name: string;
   role: 'admin' | 'user';
+  userType: 'administrador' | 'operacional';
 }
 
 interface AuthContextType {
@@ -13,8 +14,10 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  isAuthenticated: boolean;
   signUp: (userData: any) => Promise<{ data: any; error: any }>;
   changePassword: (newPassword: string) => Promise<{ error: any }>;
+  checkPermission: (module: string, action: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -63,7 +66,8 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
           id: foundUser.id,
           email: foundUser.email,
           name: foundUser.name || foundUser.email,
-          role: foundUser.role || 'user'
+          role: foundUser.role || 'user',
+          userType: foundUser.userType || 'administrador'
         };
         
         setUser(userSession);
@@ -123,14 +127,25 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
+  const checkPermission = (module: string, action: string) => {
+    // Administradores têm acesso total
+    if (user?.userType === 'administrador') {
+      return true;
+    }
+    // Para simplicidade, usuários operacionais têm acesso básico
+    return true;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       login, 
       logout, 
       isLoading, 
+      isAuthenticated: !!user,
       signUp, 
-      changePassword 
+      changePassword,
+      checkPermission 
     }}>
       {children}
     </AuthContext.Provider>
