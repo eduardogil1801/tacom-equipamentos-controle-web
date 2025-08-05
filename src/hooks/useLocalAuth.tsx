@@ -47,7 +47,15 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
       
       // Buscar usuário no localStorage
       const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
-      const foundUser = users.find((u: any) => u.email === email && u.password === password);
+      console.log('Usuários disponíveis:', users);
+      console.log('Tentando login com:', { email, password });
+      
+      // Buscar por email ou username
+      const foundUser = users.find((u: any) => 
+        (u.email === email || u.username === email) && u.password === password
+      );
+      
+      console.log('Usuário encontrado:', foundUser);
       
       if (foundUser) {
         const userSession = {
