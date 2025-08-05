@@ -5,6 +5,8 @@ interface User {
   id: string;
   email: string;
   name: string;
+  surname?: string;
+  username?: string;
   role: 'admin' | 'user';
   userType: 'administrador' | 'operacional';
 }
@@ -16,7 +18,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signUp: (userData: any) => Promise<{ data: any; error: any }>;
-  changePassword: (newPassword: string) => Promise<{ error: any }>;
+  register: (name: string, surname: string, email: string, username: string, password: string, confirmPassword: string) => Promise<boolean>;
+  changePassword: (newPassword: string, confirmPassword?: string) => Promise<{ error: any }>;
   checkPermission: (module: string, action: string) => boolean;
 }
 
@@ -115,8 +118,32 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
-  const changePassword = async (newPassword: string) => {
+  const register = async (name: string, surname: string, email: string, username: string, password: string, confirmPassword: string): Promise<boolean> => {
     try {
+      if (password !== confirmPassword) {
+        return false;
+      }
+      
+      const userData = { name, surname, email, username, password };
+      const result = await signUp(userData);
+      
+      if (result.error) {
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      return false;
+    }
+  };
+
+  const changePassword = async (newPassword: string, confirmPassword?: string) => {
+    try {
+      if (confirmPassword && newPassword !== confirmPassword) {
+        return { error: { message: 'As senhas não coincidem' } };
+      }
+      
       if (user && isElectron) {
         await ElectronDatabase.update('usuarios', user.id, { password: newPassword });
         return { error: null };
@@ -144,6 +171,7 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
       isLoading, 
       isAuthenticated: !!user,
       signUp, 
+      register,
       changePassword,
       checkPermission 
     }}>

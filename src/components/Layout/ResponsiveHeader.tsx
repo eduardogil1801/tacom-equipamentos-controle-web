@@ -16,7 +16,7 @@ import {
   ArrowRightLeft,
   History
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useLocalAuth';
 
 interface ResponsiveHeaderProps {
   currentPage: string;

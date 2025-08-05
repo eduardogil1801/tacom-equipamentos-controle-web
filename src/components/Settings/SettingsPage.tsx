@@ -11,7 +11,7 @@ import MovementTypeManager from '@/components/Settings/MovementTypeManager';
 import MaintenanceRulesManager from '@/components/Settings/MaintenanceRulesManager';
 import MaintenanceTypeManager from '@/components/Maintenance/MaintenanceTypeManager';
 import EquipmentTypeManager from '@/components/Settings/EquipmentTypeManager';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useLocalAuth';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();

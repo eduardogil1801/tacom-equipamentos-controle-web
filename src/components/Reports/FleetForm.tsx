@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getCurrentLocalMonth } from '@/utils/dateUtils';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useLocalAuth';
 import FleetFormFields from './FleetForm/FleetFormFields';
 import FleetFormSummary from './FleetForm/FleetFormSummary';
 import FleetFormActions from './FleetForm/FleetFormActions';

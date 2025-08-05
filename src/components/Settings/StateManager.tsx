@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Edit, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useLocalAuth';
 
 interface State {
   id: string;
