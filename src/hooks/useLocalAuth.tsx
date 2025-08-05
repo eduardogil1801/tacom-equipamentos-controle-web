@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { initializeUsers, type User } from '@/data/users';
+import { supabase } from '@/integrations/supabase/client';
 
 
 interface AuthContextType {
@@ -45,27 +46,26 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
     try {
       setIsLoading(true);
       
-      // Buscar usuário no localStorage
-      const users = JSON.parse(localStorage.getItem('localUsers') || '[]');
-      console.log('Usuários disponíveis:', users);
+      // Buscar usuário no Supabase
+      const { data: users, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .or(`email.eq.${email},username.eq.${email}`)
+        .eq('senha', password)
+        .single();
+
       console.log('Tentando login com:', { email, password });
+      console.log('Resultado do Supabase:', { users, error });
       
-      // Buscar por email ou username
-      const foundUser = users.find((u: any) => 
-        (u.email === email || u.username === email) && u.password === password
-      );
-      
-      console.log('Usuário encontrado:', foundUser);
-      
-      if (foundUser) {
-        const userSession = {
-          id: foundUser.id,
-          email: foundUser.email,
-          name: foundUser.name || foundUser.email,
-          surname: foundUser.surname,
-          username: foundUser.username,
-          role: foundUser.role || 'user',
-          userType: foundUser.userType || 'administrador'
+      if (users && !error) {
+        const userSession: User = {
+          id: users.id,
+          email: users.email,
+          name: users.nome || users.email,
+          surname: users.sobrenome || '',
+          username: users.username,
+          role: 'user' as 'user',
+          userType: 'administrador' as 'administrador'
         };
         
         setUser(userSession);
