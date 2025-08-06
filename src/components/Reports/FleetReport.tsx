@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Download, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// import jsPDF from 'jspdf'; // Removed for compatibility
+// import 'jspdf-autotable'; // Removed for compatibility
 
 interface FleetData {
   id: string;
@@ -110,54 +110,8 @@ const FleetReport: React.FC = () => {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Relatório de Frota', 14, 22);
-    
-    doc.setFontSize(12);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
-    
-    if (filteredData.length === 0) {
-      doc.text('Nenhum dado encontrado com os filtros aplicados.', 14, 50);
-      doc.save('relatorio-frota.pdf');
-      return;
-    }
-
-    const tableData = filteredData.map(item => [
-      item.cod_operadora,
-      item.nome_empresa,
-      formatMesReferenciaDisplay(item.mes_referencia),
-      formatNumber(item.simples_com_imagem || 0),
-      formatNumber(item.simples_sem_imagem || 0),
-      formatNumber(item.secao || 0),
-      formatNumber(item.citgis || 0),
-      formatNumber(item.buszoom || 0),
-      formatNumber(item.nuvem || 0),
-      formatNumber(item.telemetria || 0),
-      formatNumber(item.total || 0)
-    ]);
-
-    (doc as any).autoTable({
-      head: [['Código', 'Operadora', 'Mês', 'Simples C/Img', 'Simples S/Img', 'Seção', 'CITGIS', 'BUSZOOM', 'Nuvem', 'Telemetria', 'Total']],
-      body: tableData,
-      startY: 40,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] }
-    });
-
-    const totalGeral = filteredData.reduce((sum, item) => sum + (item.total || 0), 0);
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
-    
-    doc.setFontSize(12);
-    doc.text(`Total Geral de Equipamentos: ${formatNumber(totalGeral)}`, 14, finalY);
-
-    doc.save('relatorio-frota.pdf');
-    
-    toast({
-      title: "Sucesso",
-      description: "Relatório PDF gerado com sucesso!",
-    });
+    alert("Geração de PDF não disponível no momento");
+    return;
   };
 
   const handleFilterChange = (field: string, value: string) => {

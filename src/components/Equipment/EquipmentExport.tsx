@@ -2,9 +2,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Download, FileSpreadsheet, FileText, File } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// import * as XLSX from 'xlsx'; // Removed for compatibility
+// import jsPDF from 'jspdf'; // Removed for compatibility
+// import 'jspdf-autotable'; // Removed for compatibility
 
 interface Equipment {
   id: string;
@@ -57,73 +57,11 @@ const EquipmentExport: React.FC<EquipmentExportProps> = ({ data }) => {
   };
 
   const exportToExcel = () => {
-    const exportData = prepareDataForExport();
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    
-    // Ajustar largura das colunas
-    const columnWidths = [
-      { wch: 20 }, // Número de Série
-      { wch: 20 }, // Tipo
-      { wch: 15 }, // Modelo
-      { wch: 25 }, // Empresa
-      { wch: 20 }, // Estado
-      { wch: 20 }, // Status
-      { wch: 15 }  // Data de Entrada
-    ];
-    worksheet['!cols'] = columnWidths;
-    
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Equipamentos');
-    
-    const fileName = `equipamentos_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    alert("Exportação para Excel não disponível no momento");
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    const exportData = prepareDataForExport();
-    
-    // Título
-    doc.setFontSize(18);
-    doc.text('Relatório de Equipamentos', 14, 20);
-    
-    // Data do relatório
-    doc.setFontSize(12);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
-    
-    // Tabela
-    const tableHeaders = [
-      'Número de Série',
-      'Tipo',
-      'Modelo',
-      'Empresa',
-      'Estado',
-      'Status',
-      'Data Entrada'
-    ];
-    
-    const tableData = exportData.map(item => [
-      item['Número de Série'],
-      item['Tipo'],
-      item['Modelo'],
-      item['Empresa'],
-      item['Estado'],
-      item['Status'],
-      item['Data de Entrada']
-    ]);
-    
-    (doc as any).autoTable({
-      head: [tableHeaders],
-      body: tableData,
-      startY: 40,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      margin: { top: 40 }
-    });
-    
-    const fileName = `equipamentos_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
+    alert("Exportação para PDF não disponível no momento");
   };
 
   const exportToCSV = () => {

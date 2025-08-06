@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// import jsPDF from 'jspdf'; // Removed for compatibility
+// import 'jspdf-autotable'; // Removed for compatibility
 
 interface Company {
   id: string;
@@ -93,41 +93,8 @@ const CompaniesReport: React.FC = () => {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Relatório de Empresas', 14, 22);
-    
-    doc.setFontSize(12);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
-    
-    if (filteredCompanies.length === 0) {
-      doc.text('Nenhuma empresa encontrada com os filtros aplicados.', 14, 50);
-      doc.save('relatorio-empresas.pdf');
-      return;
-    }
-
-    const tableData = filteredCompanies.map(company => [
-      company.name,
-      company.cnpj || '-',
-      company.telefone || '-',
-      company.estados?.nome || company.estado || '-'
-    ]);
-
-    (doc as any).autoTable({
-      head: [['Nome', 'CNPJ', 'Telefone', 'Estado']],
-      body: tableData,
-      startY: 40,
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [66, 139, 202] }
-    });
-
-    doc.save('relatorio-empresas.pdf');
-    
-    toast({
-      title: "Sucesso",
-      description: "Relatório PDF gerado com sucesso!",
-    });
+    alert("Geração de PDF não disponível no momento");
+    return;
   };
 
   const handleFilterChange = (field: string, value: string) => {

@@ -9,8 +9,8 @@ import { FileText, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useLocalAuth';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// import jsPDF from 'jspdf'; // Removed for compatibility
+// import 'jspdf-autotable'; // Removed for compatibility
 
 interface Equipment {
   id: string;
@@ -151,57 +151,9 @@ const ProtocolPage: React.FC = () => {
     const selectedEquipmentData = equipment.filter(eq => selectedEquipment.includes(eq.id));
     const companyName = companies.find(c => c.id === protocolData.company)?.name || '';
 
-    const doc = new jsPDF();
+    alert("Geração de PDF não disponível no momento");
+    return;
 
-    // Cabeçalho
-    doc.setFontSize(18);
-    doc.text('PROTOCOLO DE ENTREGA DE EQUIPAMENTOS', 14, 20);
-
-    // Informações do protocolo
-    doc.setFontSize(12);
-    doc.text(`Empresa: ${companyName}`, 14, 40);
-    doc.text(`Data: ${new Date(protocolData.date).toLocaleDateString('pt-BR')}`, 14, 50);
-    doc.text(`Responsável pelo Recebimento: ${protocolData.responsible}`, 14, 60);
-
-    if (protocolData.observations) {
-      doc.text(`Observações: ${protocolData.observations}`, 14, 70);
-    }
-
-    // Tabela de equipamentos
-    const tableData = selectedEquipmentData.map(eq => [
-      eq.numero_serie,
-      eq.tipo,
-      eq.modelo || '-'
-    ]);
-
-    (doc as any).autoTable({
-      head: [['Número de Série', 'Tipo', 'Modelo']],
-      body: tableData,
-      startY: protocolData.observations ? 80 : 70,
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: [66, 139, 202] }
-    });
-
-    // Rodapé com assinaturas
-    const finalY = (doc as any).lastAutoTable.finalY + 20;
-    
-    doc.setFontSize(10);
-    doc.text('_'.repeat(50), 14, finalY + 20);
-    doc.text('Assinatura do Responsável pelo Envio', 14, finalY + 30);
-    
-    doc.text('_'.repeat(50), 120, finalY + 20);
-    doc.text('Assinatura do Responsável pelo Recebimento', 120, finalY + 30);
-
-    doc.text(`Total de equipamentos: ${formatNumber(selectedEquipment.length)}`, 14, finalY + 50);
-
-    // Salvar o PDF
-    const fileName = `protocolo_${companyName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
-
-    toast({
-      title: "Sucesso",
-      description: "Protocolo gerado com sucesso!",
-    });
   };
 
   return (

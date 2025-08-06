@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+// import jsPDF from 'jspdf'; // Removed for compatibility
+// import 'jspdf-autotable'; // Removed for compatibility
 
 interface Movement {
   id: string;
@@ -148,47 +148,8 @@ const MovementsReport: React.FC = () => {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Relatório de Movimentações', 14, 22);
-    
-    doc.setFontSize(12);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 32);
-    
-    if (filteredMovements.length === 0) {
-      doc.text('Nenhuma movimentação encontrada com os filtros aplicados.', 14, 50);
-      doc.save('relatorio-movimentacoes.pdf');
-      return;
-    }
-
-    const tableData = filteredMovements.map(item => [
-      formatDateForDisplay(item.data_movimento),
-      item.tipo_movimento,
-      item.equipamentos?.numero_serie || '-',
-      item.equipamentos?.tipo || '-',
-      item.equipamentos?.empresas?.name || '-',
-      item.usuario_responsavel || '-',
-      item.observacoes || '-'
-    ]);
-
-    (doc as any).autoTable({
-      head: [['Data', 'Tipo', 'Número Série', 'Tipo Equip.', 'Empresa', 'Responsável', 'Observações']],
-      body: tableData,
-      startY: 40,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [66, 139, 202] },
-      columnStyles: {
-        6: { cellWidth: 30 } // Observações column
-      }
-    });
-
-    doc.save('relatorio-movimentacoes.pdf');
-    
-    toast({
-      title: "Sucesso",
-      description: "Relatório PDF gerado com sucesso!",
-    });
+    alert("Geração de PDF não disponível no momento");
+    return;
   };
 
   const handleFilterChange = (field: string, value: string) => {

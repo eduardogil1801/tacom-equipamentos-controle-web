@@ -10,7 +10,7 @@ import { Plus, Pencil, Trash2, Download, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useLocalAuth';
 import { toast } from '@/hooks/use-toast';
-import * as XLSX from 'xlsx';
+// import * as XLSX from 'xlsx'; // Removed for compatibility
 
 interface FleetData {
   id: string;
@@ -239,10 +239,7 @@ const FleetManagement: React.FC = () => {
   };
 
   const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(fleetData);
-    XLSX.utils.book_append_sheet(wb, ws, 'Frota');
-    XLSX.writeFile(wb, 'frota.xlsx');
+    alert("Exportação para Excel não disponível no momento");
   };
 
   const formatMesReferenciaDisplay = (mesReferencia: string) => {

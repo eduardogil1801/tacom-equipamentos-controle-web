@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, Download, FileSpreadsheet, AlertCircle } from 'lucide-react';
-import * as XLSX from 'xlsx';
+// import * as XLSX from 'xlsx'; // Removed for compatibility
 
 interface BulkImportDialogProps {
   isOpen: boolean;
@@ -42,71 +42,19 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   };
 
   const previewFile = async (file: File) => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
-
-      console.log('Dados brutos do preview:', jsonData.slice(0, 3));
-
-      // Mapear dados para o formato esperado com validação melhorada
-      const mappedData: EquipmentData[] = jsonData.slice(0, 5).map((row: any) => {
-        console.log('Linha sendo processada no preview:', row);
-        
-        // Mapear status do arquivo preservando exatamente como está
-        let statusFromFile = '';
-        if (row['Status'] || row['status']) {
-          statusFromFile = (row['Status'] || row['status']).toString().trim();
-        }
-        
-        return {
-          tipo: (row['Tipo'] || row['tipo'] || '').toString().trim(),
-          numero_serie: (row['Número de Série'] || row['numero_serie'] || row['Serial'] || '').toString().trim(),
-          modelo: row['Modelo'] || row['modelo'] ? (row['Modelo'] || row['modelo']).toString().trim() : '',
-          empresa: (row['Empresa'] || row['empresa'] || '').toString().trim(),
-          estado: (row['Estado'] || row['estado'] || '').toString().trim(),
-          status: statusFromFile || 'disponivel'
-        };
-      });
-
-      console.log('Dados mapeados para preview:', mappedData);
-      setPreviewData(mappedData);
-    } catch (error) {
-      console.error('Erro ao processar arquivo no preview:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao processar arquivo. Verifique se é um arquivo Excel válido.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Funcionalidade Indisponível",
+      description: "A importação de Excel não está disponível no momento.",
+      variant: "destructive",
+    });
   };
 
   const downloadTemplate = () => {
-    const templateData = [
-      {
-        'Tipo': 'Tablet',
-        'Número de Série': 'TAB001',
-        'Modelo': 'Samsung Galaxy Tab A',
-        'Empresa': 'Central',
-        'Estado': 'RS',
-        'Status': 'disponivel'
-      },
-      {
-        'Tipo': 'Smartphone',
-        'Número de Série': 'PHONE001',
-        'Modelo': 'iPhone 13',
-        'Empresa': 'TACOM Sistemas POA',
-        'Estado': 'SP',
-        'Status': 'em_uso'
-      }
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template');
-    XLSX.writeFile(wb, 'template_equipamentos.xlsx');
+    toast({
+      title: "Funcionalidade Indisponível",
+      description: "O download do template não está disponível no momento.",
+      variant: "destructive",
+    });
   };
 
   const validateData = (data: any[]): { valid: EquipmentData[], errors: string[] } => {
@@ -212,180 +160,15 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     try {
       console.log('=== INICIANDO PROCESSAMENTO DA IMPORTAÇÃO ===');
       
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
-
-      console.log('Dados brutos extraídos do Excel:', jsonData.length, 'linhas');
-
-      if (jsonData.length === 0) {
-        throw new Error('Arquivo está vazio ou não possui dados válidos');
-      }
-
-      const { valid, errors } = validateData(jsonData);
-
-      if (errors.length > 0) {
-        console.error('Erros de validação encontrados:', errors);
-        toast({
-          title: "Erros de Validação",
-          description: `${errors.length} erro(s) encontrado(s). Verifique o console para detalhes.`,
-          variant: "destructive",
-        });
-        errors.forEach(error => console.error('ERRO:', error));
-        setIsProcessing(false);
-        return;
-      }
-
-      console.log('=== CARREGANDO EMPRESAS DO BANCO ===');
-      
-      const { data: empresas, error: empresasError } = await supabase
-        .from('empresas')
-        .select('id, name');
-
-      if (empresasError) {
-        console.error('Erro ao carregar empresas:', empresasError);
-        throw new Error(`Erro ao carregar empresas: ${empresasError.message}`);
-      }
-
-      const empresasMap = new Map<string, string>();
-      empresas?.forEach(empresa => {
-        const nomeNormalizado = empresa.name.toLowerCase().trim();
-        empresasMap.set(nomeNormalizado, empresa.id);
-      });
-
-      const empresasDoArquivo = [...new Set(valid.map(eq => eq.empresa.toLowerCase().trim()))];
-      const empresasNaoEncontradas = empresasDoArquivo.filter(nomeEmpresa => !empresasMap.has(nomeEmpresa));
-
-      if (empresasNaoEncontradas.length > 0) {
-        const erro = `Empresas não encontradas no sistema: ${empresasNaoEncontradas.join(', ')}`;
-        console.error(erro);
-        throw new Error(erro);
-      }
-
-      console.log('=== VERIFICANDO EQUIPAMENTOS DUPLICADOS ===');
-
-      const { data: equipamentosExistentes, error: equipError } = await supabase
-        .from('equipamentos')
-        .select('numero_serie, tipo');
-
-      if (equipError) {
-        console.error('Erro ao verificar equipamentos existentes:', equipError);
-        throw new Error(`Erro ao verificar duplicatas: ${equipError.message}`);
-      }
-
-      const equipamentosExistentesSet = new Set<string>();
-      equipamentosExistentes?.forEach(eq => {
-        const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
-        equipamentosExistentesSet.add(chave);
-      });
-
-      const equipamentosNovos = valid.filter(eq => {
-        const chave = `${eq.tipo.toLowerCase().trim()}|${eq.numero_serie.toLowerCase().trim()}`;
-        const isDuplicate = equipamentosExistentesSet.has(chave);
-        if (isDuplicate) {
-          console.log(`DUPLICATA IGNORADA: ${eq.tipo} - ${eq.numero_serie}`);
-        }
-        return !isDuplicate;
-      });
-
-      console.log('Equipamentos novos para inserir:', equipamentosNovos.length);
-
-      if (equipamentosNovos.length === 0) {
-        throw new Error('Todos os equipamentos já existem no sistema');
-      }
-
-      const duplicatas = valid.length - equipamentosNovos.length;
-
-      console.log('=== PREPARANDO EQUIPAMENTOS PARA INSERÇÃO ===');
-
-      // CORREÇÃO: Usar data atual corretamente sem problemas de fuso horário
-      const hoje = new Date();
-      const dataAtual = hoje.getFullYear() + '-' + 
-                      String(hoje.getMonth() + 1).padStart(2, '0') + '-' + 
-                      String(hoje.getDate()).padStart(2, '0');
-      
-      console.log('Data de entrada definida:', dataAtual);
-      
-      const equipamentosParaInserir = equipamentosNovos.map(eq => {
-        const empresaId = empresasMap.get(eq.empresa.toLowerCase().trim());
-        
-        // CORREÇÃO: Preservar status do arquivo
-        let statusFinal = eq.status || 'disponivel';
-        
-        // CORREÇÃO: Aplicar regra - equipamentos não-TACOM devem ter status "em_uso"
-        const empresaNome = eq.empresa.toLowerCase();
-        const isTacom = empresaNome.includes('tacom');
-        
-        // Se não é TACOM e status não foi especificado ou é 'disponivel', definir como "em_uso"
-        if (!isTacom && (!eq.status || eq.status === 'disponivel')) {
-          statusFinal = 'em_uso';
-          console.log(`Equipamento ${eq.numero_serie} em empresa não-TACOM definido como "em_uso"`);
-        }
-        
-        const equipamento = {
-          tipo: eq.tipo,
-          numero_serie: eq.numero_serie,
-          modelo: eq.modelo || null,
-          id_empresa: empresaId,
-          estado: eq.estado || null,
-          data_entrada: dataAtual,
-          status: statusFinal // CORREÇÃO: Usar o status correto
-        };
-        
-        console.log('Equipamento preparado com status:', equipamento);
-        return equipamento;
-      });
-
-      console.log('=== INSERINDO EQUIPAMENTOS NO BANCO ===');
-
-      const batchSize = 50;
-      let totalInseridos = 0;
-      const errosInsercao = [];
-
-      for (let i = 0; i < equipamentosParaInserir.length; i += batchSize) {
-        const batch = equipamentosParaInserir.slice(i, i + batchSize);
-        const batchNumber = Math.floor(i / batchSize) + 1;
-        
-        console.log(`=== LOTE ${batchNumber} (${batch.length} equipamentos) ===`);
-
-        const { data, error } = await supabase
-          .from('equipamentos')
-          .insert(batch)
-          .select('id, numero_serie, status');
-
-        if (error) {
-          console.error(`Erro no lote ${batchNumber}:`, error);
-          errosInsercao.push(`Lote ${batchNumber}: ${error.message}`);
-          continue;
-        }
-
-        const inseridosNesteLote = data?.length || 0;
-        totalInseridos += inseridosNesteLote;
-        
-        console.log(`Lote ${batchNumber} inserido: ${inseridosNesteLote} equipamentos`);
-        console.log(`Status dos equipamentos inseridos:`, data?.map(eq => `${eq.numero_serie}: ${eq.status}`));
-      }
-
-      console.log('=== RESULTADO FINAL ===');
-      console.log('Total inserido:', totalInseridos);
-
-      let mensagem = `${totalInseridos} equipamentos importados`;
-      if (duplicatas > 0) {
-        mensagem += `, ${duplicatas} duplicatas ignoradas`;
-      }
-
       toast({
-        title: "Importação Concluída",
-        description: mensagem,
-        variant: totalInseridos > 0 ? "default" : "destructive",
+        title: "Funcionalidade Indisponível",
+        description: "A importação de Excel não está disponível no momento.",
+        variant: "destructive",
       });
+      return;
 
-      if (totalInseridos > 0) {
-        onImportComplete();
-        onClose();
-      }
+      return;
+
     } catch (error) {
       console.error('=== ERRO GERAL NA IMPORTAÇÃO ===', error);
       toast({

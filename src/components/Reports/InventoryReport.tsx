@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Download, Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import jsPDF from 'jspdf';
+// import jsPDF from 'jspdf'; // Removed for compatibility
 
 interface Equipment {
   id: string;
@@ -133,57 +133,8 @@ const InventoryReport = () => {
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    
-    // Título
-    doc.setFontSize(16);
-    doc.text('Relatório de Inventário', 20, 20);
-    
-    // Data do relatório
-    doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 30);
-    doc.text(`Total de equipamentos: ${filteredEquipments.length}`, 20, 35);
-    
-    // Cabeçalhos da tabela
-    const headers = ['Tipo', 'Modelo', 'Série', 'Operadora', 'Status', 'Estado', 'Entrada'];
-    let yPosition = 50;
-    
-    doc.setFontSize(8);
-    headers.forEach((header, index) => {
-      doc.text(header, 20 + (index * 25), yPosition);
-    });
-    
-    // Dados da tabela
-    yPosition += 10;
-    filteredEquipments.forEach((equipment, index) => {
-      if (yPosition > 280) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      const row = [
-        equipment.tipo || '',
-        equipment.modelo || '',
-        equipment.numero_serie || '',
-        equipment.operadoras?.name || '',
-        equipment.status || '',
-        equipment.estado || '',
-        equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : ''
-      ];
-      
-      row.forEach((cell, cellIndex) => {
-        doc.text(cell.substring(0, 12), 20 + (cellIndex * 25), yPosition);
-      });
-      
-      yPosition += 8;
-    });
-    
-    doc.save('relatorio-inventario.pdf');
-    
-    toast({
-      title: "Sucesso",
-      description: "Relatório exportado com sucesso!",
-    });
+    alert("Exportação para PDF não disponível no momento");
+    return;
   };
 
   if (loading) {
