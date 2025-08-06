@@ -1,126 +1,14 @@
 {
-  "name": "tacom-equipamentos-controle",
-  "description": "Sistema de Controle de Equipamentos TACOM",
-  "version": "1.0.0",
-  "author": "TACOM",
-  "main": "main.cjs",
-  "homepage": "./",
+  "name": "vite_react_shadcn_ts",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "electron": "electron .",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
-    "build-electron": "npm run build && electron-builder",
-    "dist": "npm run build && electron-builder --publish=never",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux"
-  },
-  "build": {
-    "appId": "com.tacom.equipamentos-controle",
-    "productName": "TACOM Equipamentos Controle",
-    "directories": {
-      "output": "dist-electron",
-      "buildResources": "build"
-    },
-    "files": [
-      "dist/**/*",
-      "main.js",
-      "preload.js",
-      "node_modules/**/*",
-      "!node_modules/.cache/**/*",
-      "!node_modules/electron/**/*",
-      "!node_modules/electron-builder/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "assets/",
-        "to": "assets/",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "mac": {
-      "category": "public.app-category.business",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "icon": "build/icon.icns"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64",
-            "ia32"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64",
-            "ia32"
-          ]
-        }
-      ],
-      "icon": "build/icon.ico"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.png",
-      "category": "Office"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowElevation": true,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "TACOM Equipamentos"
-    },
-    "dmg": {
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    }
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -190,9 +78,6 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "autoprefixer": "^10.4.20",
-    "concurrently": "^8.2.2",
-    "electron": "^37.2.5",
-    "electron-builder": "^26.0.12",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
@@ -202,7 +87,6 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1",
-    "wait-on": "^7.2.0"
+    "vite": "^5.4.1"
   }
 }
