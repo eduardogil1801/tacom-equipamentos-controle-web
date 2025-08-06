@@ -84,29 +84,36 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({
           </CardHeader>
           <CardContent>
             {maintenanceTypesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={maintenanceTypesData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${ensureValidNumber(value)}`}
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={maintenanceTypesData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    fontSize={11}
+                    interval={0}
+                  />
+                  <YAxis 
+                    tickFormatter={(value) => ensureValidNumber(value).toLocaleString('pt-BR')}
+                  />
+                  <Tooltip 
+                    formatter={(value) => [ensureValidNumber(value).toLocaleString('pt-BR'), 'Quantidade']}
+                    labelFormatter={(label) => String(label || '')}
+                  />
+                  <Bar 
+                    dataKey="value" 
+                    radius={[4, 4, 0, 0]}
                   >
                     {maintenanceTypesData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [ensureValidNumber(value), '']} 
-                    labelFormatter={(label) => String(label || '')}
-                  />
-                </PieChart>
-                </ResponsiveContainer>
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500">
+              <div className="flex items-center justify-center h-[350px] text-gray-500">
                 <div className="text-center">
                   <Wrench className="h-12 w-12 mx-auto mb-2 opacity-50" />
                   <p>Nenhum equipamento em manutenção</p>
