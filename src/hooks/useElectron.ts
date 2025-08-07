@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 
+// Type definition for electron API
+declare global {
+  interface Window {
+    electronAPI?: any;
+  }
+}
+
 const isElectron = typeof window !== 'undefined' && window.electronAPI;
 
 export const useElectron = () => {
@@ -10,7 +17,7 @@ export const useElectron = () => {
   }, []);
 
   return {
-    isElectronApp,
-    electronAPI: isElectron ? (window as any).electronAPI : null
+    isElectronApp: false, // Disabled for web deployment
+    electronAPI: null
   };
 };
