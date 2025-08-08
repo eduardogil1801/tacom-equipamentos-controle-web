@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useLocalAuth';
+import { useAuth } from '@/hooks/useHybridAuth';
 import { getCurrentLocalDate } from '@/utils/dateUtils';
 
 interface Equipment {

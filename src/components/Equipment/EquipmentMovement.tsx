@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useLocalAuth';
+import { useAuth } from '@/hooks/useHybridAuth';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 
 type Movement = {
