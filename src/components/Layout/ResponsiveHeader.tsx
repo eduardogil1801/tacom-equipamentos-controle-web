@@ -15,8 +15,8 @@ import {
   ArrowRightLeft,
   History
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useHybridAuth'; // Importação atualizada
-import ConnectionStatus from '@/components/ConnectionStatus'; // Novo componente
+import { useAuth } from '@/hooks/useHybridAuth';
+import ConnectionStatus from '@/components/ConnectionStatus';
 
 interface ResponsiveHeaderProps {
   currentPage: string;
