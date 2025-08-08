@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Download, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useLocalAuth';
+import { useAuth } from '@/hooks/useHybridAuth';
 import { toast } from '@/hooks/use-toast';
 // import * as XLSX from 'xlsx'; // Removed for compatibility
 

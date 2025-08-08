@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Settings, FileText, Package, Truck } from 'lucide-react';
-import { useAuth } from '@/hooks/useLocalAuth';
+import { useAuth } from '@/hooks/useHybridAuth';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 

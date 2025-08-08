@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useLocalAuth';
+import { useAuth } from '@/hooks/useHybridAuth';
 
 export const useReportPermissions = () => {
   const { user } = useAuth();
