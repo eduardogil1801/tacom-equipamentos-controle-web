@@ -1,11 +1,12 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog, shell } = require('electron');
 const path = require('path');
-const isDev = process.env.NODE_ENV === 'development';
+
+// Forma robusta de detectar dev mode:
+const isDev = !app.isPackaged;
 
 let mainWindow;
 
 function createWindow() {
-  // Criar a janela principal
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -22,28 +23,27 @@ function createWindow() {
     show: false,
     icon: path.join(__dirname, 'assets', 'icon.png')
   });
-
-  // Carregar a aplicação
+ // Remover a barra de menu
+  mainWindow.setMenu(null);
+  
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+    //mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
-
-  // Mostrar janela quando estiver pronta
+   mainWindow.maximize();  // <-- maximiza a janela aqui
+   
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     if (isDev) mainWindow.focus();
   });
 
-  // Limpar referência quando a janela for fechada
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
-// Eventos principais do aplicativo
 app.whenReady().then(() => {
   createWindow();
   
@@ -60,7 +60,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Handlers IPC básicos
+// Handlers IPC
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('get-app-name', () => app.getName());
 ipcMain.handle('get-platform', () => process.platform);
