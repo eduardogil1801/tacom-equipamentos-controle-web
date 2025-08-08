@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-const isElectron = typeof window !== 'undefined' && window.electronAPI;
-
+// Web-only version - no Electron support
 export const useElectron = () => {
-  const [isElectronApp, setIsElectronApp] = useState(false);
-
-  useEffect(() => {
-    setIsElectronApp(!!isElectron);
-  }, []);
-
   return {
-    isElectronApp,
-    electronAPI: isElectron ? (window as any).electronAPI : null
+    isElectronApp: false,
+    electronAPI: null
   };
 };
