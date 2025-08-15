@@ -80,11 +80,10 @@ export const useDashboardCalculations = (
   });
   const totalEquipments = ensureValidNumber(equipmentsForTotal.length);
   
-  // Para TACOM SISTEMAS POA - apenas equipamentos que não saíram (sem data_saida) e não indisponíveis
+  // Para TACOM SISTEMAS POA - todos os equipamentos (sem filtro de data_saida)
   const tacomEquipmentsInStock = tacomCompany 
     ? allEquipments.filter(eq => 
         eq.id_empresa === tacomCompany.id && 
-        !eq.data_saida && 
         eq.status !== 'indisponivel'
       )
     : [];
@@ -119,10 +118,6 @@ export const useDashboardCalculations = (
   const filteredCompanyTotal = ensureValidNumber(
     filteredCompanyEquipments.filter(eq => eq.id_empresa === selectedCompany).length
   );
-  const filteredCompanyInStock = ensureValidNumber(
-    filteredCompanyEquipments.filter(eq => eq.id_empresa === selectedCompany && !eq.data_saida).length
-  );
-  const filteredCompanyWithdrawn = ensureValidNumber(filteredCompanyTotal - filteredCompanyInStock);
 
   // Check if filtered company is TACOM
   const isTacomFiltered = selectedCompanyData && tacomCompany && selectedCompanyData.id === tacomCompany.id;
@@ -130,7 +125,7 @@ export const useDashboardCalculations = (
   // Data for pie chart - usar equipamentos filtrados (sem indisponíveis)
   const pieChartData = validateChartData(
     equipmentsForCalculation
-      .filter(eq => !eq.data_saida && eq.tipo)
+      .filter(eq => eq.tipo) // Remover filtro de data_saida
       .reduce((acc: any[], equipment) => {
         const existing = acc.find(item => item.name === equipment.tipo);
         if (existing) {
@@ -188,8 +183,6 @@ export const useDashboardCalculations = (
     isCompanyFiltered,
     selectedCompanyData,
     filteredCompanyTotal,
-    filteredCompanyInStock,
-    filteredCompanyWithdrawn,
     isTacomFiltered,
     pieChartData,
     maintenanceTypesData,

@@ -72,12 +72,14 @@ const Dashboard: React.FC = () => {
 
       <DashboardStats
         isCompanyFiltered={calculations.isCompanyFiltered}
-		isTacomFiltered={calculations.isTacomFiltered}
-		totalEquipments={calculations.totalEquipments}
-		inStockEquipments={calculations.inStockEquipments}
-		equipmentsInMaintenanceCount={calculations.equipmentsInMaintenanceCount}
-		filteredCompanyTotal={calculations.filteredCompanyTotal}
-		selectedCompanyName={selectedCompanyName}
+        isTacomFiltered={calculations.isTacomFiltered}
+        totalEquipments={calculations.totalEquipments}
+        inStockEquipments={calculations.inStockEquipments}
+        equipmentsInMaintenanceCount={calculations.equipmentsInMaintenanceCount}
+        filteredCompanyTotal={calculations.filteredCompanyTotal}
+        filteredCompanyInStock={calculations.filteredCompanyInStock}
+        filteredCompanyWithdrawn={calculations.filteredCompanyWithdrawn}
+        selectedCompanyName={selectedCompanyName}
       />
 
       <DashboardCharts

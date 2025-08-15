@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, Database, Package, Wrench } from 'lucide-react';
+import { Building, Database, TrendingUp, Package, Wrench } from 'lucide-react';
 
 interface DashboardStatsProps {
   isCompanyFiltered: boolean;
@@ -9,6 +10,8 @@ interface DashboardStatsProps {
   inStockEquipments: number;
   equipmentsInMaintenanceCount: number;
   filteredCompanyTotal: number;
+  filteredCompanyInStock: number;
+  filteredCompanyWithdrawn: number;
   selectedCompanyName?: string;
 }
 
@@ -19,11 +22,13 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
   inStockEquipments,
   equipmentsInMaintenanceCount,
   filteredCompanyTotal,
+  filteredCompanyInStock,
+  filteredCompanyWithdrawn,
   selectedCompanyName
 }) => {
   if (!isCompanyFiltered) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Equipamentos</CardTitle>
@@ -65,7 +70,7 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total da Empresa</CardTitle>
@@ -75,6 +80,32 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({
           <div className="text-2xl font-bold text-primary">{filteredCompanyTotal.toLocaleString('pt-BR')}</div>
           <p className="text-xs text-muted-foreground">
             Equipamentos de {selectedCompanyName}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Em Estoque</CardTitle>
+          <Package className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-600">{filteredCompanyInStock.toLocaleString('pt-BR')}</div>
+          <p className="text-xs text-muted-foreground">
+            Equipamentos em estoque
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Retirados</CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-600">{filteredCompanyWithdrawn.toLocaleString('pt-BR')}</div>
+          <p className="text-xs text-muted-foreground">
+            Equipamentos retirados
           </p>
         </CardContent>
       </Card>

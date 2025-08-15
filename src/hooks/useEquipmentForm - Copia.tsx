@@ -132,34 +132,7 @@ export const useEquipmentForm = (
       status: !isTacom ? 'em_uso' : prev.status
     }));
   };
-  const validateSerialNumber = async (numeroSerie: string, tipo: string, equipmentId?: string): Promise<boolean> => {
-    try {
-      // Query para verificar se existe equipamento com mesmo número de série e mesmo tipo
-      let query = supabase
-        .from('equipamentos')
-        .select('id, numero_serie, tipo')
-        .eq('numero_serie', numeroSerie)
-        .eq('tipo', tipo);
-      
-      // Se estamos editando, excluir o próprio equipamento da validação
-      if (equipmentId) {
-        query = query.neq('id', equipmentId);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Erro ao validar número de série:', error);
-        throw error;
-      }
-      
-      // Se encontrou algum equipamento, significa que já existe
-      return data && data.length > 0;
-    } catch (error) {
-      console.error('Erro na validação:', error);
-      throw error;
-    }
-  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -178,27 +151,7 @@ export const useEquipmentForm = (
 
     setLoading(true);
 
-	try {
-      // Validar se já existe equipamento com mesmo número de série e tipo
-      console.log('Validando número de série...');
-      const existsEquipment = await validateSerialNumber(
-        formData.numero_serie, 
-        formData.tipo, 
-        equipment?.id // Se estamos editando, passar o ID para excluir da validação
-      );
-      
-      if (existsEquipment) {
-        toast({
-          title: "Erro de Validação",
-          description: `Já existe um equipamento do tipo "${formData.tipo}" com o número de série "${formData.numero_serie}". Use um número de série diferente ou altere o tipo do equipamento.`,
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Número de série validado com sucesso');
-
+    try {
       if (equipment) {
         console.log('Atualizando equipamento existente com ID:', equipment.id);
         

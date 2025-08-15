@@ -26,7 +26,7 @@ import EquipmentDistributionReport from './EquipmentDistributionReport';
 import MovementsReport from './MovementsReport';
 import InventoryReport from './InventoryReport';
 import EquipmentHistoryReport from './EquipmentHistoryReport';
-import BillingServicesReport from './BillingServicesReport';
+import FleetReport from './FleetReport';
 import MaintenanceReport from './MaintenanceReport';
 import MonthlyReport from './MonthlyReport';
 import InventoryStockReport from './InventoryStockReport';
@@ -84,11 +84,11 @@ const allReports: ReportItem[] = [
     component: EquipmentHistoryReport
   },
   {
-    key: 'billing-services-report',
-    title: 'Faturamento por Serviço',
-    description: 'Relatório de faturamento consolidado por tipo de serviço',
+    key: 'fleet-report',
+    title: 'Frota',
+    description: 'Relatório consolidado da frota de equipamentos por operadora',
     icon: <Truck className="h-6 w-6" />,
-    component: BillingServicesReport
+    component: FleetReport
   },
   {
     key: 'maintenance-report',

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -5,6 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 interface ChartData {
   name: string;
   fullName: string;
+  'Em Estoque': number;
+  'Retirados': number;
   'Total': number;
   total: number;
 }
@@ -20,8 +23,14 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
   const validData = data.filter(item => 
     item && 
     typeof item === 'object' && 
+    typeof item['Em Estoque'] === 'number' && 
+    typeof item['Retirados'] === 'number' &&
     typeof item['Total'] === 'number' &&
+    !isNaN(item['Em Estoque']) && 
+    !isNaN(item['Retirados']) &&
     !isNaN(item['Total']) &&
+    isFinite(item['Em Estoque']) && 
+    isFinite(item['Retirados']) &&
     isFinite(item['Total'])
   ).map(item => ({
     ...item,
@@ -79,9 +88,21 @@ const EquipmentByCompanyChart: React.FC<EquipmentByCompanyChartProps> = ({ data 
             />
             <Legend />
             <Bar 
+              dataKey="Em Estoque" 
+              stackId="a" 
+              fill="#16A34A" 
+              name="Em Estoque"
+            />
+            <Bar 
+              dataKey="Retirados" 
+              stackId="a" 
+              fill="#DC2626" 
+              name="Retirados"
+            />
+            <Bar 
               dataKey="Total" 
               fill="#2563EB" 
-              name="Total de Equipamentos"
+              name="Total Geral"
             />
           </BarChart>
         </ResponsiveContainer>
