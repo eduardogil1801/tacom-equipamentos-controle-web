@@ -29,13 +29,12 @@ const reportModules = [
   { key: 'equipment-distribution-report', label: 'Relatório de Distribuição de Equipamentos' },
   { key: 'equipment-history-report', label: 'Relatório de Histórico de Equipamentos' },
   { key: 'equipment-status-report', label: 'Relatório de Status de Equipamentos' },
-  { key: 'billing-services-report', label: 'Relatório de Faturamento por Serviço' }, // ALTERADO: era 'fleet-report'
+  { key: 'fleet-report', label: 'Relatório de Frota' },
   { key: 'inventory-report', label: 'Relatório de Inventário' },
   { key: 'inventory-stock-report', label: 'Relatório de Estoque' },
   { key: 'maintenance-report', label: 'Relatório de Manutenção' },
   { key: 'monthly-report', label: 'Relatório Mensal' },
-  { key: 'movements-report', label: 'Relatório de Movimentações' },
-  { key: 'equipment-history-detail-report', label: 'Relatório de Histórico Detalhado' }
+  { key: 'movements-report', label: 'Relatório de Movimentações' }
 ];
 
 const ReportPermissionManagement: React.FC = () => {

@@ -1,5 +1,3 @@
-// 1. Atualizar o arquivo src/hooks/useReportPermissions.tsx
-// Substituir 'fleet-report' por 'billing-services-report' na lista de permissões dos administradores:
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,13 +24,12 @@ export const useReportPermissions = () => {
         'equipment-distribution-report',
         'equipment-history-report',
         'equipment-status-report',
-        'billing-services-report', // ALTERADO: era 'fleet-report'
+        'fleet-report',
         'inventory-report',
         'inventory-stock-report',
         'maintenance-report',
         'monthly-report',
-        'movements-report',
-        'equipment-history-detail-report'
+        'movements-report'
       ]);
       setLoading(false);
       return;

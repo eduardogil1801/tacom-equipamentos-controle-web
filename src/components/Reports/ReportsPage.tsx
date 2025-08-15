@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -188,25 +187,19 @@ const ReportsPage: React.FC = () => {
         {availableReports.map((report) => (
           <Card 
             key={report.key} 
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-2 hover:border-blue-300"
+            className="hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => handleReportSelect(report.key)}
           >
             <CardHeader className="text-center pb-4">
-              <div className="flex justify-center mb-3">
-                <div className="p-3 bg-blue-100 rounded-full text-blue-600">
-                  {report.icon}
-                </div>
+              <div className="mx-auto mb-4 p-3 bg-blue-50 rounded-full w-fit">
+                {report.icon}
               </div>
-              <CardTitle className="text-lg font-semibold">
-                {report.title}
-              </CardTitle>
+              <CardTitle className="text-lg">{report.title}</CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-sm text-gray-600 mb-4">
-                {report.description}
-              </p>
+              <p className="text-gray-600 text-sm mb-4">{report.description}</p>
               <Button 
-                className="w-full"
+                className="w-full bg-red-500 hover:bg-red-600 text-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleReportSelect(report.key);
