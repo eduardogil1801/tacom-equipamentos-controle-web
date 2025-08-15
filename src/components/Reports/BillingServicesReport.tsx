@@ -19,6 +19,7 @@ interface FleetData {
   buszoom: number;
   nuvem: number;
   total: number;
+  telemetria?: number;
 }
 
 interface FilterState {
@@ -89,7 +90,7 @@ const BillingServicesReport: React.FC = () => {
       setFleetData(formattedData);
       
       // Extrair empresas únicas
-      const uniqueCompanies = [...new Set(formattedData.map(item => item.nome_empresa))];
+      const uniqueCompanies = [...new Set(formattedData.map(item => item.nome_empresa))].filter(Boolean);
       setCompanies(uniqueCompanies);
       
     } catch (error) {
@@ -131,12 +132,12 @@ const BillingServicesReport: React.FC = () => {
 
   const calculateServiceTotals = (data: FleetData[]) => {
     const totals = data.reduce((acc, item) => {
-      acc.qtdTotal += item.simples_com_imagem;
-      acc.qtdTotal2 += item.simples_sem_imagem;
-      acc.qtdTotal3 += item.secao;
-      acc.qtdTotal4 += item.citgis;
-      acc.qtdTotal5 += item.buszoom;
-      acc.qtdTotal6 += item.nuvem;
+      acc.qtdTotal += item.simples_com_imagem || 0;
+      acc.qtdTotal2 += item.simples_sem_imagem || 0;
+      acc.qtdTotal3 += item.secao || 0;
+      acc.qtdTotal4 += item.citgis || 0;
+      acc.qtdTotal5 += item.buszoom || 0;
+      acc.qtdTotal6 += item.telemetria || 0;
       return acc;
     }, {
       qtdTotal: 0,
