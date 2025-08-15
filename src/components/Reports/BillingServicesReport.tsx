@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
+// Interfaces
 interface FleetData {
   id: string;
   nome_empresa: string;
@@ -38,22 +32,17 @@ interface ServiceTotals {
   qtdTotal6: number;
 }
 
-// Função para formatar números com pontos
-const formatNumber = (num: number): string => {
-  return num.toLocaleString('pt-BR');
-};
-
 const BillingServicesReport: React.FC = () => {
+  const [components, setComponents] = useState<any>({});
+  const [loading, setLoading] = useState(true);
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [filteredData, setFilteredData] = useState<FleetData[]>([]);
   const [companies, setCompanies] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>({
     empresa: '',
     mes: '',
     ano: ''
   });
-
   const [serviceTotals, setServiceTotals] = useState<ServiceTotals>({
     qtdTotal: 0,
     qtdTotal2: 0,
@@ -64,42 +53,93 @@ const BillingServicesReport: React.FC = () => {
     qtdTotal6: 0
   });
 
+  // Carregamento de componentes
   useEffect(() => {
-    loadFleetData();
+    loadComponents();
   }, []);
 
+  // Carregamento de dados quando componentes estão prontos
+  useEffect(() => {
+    if (components.supabase) {
+      loadFleetData();
+    }
+  }, [components.supabase]);
+
+  // Aplicar filtros quando dados ou filtros mudam
   useEffect(() => {
     applyFilters();
   }, [fleetData, filters]);
 
+  const loadComponents = async () => {
+    try {
+      // Carregar todos os componentes necessários
+      const [
+        cardModule,
+        buttonModule,
+        labelModule,
+        selectModule,
+        iconModule,
+        supabaseModule,
+        toastModule
+      ] = await Promise.all([
+        import('@/components/ui/card'),
+        import('@/components/ui/button'),
+        import('@/components/ui/label'),
+        import('@/components/ui/select'),
+        import('lucide-react'),
+        import('@/integrations/supabase/client'),
+        import('@/hooks/use-toast')
+      ]);
+
+      setComponents({
+        ...cardModule,
+        ...buttonModule,
+        ...labelModule,
+        ...selectModule,
+        Download: iconModule.Download,
+        supabase: supabaseModule.supabase,
+        toast: toastModule.toast
+      });
+    } catch (error) {
+      console.error('Erro ao carregar componentes:', error);
+    }
+  };
+
   const loadFleetData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await components.supabase
         .from('frota')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      const formattedData = (data || []).map(item => ({
+      const formattedData = (data || []).map((item: any) => ({
         ...item,
-        telemetria: item.telemetria || 0
+        telemetria: item.telemetria || 0,
+        simples_com_imagem: item.simples_com_imagem || 0,
+        simples_sem_imagem: item.simples_sem_imagem || 0,
+        secao: item.secao || 0,
+        citgis: item.citgis || 0,
+        buszoom: item.buszoom || 0,
+        nuvem: item.nuvem || 0
       }));
       
       setFleetData(formattedData);
       
-      // Extrair empresas únicas
-      const uniqueCompanies = [...new Set(formattedData.map(item => item.nome_empresa))].filter(Boolean);
+      const uniqueCompanies = [...new Set(formattedData.map((item: any) => item.nome_empresa))].filter(Boolean);
       setCompanies(uniqueCompanies);
       
     } catch (error) {
-      console.error('Erro ao carregar dados da frota:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar dados da frota",
-        variant: "destructive",
-      });
+      console.error('Erro ao carregar dados:', error);
+      if (components.toast) {
+        components.toast({
+          title: "Erro",
+          description: "Erro ao carregar dados da frota",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -156,22 +196,45 @@ const BillingServicesReport: React.FC = () => {
     });
   };
 
-  const generatePDF = () => {
-    toast({
-      title: "Em desenvolvimento",
-      description: "Funcionalidade de geração de PDF será implementada em breve.",
-    });
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString('pt-BR');
   };
 
   const handleFilterChange = (field: keyof FilterState, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  // Gerar anos disponíveis (dos últimos 5 anos até o próximo ano)
+  const generatePDF = () => {
+    if (components.toast) {
+      components.toast({
+        title: "Em desenvolvimento",
+        description: "Funcionalidade de geração de PDF será implementada em breve.",
+      });
+    }
+  };
+
+  // Se componentes não carregaram ainda
+  if (!components.Card || !components.Button) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div>🔄 Carregando componentes...</div>
+      </div>
+    );
+  }
+
+  const { Card, CardContent, CardHeader, CardTitle, Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Download } = components;
+
+  if (loading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div>🔄 Carregando dados do relatório...</div>
+      </div>
+    );
+  }
+
+  // Gerar anos e meses
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 7 }, (_, i) => currentYear - 5 + i);
-
-  // Meses
   const months = [
     { value: '1', label: 'Janeiro' },
     { value: '2', label: 'Fevereiro' },
@@ -186,14 +249,6 @@ const BillingServicesReport: React.FC = () => {
     { value: '11', label: 'Novembro' },
     { value: '12', label: 'Dezembro' }
   ];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-lg">Carregando relatório...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 p-6">
@@ -213,10 +268,9 @@ const BillingServicesReport: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* ComboBox Empresa */}
             <div>
               <Label htmlFor="empresa">Empresa</Label>
-              <Select value={filters.empresa} onValueChange={(value) => handleFilterChange('empresa', value)}>
+              <Select value={filters.empresa} onValueChange={(value: string) => handleFilterChange('empresa', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a empresa" />
                 </SelectTrigger>
@@ -231,10 +285,9 @@ const BillingServicesReport: React.FC = () => {
               </Select>
             </div>
 
-            {/* ComboBox Mês */}
             <div>
               <Label htmlFor="mes">Mês</Label>
-              <Select value={filters.mes} onValueChange={(value) => handleFilterChange('mes', value)}>
+              <Select value={filters.mes} onValueChange={(value: string) => handleFilterChange('mes', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o mês" />
                 </SelectTrigger>
@@ -249,10 +302,9 @@ const BillingServicesReport: React.FC = () => {
               </Select>
             </div>
 
-            {/* ComboBox Ano */}
             <div>
               <Label htmlFor="ano">Ano</Label>
-              <Select value={filters.ano} onValueChange={(value) => handleFilterChange('ano', value)}>
+              <Select value={filters.ano} onValueChange={(value: string) => handleFilterChange('ano', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o ano" />
                 </SelectTrigger>
@@ -272,7 +324,6 @@ const BillingServicesReport: React.FC = () => {
 
       {/* Cards de Resultados */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Primeira linha */}
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
@@ -314,7 +365,6 @@ const BillingServicesReport: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Segunda linha */}
         <Card>
           <CardContent className="p-4">
             <div className="text-center">
@@ -346,7 +396,7 @@ const BillingServicesReport: React.FC = () => {
         </Card>
       </div>
 
-      {/* Resumo de registros */}
+      {/* Resumo */}
       <Card>
         <CardContent className="p-4">
           <div className="text-center">
