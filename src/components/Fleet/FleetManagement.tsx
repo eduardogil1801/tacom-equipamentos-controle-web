@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useHybridAuth';
-import { Plus, Edit, Trash2, Download, Shield } from 'lucide-react';
+import { Plus, Edit, Trash2, Download, Shield, ArrowLeft } from 'lucide-react';
+import FleetForm from '@/components/Reports/FleetForm';
 
 interface FleetData {
   id: string;
@@ -60,8 +59,10 @@ const FleetManagement: React.FC = () => {
   }
 
   useEffect(() => {
-    loadFleetData();
-  }, []);
+    if (!showForm) {
+      loadFleetData();
+    }
+  }, [showForm]);
 
   const loadFleetData = async () => {
     try {
@@ -83,6 +84,25 @@ const FleetManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddNew = () => {
+    console.log('Clicou em Nova Frota');
+    setEditingFleet(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (fleet: FleetData) => {
+    console.log('Editando frota:', fleet);
+    setEditingFleet(fleet);
+    setShowForm(true);
+  };
+
+  const handleBackToList = () => {
+    console.log('Voltando para lista');
+    setShowForm(false);
+    setEditingFleet(null);
+    loadFleetData(); // Recarregar dados quando voltar
   };
 
   const handleDelete = async (id: string) => {
@@ -129,6 +149,28 @@ const FleetManagement: React.FC = () => {
     });
   };
 
+  // Se está mostrando o formulário, renderizar o FleetForm
+  if (showForm) {
+    return (
+      <div>
+        {/* Botão de voltar */}
+        <div className="mb-4">
+          <Button
+            onClick={handleBackToList}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para Lista
+          </Button>
+        </div>
+        
+        {/* Renderizar o formulário */}
+        <FleetForm />
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -152,7 +194,7 @@ const FleetManagement: React.FC = () => {
           </Button>
           {canCreate && (
             <Button 
-              onClick={() => setShowForm(true)}
+              onClick={handleAddNew}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -172,7 +214,7 @@ const FleetManagement: React.FC = () => {
               <p>Nenhum registro de frota encontrado.</p>
               {canCreate && (
                 <Button 
-                  onClick={() => setShowForm(true)} 
+                  onClick={handleAddNew} 
                   className="mt-4"
                 >
                   Criar Primeiro Registro
@@ -227,10 +269,7 @@ const FleetManagement: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => {
-                                    setEditingFleet(fleet);
-                                    setShowForm(true);
-                                  }}
+                                  onClick={() => handleEdit(fleet)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -318,10 +357,7 @@ const FleetManagement: React.FC = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  setEditingFleet(fleet);
-                                  setShowForm(true);
-                                }}
+                                onClick={() => handleEdit(fleet)}
                               >
                                 <Edit className="h-4 w-4 mr-1" />
                                 Editar

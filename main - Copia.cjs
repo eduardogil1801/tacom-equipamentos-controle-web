@@ -24,7 +24,7 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', 'icon.png')
   });
  // Remover a barra de menu
-
+  mainWindow.setMenu(null);
   
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
