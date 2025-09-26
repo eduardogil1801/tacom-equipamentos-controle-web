@@ -1,16 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Download, Shield } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useHybridAuth';
-import { toast } from '@/hooks/use-toast';
-// import * as XLSX from 'xlsx'; // Removed for compatibility
+import { Plus, Edit, Trash2, Download, Shield } from 'lucide-react';
+import { checkPermission } from '@/utils/permissions';
 
 interface FleetData {
   id: string;
@@ -20,34 +18,21 @@ interface FleetData {
   simples_sem_imagem: number;
   simples_com_imagem: number;
   secao: number;
-  telemetria: number;
   nuvem: number;
+  telemetria: number;
   citgis: number;
   buszoom: number;
   total: number;
   usuario_responsavel: string;
   created_at: string;
-  updated_at: string;
 }
 
 const FleetManagement: React.FC = () => {
-  const { user, checkPermission } = useAuth();
+  const { user } = useAuth();
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFleet, setEditingFleet] = useState<FleetData | null>(null);
-  const [nomeEmpresa, setNomeEmpresa] = useState('');
-  const [codOperadora, setCodOperadora] = useState('');
-  const [mesReferencia, setMesReferencia] = useState('');
-  const [simplesSemImagem, setSimplesSemImagem] = useState(0);
-  const [simplesComImagem, setSimplesComImagem] = useState(0);
-  const [secao, setSecao] = useState(0);
-  const [telemetria, setTelemetria] = useState(0);
-  const [nuvem, setNuvem] = useState(0);
-  const [citgis, setCitgis] = useState(0);
-  const [buszoom, setBuszoom] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [usuarioResponsavel, setUsuarioResponsavel] = useState('');
 
   // Verificar permissões
   const canView = user?.userType === 'administrador' || checkPermission('fleet', 'view');
@@ -101,31 +86,6 @@ const FleetManagement: React.FC = () => {
     }
   };
 
-  const handleAddNew = () => {
-    setEditingFleet(null);
-    setShowForm(true);
-  };
-
-  const handleEdit = (fleet: FleetData) => {
-    setEditingFleet(fleet);
-    setNomeEmpresa(fleet.nome_empresa);
-    setCodOperadora(fleet.cod_operadora);
-    // Converter data para MM/YYYY
-    const date = new Date(fleet.mes_referencia);
-    const formattedDate = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-    setMesReferencia(formattedDate);
-    setSimplesSemImagem(fleet.simples_sem_imagem);
-    setSimplesComImagem(fleet.simples_com_imagem);
-    setSecao(fleet.secao);
-    setTelemetria(fleet.telemetria);
-    setNuvem(fleet.nuvem);
-    setCitgis(fleet.citgis);
-    setBuszoom(fleet.buszoom);
-    setTotal(fleet.total);
-    setUsuarioResponsavel(fleet.usuario_responsavel);
-    setShowForm(true);
-  };
-
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este registro de frota?')) {
       try {
@@ -135,13 +95,15 @@ const FleetManagement: React.FC = () => {
           .eq('id', id);
 
         if (error) throw error;
-        loadFleetData();
+
         toast({
           title: "Sucesso",
           description: "Registro de frota excluído com sucesso!",
         });
+
+        loadFleetData();
       } catch (error) {
-        console.error('Error deleting fleet data:', error);
+        console.error('Error deleting fleet record:', error);
         toast({
           title: "Erro",
           description: "Erro ao excluir registro de frota.",
@@ -151,100 +113,21 @@ const FleetManagement: React.FC = () => {
     }
   };
 
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingFleet(null);
-    clearFormFields();
-  };
-
-  const clearFormFields = () => {
-    setNomeEmpresa('');
-    setCodOperadora('');
-    setMesReferencia('');
-    setSimplesSemImagem(0);
-    setSimplesComImagem(0);
-    setSecao(0);
-    setTelemetria(0);
-    setNuvem(0);
-    setCitgis(0);
-    setBuszoom(0);
-    setTotal(0);
-    setUsuarioResponsavel('');
-  };
-
-  const formatDateForDatabase = (mmYyyy: string) => {
-    const [month, year] = mmYyyy.split('/');
-    return `${year}-${month.padStart(2, '0')}-01`;
-  };
-
-  const handleFormSave = async () => {
-    try {
-      setLoading(true);
-      
-      // Converter MM/YYYY para formato de data do banco
-      const databaseDate = formatDateForDatabase(mesReferencia);
-      
-      const fleetDataToSave = {
-        nome_empresa: nomeEmpresa,
-        cod_operadora: codOperadora,
-        mes_referencia: databaseDate,
-        simples_sem_imagem: simplesSemImagem,
-        simples_com_imagem: simplesComImagem,
-        secao: secao,
-        telemetria: telemetria,
-        nuvem: nuvem,
-        citgis: citgis,
-        buszoom: buszoom,
-        total: total,
-        usuario_responsavel: usuarioResponsavel,
-      };
-
-      if (editingFleet) {
-        // Update existing fleet data
-        const { error } = await supabase
-          .from('frota')
-          .update(fleetDataToSave)
-          .eq('id', editingFleet.id);
-
-        if (error) throw error;
-        toast({
-          title: "Sucesso",
-          description: "Registro de frota atualizado com sucesso!",
-        });
-      } else {
-        // Insert new fleet data
-        const { error } = await supabase
-          .from('frota')
-          .insert([fleetDataToSave]);
-
-        if (error) throw error;
-        toast({
-          title: "Sucesso",
-          description: "Registro de frota criado com sucesso!",
-        });
-      }
-
-      loadFleetData();
-      handleFormClose();
-    } catch (error) {
-      console.error('Error saving fleet data:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar registro de frota.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportToExcel = () => {
-    alert("Exportação para Excel não disponível no momento");
-  };
-
   const formatMesReferenciaDisplay = (mesReferencia: string) => {
     const date = new Date(mesReferencia);
     return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  const formatNumber = (num: number): string => {
+    return num?.toLocaleString('pt-BR') || '0';
+  };
+
+  const exportToExcel = () => {
+    // Implementar exportação para Excel se necessário
+    toast({
+      title: "Em desenvolvimento",
+      description: "Funcionalidade de exportação será implementada em breve.",
+    });
   };
 
   if (loading) {
@@ -255,147 +138,6 @@ const FleetManagement: React.FC = () => {
     );
   }
 
-  if (showForm) {
-    return (
-      <div className="space-y-6 p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingFleet ? 'Editar Frota' : 'Nova Frota'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="nome_empresa">Nome da Empresa</Label>
-                <Input
-                  id="nome_empresa"
-                  type="text"
-                  value={nomeEmpresa}
-                  onChange={(e) => setNomeEmpresa(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="cod_operadora">Código da Operadora</Label>
-                <Input
-                  id="cod_operadora"
-                  type="text"
-                  value={codOperadora}
-                  onChange={(e) => setCodOperadora(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="mes_referencia">Mês de Referência (MM/YYYY)</Label>
-                <Input
-                  id="mes_referencia"
-                  type="text"
-                  placeholder="MM/YYYY"
-                  value={mesReferencia}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    if (value.length <= 2) {
-                      setMesReferencia(value);
-                    } else if (value.length <= 6) {
-                      setMesReferencia(value.slice(0, 2) + '/' + value.slice(2));
-                    }
-                  }}
-                  maxLength={7}
-                />
-              </div>
-              <div>
-                <Label htmlFor="simples_sem_imagem">Simples Sem Imagem</Label>
-                <Input
-                  id="simples_sem_imagem"
-                  type="number"
-                  value={simplesSemImagem}
-                  onChange={(e) => setSimplesSemImagem(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="simples_com_imagem">Simples Com Imagem</Label>
-                <Input
-                  id="simples_com_imagem"
-                  type="number"
-                  value={simplesComImagem}
-                  onChange={(e) => setSimplesComImagem(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="secao">Seção</Label>
-                <Input
-                  id="secao"
-                  type="number"
-                  value={secao}
-                  onChange={(e) => setSecao(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="telemetria">Telemetria</Label>
-                <Input
-                  id="telemetria"
-                  type="number"
-                  value={telemetria}
-                  onChange={(e) => setTelemetria(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="nuvem">Nuvem</Label>
-                <Input
-                  id="nuvem"
-                  type="number"
-                  value={nuvem}
-                  onChange={(e) => setNuvem(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="citgis">Citgis</Label>
-                <Input
-                  id="citgis"
-                  type="number"
-                  value={citgis}
-                  onChange={(e) => setCitgis(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="buszoom">Buszoom</Label>
-                <Input
-                  id="buszoom"
-                  type="number"
-                  value={buszoom}
-                  onChange={(e) => setBuszoom(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="total">Total</Label>
-                <Input
-                  id="total"
-                  type="number"
-                  value={total}
-                  onChange={(e) => setTotal(Number(e.target.value))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="usuario_responsavel">Usuário Responsável</Label>
-                <Input
-                  id="usuario_responsavel"
-                  type="text"
-                  value={usuarioResponsavel}
-                  onChange={(e) => setUsuarioResponsavel(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="ghost" onClick={handleFormClose}>
-                Cancelar
-              </Button>
-              <Button onClick={handleFormSave} disabled={loading}>
-                {loading ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-  
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
@@ -411,7 +153,7 @@ const FleetManagement: React.FC = () => {
           </Button>
           {canCreate && (
             <Button 
-              onClick={handleAddNew}
+              onClick={() => setShowForm(true)}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -426,67 +168,186 @@ const FleetManagement: React.FC = () => {
           <CardTitle>Dados da Frota</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Operadora</TableHead>
-                <TableHead>Mês</TableHead>
-                <TableHead>Simples s/ Imagem</TableHead>
-                <TableHead>Simples c/ Imagem</TableHead>
-                <TableHead>Seção</TableHead>
-                <TableHead>Telemetria</TableHead>
-                <TableHead>Nuvem</TableHead>
-                <TableHead>Citgis</TableHead>
-                <TableHead>Buszoom</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Responsável</TableHead>
-                {canEdit || canDelete ? <TableHead>Ações</TableHead> : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fleetData.map((fleet) => (
-                <TableRow key={fleet.id}>
-                  <TableCell>{fleet.nome_empresa}</TableCell>
-                  <TableCell>{fleet.cod_operadora}</TableCell>
-                  <TableCell>{formatMesReferenciaDisplay(fleet.mes_referencia)}</TableCell>
-                  <TableCell>{fleet.simples_sem_imagem}</TableCell>
-                  <TableCell>{fleet.simples_com_imagem}</TableCell>
-                  <TableCell>{fleet.secao}</TableCell>
-                  <TableCell>{fleet.telemetria}</TableCell>
-                  <TableCell>{fleet.nuvem}</TableCell>
-                  <TableCell>{fleet.citgis}</TableCell>
-                  <TableCell>{fleet.buszoom}</TableCell>
-                  <TableCell>{fleet.total}</TableCell>
-                  <TableCell>{fleet.usuario_responsavel}</TableCell>
-                  {canEdit || canDelete ? (
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {canEdit && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(fleet)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+          {fleetData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>Nenhum registro de frota encontrado.</p>
+              {canCreate && (
+                <Button 
+                  onClick={() => setShowForm(true)} 
+                  className="mt-4"
+                >
+                  Criar Primeiro Registro
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome da Empresa</TableHead>
+                      <TableHead>Cód Operadora</TableHead>
+                      <TableHead>Mês Referência</TableHead>
+                      <TableHead>Simples S/Image</TableHead>
+                      <TableHead>Simples C/Image</TableHead>
+                      <TableHead>Seção</TableHead>
+                      <TableHead className="bg-blue-50">Nuvem</TableHead>
+                      <TableHead>Telemetria</TableHead>
+                      <TableHead>CITGIS</TableHead>
+                      <TableHead>BUSZOOM</TableHead>
+                      <TableHead className="bg-green-50">Total</TableHead>
+                      <TableHead>Responsável</TableHead>
+                      {(canEdit || canDelete) && <TableHead>Ações</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fleetData.map((fleet) => (
+                      <TableRow key={fleet.id}>
+                        <TableCell className="font-medium">{fleet.nome_empresa}</TableCell>
+                        <TableCell>{fleet.cod_operadora}</TableCell>
+                        <TableCell>{formatMesReferenciaDisplay(fleet.mes_referencia)}</TableCell>
+                        <TableCell>{formatNumber(fleet.simples_sem_imagem)}</TableCell>
+                        <TableCell>{formatNumber(fleet.simples_com_imagem)}</TableCell>
+                        <TableCell>{formatNumber(fleet.secao)}</TableCell>
+                        <TableCell className="bg-blue-50 font-semibold text-blue-700">
+                          {formatNumber(fleet.nuvem)}
+                        </TableCell>
+                        <TableCell>{formatNumber(fleet.telemetria)}</TableCell>
+                        <TableCell>{formatNumber(fleet.citgis)}</TableCell>
+                        <TableCell>{formatNumber(fleet.buszoom)}</TableCell>
+                        <TableCell className="bg-green-50 font-semibold text-green-700">
+                          {formatNumber(fleet.total)}
+                        </TableCell>
+                        <TableCell className="text-sm">{fleet.usuario_responsavel}</TableCell>
+                        {(canEdit || canDelete) && (
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {canEdit && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingFleet(fleet);
+                                    setShowForm(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {canDelete && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(fleet.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
                         )}
-                        {canDelete && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(fleet.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {fleetData.map((fleet) => (
+                  <Card key={fleet.id} className="border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-sm">{fleet.nome_empresa}</p>
+                            <p className="text-xs text-gray-600">Código: {fleet.cod_operadora}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">Mês:</p>
+                            <p className="text-sm font-medium">
+                              {formatMesReferenciaDisplay(fleet.mes_referencia)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <p className="text-gray-500">Simples S/Img:</p>
+                            <p className="font-medium">{formatNumber(fleet.simples_sem_imagem)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Simples C/Img:</p>
+                            <p className="font-medium">{formatNumber(fleet.simples_com_imagem)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Seção:</p>
+                            <p className="font-medium">{formatNumber(fleet.secao)}</p>
+                          </div>
+                          <div className="bg-blue-50 p-2 rounded">
+                            <p className="text-blue-700 font-semibold">Nuvem:</p>
+                            <p className="font-bold text-blue-800">{formatNumber(fleet.nuvem)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Telemetria:</p>
+                            <p className="font-medium">{formatNumber(fleet.telemetria)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">CITGIS:</p>
+                            <p className="font-medium">{formatNumber(fleet.citgis)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">BUSZOOM:</p>
+                            <p className="font-medium">{formatNumber(fleet.buszoom)}</p>
+                          </div>
+                          <div className="bg-green-50 p-2 rounded">
+                            <p className="text-green-700 font-semibold">Total:</p>
+                            <p className="font-bold text-green-800">{formatNumber(fleet.total)}</p>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-2">
+                          <p className="text-xs text-gray-500">Responsável: {fleet.usuario_responsavel}</p>
+                        </div>
+
+                        {(canEdit || canDelete) && (
+                          <div className="flex gap-2 justify-end pt-2">
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingFleet(fleet);
+                                  setShowForm(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(fleet.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Excluir
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

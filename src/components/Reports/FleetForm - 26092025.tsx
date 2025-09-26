@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getCurrentLocalMonth } from '@/utils/dateUtils';
 import { useAuth } from '@/hooks/useHybridAuth';
 import FleetFormFields from './FleetForm/FleetFormFields';
+import FleetFormSummary from './FleetForm/FleetFormSummary';
+import FleetFormActions from './FleetForm/FleetFormActions';
 
 interface Company {
   id: string;
@@ -19,7 +22,6 @@ interface FleetData {
   simples_com_imagem: number;
   simples_sem_imagem: number;
   secao: number;
-  telemetria: number;
   citgis: number;
   buszoom: number;
   nuvem: number;
@@ -31,11 +33,10 @@ const FleetForm = () => {
   const [formData, setFormData] = useState<FleetData>({
     nome_empresa: '',
     cod_operadora: '',
-    mes_referencia: '', // Deixar em branco inicialmente
+    mes_referencia: '',
     simples_com_imagem: 0,
     simples_sem_imagem: 0,
     secao: 0,
-    telemetria: 0,
     citgis: 0,
     buszoom: 0,
     nuvem: 0
@@ -52,6 +53,15 @@ const FleetForm = () => {
 
   useEffect(() => {
     loadCompanies();
+    
+    // Usar a função utilitária para obter o mês atual
+    const mesAtual = getCurrentLocalMonth();
+    console.log('Mês atual definido:', mesAtual);
+    
+    setFormData(prev => ({
+      ...prev,
+      mes_referencia: mesAtual
+    }));
   }, []);
 
   const loadCompanies = async () => {
@@ -121,62 +131,13 @@ const FleetForm = () => {
     }
   };
 
-  const loadPreviousData = async (companyName: string) => {
-    try {
-      // Buscar o último registro da empresa para preencher os campos
-      const { data, error } = await supabase
-        .from('frota')
-        .select('*')
-        .eq('nome_empresa', companyName)
-        .order('mes_referencia', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error('Error loading previous data:', error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const lastRecord = data[0];
-        console.log('Dados do mês anterior encontrados:', lastRecord);
-        
-        // Preencher campos com dados do mês anterior (exceto mês de referência)
-        setFormData(prev => ({
-          ...prev,
-          simples_com_imagem: lastRecord.simples_com_imagem || 0,
-          simples_sem_imagem: lastRecord.simples_sem_imagem || 0,
-          secao: lastRecord.secao || 0,
-          telemetria: lastRecord.telemetria || 0,
-          citgis: lastRecord.citgis || 0,
-          buszoom: lastRecord.buszoom || 0,
-          nuvem: (lastRecord.simples_com_imagem || 0) + (lastRecord.simples_sem_imagem || 0) + (lastRecord.secao || 0)
-        }));
-
-        toast({
-          title: "Dados Carregados",
-          description: "Dados do mês anterior foram carregados. Você pode alterar conforme necessário.",
-        });
-      }
-    } catch (error) {
-      console.error('Error loading previous data:', error);
-    }
-  };
-
   const calculateTotal = () => {
     return formData.simples_com_imagem + 
            formData.simples_sem_imagem + 
            formData.secao + 
-           formData.telemetria +
            formData.citgis + 
-           formData.buszoom;
-  };
-
-  const formatMesReferenciaForDatabase = (mes: string) => {
-    // Se o mês está no formato YYYY-MM, adicionar -01 para criar uma data válida
-    if (mes && mes.includes('-') && mes.length === 7) {
-      return mes + '-01';
-    }
-    return mes;
+           formData.buszoom + 
+           formData.nuvem;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,12 +160,9 @@ const FleetForm = () => {
       const fleetData = {
         ...formData,
         total,
-        // Corrigir o formato do mês para o banco de dados
-        mes_referencia: formatMesReferenciaForDatabase(formData.mes_referencia),
+        mes_referencia: formData.mes_referencia + '-01', // Converter para formato DATE
         usuario_responsavel: getUserResponsibleName()
       };
-
-      console.log('Dados a serem salvos:', fleetData);
 
       // Verificar se já existe registro para a empresa e mês
       const { data: existing, error: checkError } = await supabase
@@ -242,15 +200,15 @@ const FleetForm = () => {
         });
       }
 
-      // Resetar formulário
+      // Resetar formulário com mês atual
+      const mesAtual = getCurrentLocalMonth();
       setFormData({
         nome_empresa: '',
         cod_operadora: '',
-        mes_referencia: '',
+        mes_referencia: mesAtual,
         simples_com_imagem: 0,
         simples_sem_imagem: 0,
         secao: 0,
-        telemetria: 0,
         citgis: 0,
         buszoom: 0,
         nuvem: 0
@@ -281,64 +239,18 @@ const FleetForm = () => {
           <CardTitle>Informações da Frota</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <FleetFormFields
               companies={companies}
               formData={formData}
               userResponsibleName={getUserResponsibleName()}
               onCompanyChange={handleCompanyChange}
               onInputChange={handleInputChange}
-              onLoadPreviousData={loadPreviousData}
             />
 
-            {/* Resumo/Total */}
-            <div className="border-t pt-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold text-blue-800 mb-2">Resumo</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p><strong>Total Bilhetagem (Nuvem):</strong> {formData.nuvem.toLocaleString()}</p>
-                    <p><strong>Total Geral:</strong> {calculateTotal().toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p><strong>Empresa:</strong> {formData.nome_empresa || 'Não selecionada'}</p>
-                    <p><strong>Responsável:</strong> {getUserResponsibleName()}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <FleetFormSummary total={calculateTotal()} />
 
-            {/* Botões de ação */}
-            <div className="flex gap-4 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setFormData({
-                    nome_empresa: '',
-                    cod_operadora: '',
-                    mes_referencia: '',
-                    simples_com_imagem: 0,
-                    simples_sem_imagem: 0,
-                    secao: 0,
-                    telemetria: 0,
-                    citgis: 0,
-                    buszoom: 0,
-                    nuvem: 0
-                  });
-                }}
-                disabled={loading}
-              >
-                Limpar
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
+            <FleetFormActions loading={loading} />
           </form>
         </CardContent>
       </Card>
