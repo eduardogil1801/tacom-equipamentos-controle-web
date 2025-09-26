@@ -63,22 +63,39 @@ const FleetFormFields: React.FC<FleetFormFieldsProps> = ({
   };
 
   const formatMesForInput = (mes: string) => {
+    console.log('Formatando mês para input:', mes);
+    
     if (!mes) return '';
+    
     // Se já está no formato YYYY-MM, retornar como está
     if (mes.includes('-') && mes.length === 7) {
+      console.log('Mês já no formato YYYY-MM:', mes);
       return mes;
     }
+    
+    // Se está no formato YYYY-MM-DD, extrair apenas YYYY-MM
+    if (mes.includes('-') && mes.length === 10) {
+      const result = mes.substring(0, 7);
+      console.log('Mês extraído de data completa:', result);
+      return result;
+    }
+    
     // Se está no formato MM/YYYY, converter para YYYY-MM
     if (mes.includes('/')) {
       const [month, year] = mes.split('/');
-      return `${year}-${month.padStart(2, '0')}`;
+      const result = `${year}-${month.padStart(2, '0')}`;
+      console.log('Mês convertido de MM/YYYY para YYYY-MM:', result);
+      return result;
     }
+    
+    console.log('Mês retornado sem conversão:', mes);
     return mes;
   };
 
   const handleMesChange = (value: string) => {
+    console.log('Mês selecionado no input:', value);
     // O input type="month" retorna no formato YYYY-MM
-    // Vamos manter este formato internamente e converter quando necessário
+    // Vamos manter este formato internamente
     onInputChange('mes_referencia', value);
   };
 

@@ -133,8 +133,36 @@ const FleetManagement: React.FC = () => {
   };
 
   const formatMesReferenciaDisplay = (mesReferencia: string) => {
-    const date = new Date(mesReferencia);
-    return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    console.log('Formatando data para exibição:', mesReferencia);
+    
+    if (!mesReferencia) return '';
+    
+    // Se está no formato YYYY-MM-DD, extrair apenas YYYY-MM
+    let dateToFormat = mesReferencia;
+    if (mesReferencia.length === 10) {
+      dateToFormat = mesReferencia.substring(0, 7);
+    }
+    
+    // Se está no formato YYYY-MM, converter para MM/YYYY
+    if (dateToFormat.includes('-') && dateToFormat.length === 7) {
+      const [year, month] = dateToFormat.split('-');
+      const result = `${month}/${year}`;
+      console.log('Data formatada:', mesReferencia, '→', result);
+      return result;
+    }
+    
+    // Fallback: tentar criar uma data
+    try {
+      const date = new Date(mesReferencia + (mesReferencia.length === 7 ? '-01' : ''));
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const result = `${month}/${year}`;
+      console.log('Data formatada via Date:', mesReferencia, '→', result);
+      return result;
+    } catch (error) {
+      console.error('Erro ao formatar data:', mesReferencia, error);
+      return mesReferencia;
+    }
   };
 
   const formatNumber = (num: number): string => {
@@ -235,10 +263,11 @@ const FleetManagement: React.FC = () => {
                       <TableHead>Simples C/Image</TableHead>
                       <TableHead>Seção</TableHead>
                       <TableHead className="bg-blue-50">Nuvem</TableHead>
+                      <TableHead className="bg-green-50">Total Bilhetagem</TableHead>
                       <TableHead>Telemetria</TableHead>
                       <TableHead>CITGIS</TableHead>
                       <TableHead>BUSZOOM</TableHead>
-                      <TableHead className="bg-green-50">Total</TableHead>
+                      <TableHead className="bg-orange-50">Total Geral</TableHead>
                       <TableHead>Responsável</TableHead>
                       {(canEdit || canDelete) && <TableHead>Ações</TableHead>}
                     </TableRow>
@@ -255,10 +284,13 @@ const FleetManagement: React.FC = () => {
                         <TableCell className="bg-blue-50 font-semibold text-blue-700">
                           {formatNumber(fleet.nuvem)}
                         </TableCell>
+                        <TableCell className="bg-green-50 font-semibold text-green-700">
+                          {formatNumber(fleet.nuvem)} {/* Total Bilhetagem = Nuvem */}
+                        </TableCell>
                         <TableCell>{formatNumber(fleet.telemetria)}</TableCell>
                         <TableCell>{formatNumber(fleet.citgis)}</TableCell>
                         <TableCell>{formatNumber(fleet.buszoom)}</TableCell>
-                        <TableCell className="bg-green-50 font-semibold text-green-700">
+                        <TableCell className="bg-orange-50 font-semibold text-orange-700">
                           {formatNumber(fleet.total)}
                         </TableCell>
                         <TableCell className="text-sm">{fleet.usuario_responsavel}</TableCell>

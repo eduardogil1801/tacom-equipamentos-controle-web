@@ -182,10 +182,24 @@ const FleetForm = () => {
   };
 
   const formatMesReferenciaForDatabase = (mes: string) => {
-    // Se o mês está no formato YYYY-MM, adicionar -01 para criar uma data válida
+    console.log('Mês recebido para conversão:', mes);
+    
+    // Se o mês está no formato YYYY-MM (do input type="month")
     if (mes && mes.includes('-') && mes.length === 7) {
-      return mes + '-01';
+      const result = mes + '-01';
+      console.log('Mês convertido para banco:', result);
+      return result;
     }
+    
+    // Se está no formato MM/YYYY, converter para YYYY-MM-01
+    if (mes && mes.includes('/')) {
+      const [month, year] = mes.split('/');
+      const result = `${year}-${month.padStart(2, '0')}-01`;
+      console.log('Mês MM/YYYY convertido para banco:', result);
+      return result;
+    }
+    
+    console.log('Mês retornado sem conversão:', mes);
     return mes;
   };
 
@@ -206,27 +220,51 @@ const FleetForm = () => {
     try {
       const total = calculateTotal();
       
+      console.log('=== DEBUG SALVAMENTO ===');
+      console.log('Mês original do formData:', formData.mes_referencia);
+      
+      const mesFormatado = formatMesReferenciaForDatabase(formData.mes_referencia);
+      console.log('Mês formatado para banco:', mesFormatado);
+      
       const fleetData = {
         ...formData,
         total,
-        // Corrigir o formato do mês para o banco de dados
-        mes_referencia: formatMesReferenciaForDatabase(formData.mes_referencia),
+        mes_referencia: mesFormatado,
         usuario_responsavel: getUserResponsibleName()
       };
 
-      console.log('Dados a serem salvos:', fleetData);
+      console.log('Dados finais para salvar:', fleetData);
 
       // Verificar se já existe registro para a empresa e mês
+      console.log('Verificando registros existentes para:', {
+        empresa: formData.nome_empresa,
+        mes: fleetData.mes_referencia
+      });
+
       const { data: existing, error: checkError } = await supabase
         .from('frota')
-        .select('id')
+        .select('id, mes_referencia, nome_empresa')
         .eq('nome_empresa', formData.nome_empresa)
         .eq('mes_referencia', fleetData.mes_referencia);
 
       if (checkError) throw checkError;
 
+      console.log('Registros encontrados:', existing);
+
       if (existing && existing.length > 0) {
         // Atualizar registro existente
+        console.log('Atualizando registro existente:', existing[0]);
+        
+        // Perguntar ao usuário se quer sobrescrever
+        const confirmUpdate = confirm(
+          `Já existe um registro para ${formData.nome_empresa} em ${formData.mes_referencia}. Deseja sobrescrever?`
+        );
+        
+        if (!confirmUpdate) {
+          setLoading(false);
+          return;
+        }
+
         const { error: updateError } = await supabase
           .from('frota')
           .update(fleetData)
@@ -236,19 +274,26 @@ const FleetForm = () => {
 
         toast({
           title: "Sucesso",
-          description: "Dados da frota atualizados com sucesso!",
+          description: `Dados da frota de ${formData.mes_referencia} atualizados com sucesso!`,
         });
       } else {
         // Criar novo registro
-        const { error: insertError } = await supabase
+        console.log('Criando novo registro para:', fleetData);
+        const { error: insertError, data: insertData } = await supabase
           .from('frota')
-          .insert([fleetData]);
+          .insert([fleetData])
+          .select();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Erro ao inserir:', insertError);
+          throw insertError;
+        }
+
+        console.log('Registro criado com sucesso:', insertData);
 
         toast({
           title: "Sucesso",
-          description: "Dados da frota salvos com sucesso!",
+          description: `Dados da frota de ${formData.mes_referencia} salvos com sucesso!`,
         });
       }
 
