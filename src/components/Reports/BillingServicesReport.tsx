@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -26,8 +26,7 @@ interface FleetData {
 
 interface FilterState {
   empresa: string;
-  mes: string;
-  ano: string;
+  mesReferencia: string;
 }
 
 interface ServiceTotals {
@@ -38,13 +37,11 @@ interface ServiceTotals {
   qtdTotal4: number;
   qtdTotal5: number;
   qtdTotal6: number;
-  totalBilhetagem: number;
 }
 
 interface ExportFilters {
   empresa: string;
-  mes: string;
-  ano: string;
+  mesReferencia: string;
 }
 
 // Função para formatar números com pontos
@@ -93,14 +90,12 @@ const BillingServicesReport: React.FC = () => {
   const [exportType, setExportType] = useState<'pdf' | 'xlsx'>('pdf');
   const [exportFilters, setExportFilters] = useState<ExportFilters>({
     empresa: '',
-    mes: '',
-    ano: ''
+    mesReferencia: ''
   });
   
   const [filters, setFilters] = useState<FilterState>({
     empresa: '',
-    mes: '',
-    ano: ''
+    mesReferencia: ''
   });
 
   const [serviceTotals, setServiceTotals] = useState<ServiceTotals>({
@@ -110,8 +105,7 @@ const BillingServicesReport: React.FC = () => {
     qtdTotalNuvem: 0,
     qtdTotal4: 0,
     qtdTotal5: 0,
-    qtdTotal6: 0,
-    totalBilhetagem: 0
+    qtdTotal6: 0
   });
 
   useEffect(() => {
@@ -168,37 +162,13 @@ const BillingServicesReport: React.FC = () => {
       filtered = filtered.filter(item => item.nome_empresa === filters.empresa);
     }
 
-    if (filters.mes && filters.mes !== 'all') {
+    if (filters.mesReferencia && filters.mesReferencia !== 'all') {
       filtered = filtered.filter(item => {
         try {
-          // Extrair mês da data armazenada
-          let dateStr = item.mes_referencia;
-          if (dateStr.length === 10) {
-            dateStr = dateStr.substring(0, 7); // YYYY-MM
-          }
-          
-          const [year, month] = dateStr.split('-');
-          return month === filters.mes;
+          const formattedItem = formatMesReferencia(item.mes_referencia);
+          return formattedItem === filters.mesReferencia;
         } catch (error) {
-          console.error('Erro ao filtrar por mês:', error);
-          return false;
-        }
-      });
-    }
-
-    if (filters.ano && filters.ano !== 'all') {
-      filtered = filtered.filter(item => {
-        try {
-          // Extrair ano da data armazenada
-          let dateStr = item.mes_referencia;
-          if (dateStr.length === 10) {
-            dateStr = dateStr.substring(0, 7); // YYYY-MM
-          }
-          
-          const [year] = dateStr.split('-');
-          return year === filters.ano;
-        } catch (error) {
-          console.error('Erro ao filtrar por ano:', error);
+          console.error('Erro ao filtrar por mês referência:', error);
           return false;
         }
       });
@@ -224,7 +194,6 @@ const BillingServicesReport: React.FC = () => {
     const totals = data.reduce(
       (acc, item) => {
         const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
-        const totalBilhetagem = nuvemTotal + (item.citgis || 0) + (item.buszoom || 0) + (item.telemetria || 0);
         
         return {
           qtdTotal: acc.qtdTotal + (item.simples_com_imagem || 0),
@@ -233,8 +202,7 @@ const BillingServicesReport: React.FC = () => {
           qtdTotalNuvem: acc.qtdTotalNuvem + nuvemTotal,
           qtdTotal4: acc.qtdTotal4 + (item.citgis || 0),
           qtdTotal5: acc.qtdTotal5 + (item.buszoom || 0),
-          qtdTotal6: acc.qtdTotal6 + (item.telemetria || 0),
-          totalBilhetagem: acc.totalBilhetagem + totalBilhetagem
+          qtdTotal6: acc.qtdTotal6 + (item.telemetria || 0)
         };
       },
       {
@@ -244,8 +212,7 @@ const BillingServicesReport: React.FC = () => {
         qtdTotalNuvem: 0,
         qtdTotal4: 0,
         qtdTotal5: 0,
-        qtdTotal6: 0,
-        totalBilhetagem: 0
+        qtdTotal6: 0
       }
     );
 
@@ -268,7 +235,7 @@ const BillingServicesReport: React.FC = () => {
 
   const openExportDialog = (type: 'pdf' | 'xlsx') => {
     setExportType(type);
-    setExportFilters({ empresa: '', mes: '', ano: '' });
+    setExportFilters({ empresa: '', mesReferencia: '' });
     setIsExportDialogOpen(true);
   };
 
@@ -281,32 +248,11 @@ const BillingServicesReport: React.FC = () => {
         dataToExport = dataToExport.filter(item => item.nome_empresa === exportFilters.empresa);
       }
 
-      if (exportFilters.mes && exportFilters.mes !== 'all') {
+      if (exportFilters.mesReferencia && exportFilters.mesReferencia !== 'all') {
         dataToExport = dataToExport.filter(item => {
           try {
-            let dateStr = item.mes_referencia;
-            if (dateStr.length === 10) {
-              dateStr = dateStr.substring(0, 7); // YYYY-MM
-            }
-            
-            const [year, month] = dateStr.split('-');
-            return month === exportFilters.mes;
-          } catch (error) {
-            return false;
-          }
-        });
-      }
-
-      if (exportFilters.ano && exportFilters.ano !== 'all') {
-        dataToExport = dataToExport.filter(item => {
-          try {
-            let dateStr = item.mes_referencia;
-            if (dateStr.length === 10) {
-              dateStr = dateStr.substring(0, 7); // YYYY-MM
-            }
-            
-            const [year] = dateStr.split('-');
-            return year === exportFilters.ano;
+            const formattedItem = formatMesReferencia(item.mes_referencia);
+            return formattedItem === exportFilters.mesReferencia;
           } catch (error) {
             return false;
           }
@@ -352,114 +298,52 @@ const BillingServicesReport: React.FC = () => {
     // Preparar dados para o Excel
     const excelData = data.map(item => {
       const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
-      const totalBilhetagem = nuvemTotal + (item.citgis || 0) + (item.buszoom || 0) + (item.telemetria || 0);
       
       return {
         'Empresa': item.nome_empresa,
         'Mês Referência': formatMesReferencia(item.mes_referencia),
-        'Simples C/Imagem': item.simples_com_imagem || 0,
-        'Simples S/Imagem': item.simples_sem_imagem || 0,
+        'Simples C/Image': item.simples_com_imagem || 0,
+        'Simples S/Image': item.simples_sem_imagem || 0,
         'Seção': item.secao || 0,
         'Nuvem': nuvemTotal,
-        'Total Bilhetagem': totalBilhetagem,
+        'Total Bilhetagem': nuvemTotal, // Total Bilhetagem = Nuvem
         'CITGIS': item.citgis || 0,
         'Buszoom': item.buszoom || 0,
         'Telemetria': item.telemetria || 0
       };
     });
 
-    // Adicionar linha de totais sempre quando for "todas empresas"
+    // Adicionar totais quando for "todas empresas"
     if (!exportFilters.empresa || exportFilters.empresa === 'all') {
-      // Agrupar por empresa e somar os totais
-      const empresaTotals = new Map();
-      
-      data.forEach(item => {
-        const empresa = item.nome_empresa;
-        if (!empresaTotals.has(empresa)) {
-          empresaTotals.set(empresa, {
-            simplesComImagem: 0,
-            simplesSemImagem: 0,
-            secao: 0,
-            citgis: 0,
-            buszoom: 0,
-            telemetria: 0
-          });
-        }
-        
-        const current = empresaTotals.get(empresa);
-        current.simplesComImagem += (item.simples_com_imagem || 0);
-        current.simplesSemImagem += (item.simples_sem_imagem || 0);
-        current.secao += (item.secao || 0);
-        current.citgis += (item.citgis || 0);
-        current.buszoom += (item.buszoom || 0);
-        current.telemetria += (item.telemetria || 0);
-      });
-
-      // Adicionar linha vazia para separar
-      excelData.push({
-        'Empresa': '',
-        'Mês Referência': '',
-        'Simples C/Imagem': '',
-        'Simples S/Imagem': '',
-        'Seção': '',
-        'Nuvem': '',
-        'Total Bilhetagem': '',
-        'CITGIS': '',
-        'Buszoom': '',
-        'Telemetria': ''
-      });
-
-      // Adicionar totais por empresa
-      empresaTotals.forEach((totals, empresa) => {
-        const nuvemTotal = totals.simplesComImagem + totals.simplesSemImagem + totals.secao;
-        const totalBilhetagem = nuvemTotal + totals.citgis + totals.buszoom + totals.telemetria;
-        
-        excelData.push({
-          'Empresa': `TOTAL ${empresa}`,
-          'Mês Referência': '',
-          'Simples C/Imagem': totals.simplesComImagem,
-          'Simples S/Imagem': totals.simplesSemImagem,
-          'Seção': totals.secao,
-          'Nuvem': nuvemTotal,
-          'Total Bilhetagem': totalBilhetagem,
-          'CITGIS': totais.citgis,
-          'Buszoom': totals.buszoom,
-          'Telemetria': totals.telemetria
-        });
-      });
-
-      // Adicionar total geral de todas empresas
+      // Calcular totais gerais
       const totalsGeral = data.reduce((acc, item) => {
         const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
-        const totalBilhetagem = nuvemTotal + (item.citgis || 0) + (item.buszoom || 0) + (item.telemetria || 0);
         
         return {
-          simplesComImagem: acc.simplesComImagem + (item.simples_com_imagem || 0),
-          simplesSemImagem: acc.simplesSemImagem + (item.simples_sem_imagem || 0),
+          simplesComImage: acc.simplesComImage + (item.simples_com_imagem || 0),
+          simplesSemImage: acc.simplesSemImage + (item.simples_sem_imagem || 0),
           secao: acc.secao + (item.secao || 0),
           nuvem: acc.nuvem + nuvemTotal,
-          totalBilhetagem: acc.totalBilhetagem + totalBilhetagem,
           citgis: acc.citgis + (item.citgis || 0),
           buszoom: acc.buszoom + (item.buszoom || 0),
           telemetria: acc.telemetria + (item.telemetria || 0)
         };
       }, {
-        simplesComImagem: 0,
-        simplesSemImagem: 0,
+        simplesComImage: 0,
+        simplesSemImage: 0,
         secao: 0,
         nuvem: 0,
-        totalBilhetagem: 0,
         citgis: 0,
         buszoom: 0,
         telemetria: 0
       });
 
-      // Linha vazia antes do total geral
+      // Linha vazia antes do total
       excelData.push({
         'Empresa': '',
         'Mês Referência': '',
-        'Simples C/Imagem': '',
-        'Simples S/Imagem': '',
+        'Simples C/Image': '',
+        'Simples S/Image': '',
         'Seção': '',
         'Nuvem': '',
         'Total Bilhetagem': '',
@@ -468,14 +352,15 @@ const BillingServicesReport: React.FC = () => {
         'Telemetria': ''
       });
 
+      // Linha de total
       excelData.push({
-        'Empresa': 'TOTAL GERAL DE TODAS EMPRESAS',
+        'Empresa': 'TOTAL GERAL',
         'Mês Referência': '',
-        'Simples C/Imagem': totalsGeral.simplesComImagem,
-        'Simples S/Imagem': totalsGeral.simplesSemImagem,
+        'Simples C/Image': totalsGeral.simplesComImage,
+        'Simples S/Image': totalsGeral.simplesSemImage,
         'Seção': totalsGeral.secao,
         'Nuvem': totalsGeral.nuvem,
-        'Total Bilhetagem': totalsGeral.totalBilhetagem,
+        'Total Bilhetagem': totalsGeral.nuvem, // Total Bilhetagem = Nuvem
         'CITGIS': totalsGeral.citgis,
         'Buszoom': totalsGeral.buszoom,
         'Telemetria': totalsGeral.telemetria
@@ -492,30 +377,182 @@ const BillingServicesReport: React.FC = () => {
   };
 
   const generatePDF = async (data: FleetData[]) => {
-    // Implementar geração de PDF - por enquanto mostrar toast
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "A geração de PDF será implementada em breve. Use a exportação em Excel por enquanto.",
-    });
+    try {
+      // Importar jsPDF dinamicamente
+      const { jsPDF } = await import('jspdf');
+      
+      // Criar novo documento PDF
+      const doc = new jsPDF();
+      
+      // Configurar cores
+      const primaryColor = [41, 128, 185]; // Azul
+      const secondaryColor = [52, 73, 94]; // Cinza escuro
+      const accentColor = [231, 76, 60]; // Vermelho
+      
+      // Header do documento
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, 210, 25, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.text('RELATÓRIO DE FATURAMENTO POR SERVIÇO', 105, 16, { align: 'center' });
+      
+      // Informações do filtro
+      let yPosition = 35;
+      doc.setTextColor(...secondaryColor);
+      doc.setFontSize(10);
+      
+      if (exportFilters.empresa && exportFilters.empresa !== 'all') {
+        doc.text(`Empresa: ${exportFilters.empresa}`, 20, yPosition);
+        yPosition += 5;
+      }
+      
+      if (exportFilters.mesReferencia && exportFilters.mesReferencia !== 'all') {
+        doc.text(`Mês Referência: ${exportFilters.mesReferencia}`, 20, yPosition);
+        yPosition += 5;
+      }
+      
+      yPosition += 10;
+      
+      // Cabeçalho da tabela
+      const tableHeaders = [
+        'Empresa', 'Mês Ref.', 'Simples C/Image', 'Simples S/Image', 
+        'Seção', 'Nuvem', 'Total Bilhet.', 'CITGIS', 'Buszoom', 'Telemetria'
+      ];
+      
+      const columnWidths = [25, 18, 18, 18, 15, 15, 18, 15, 15, 15];
+      let xPosition = 15;
+      
+      // Desenhar cabeçalho
+      doc.setFillColor(...primaryColor);
+      doc.rect(15, yPosition, 180, 8, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      
+      tableHeaders.forEach((header, index) => {
+        doc.text(header, xPosition + 1, yPosition + 5);
+        xPosition += columnWidths[index];
+      });
+      
+      yPosition += 8;
+      
+      // Dados da tabela
+      doc.setTextColor(...secondaryColor);
+      data.forEach((item, index) => {
+        if (yPosition > 270) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        
+        const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
+        
+        // Alternar cores das linhas
+        if (index % 2 === 0) {
+          doc.setFillColor(248, 249, 250);
+          doc.rect(15, yPosition, 180, 6, 'F');
+        }
+        
+        const rowData = [
+          item.nome_empresa,
+          formatMesReferencia(item.mes_referencia),
+          (item.simples_com_imagem || 0).toString(),
+          (item.simples_sem_imagem || 0).toString(),
+          (item.secao || 0).toString(),
+          nuvemTotal.toString(),
+          nuvemTotal.toString(), // Total Bilhetagem = Nuvem
+          (item.citgis || 0).toString(),
+          (item.buszoom || 0).toString(),
+          (item.telemetria || 0).toString()
+        ];
+        
+        xPosition = 15;
+        rowData.forEach((cellData, cellIndex) => {
+          doc.text(cellData, xPosition + 1, yPosition + 4);
+          xPosition += columnWidths[cellIndex];
+        });
+        
+        yPosition += 6;
+      });
+      
+      // Adicionar totais se for "todas empresas"
+      if (!exportFilters.empresa || exportFilters.empresa === 'all') {
+        yPosition += 5;
+        
+        const totals = data.reduce((acc, item) => {
+          const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
+          return {
+            simplesComImage: acc.simplesComImage + (item.simples_com_imagem || 0),
+            simplesSemImage: acc.simplesSemImage + (item.simples_sem_imagem || 0),
+            secao: acc.secao + (item.secao || 0),
+            nuvem: acc.nuvem + nuvemTotal,
+            citgis: acc.citgis + (item.citgis || 0),
+            buszoom: acc.buszoom + (item.buszoom || 0),
+            telemetria: acc.telemetria + (item.telemetria || 0)
+          };
+        }, {
+          simplesComImage: 0,
+          simplesSemImage: 0,
+          secao: 0,
+          nuvem: 0,
+          citgis: 0,
+          buszoom: 0,
+          telemetria: 0
+        });
+        
+        // Linha de total
+        doc.setFillColor(...accentColor);
+        doc.rect(15, yPosition, 180, 8, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        
+        const totalRowData = [
+          'TOTAL GERAL',
+          '',
+          totals.simplesComImage.toString(),
+          totals.simplesSemImage.toString(),
+          totals.secao.toString(),
+          totals.nuvem.toString(),
+          totals.nuvem.toString(), // Total Bilhetagem = Nuvem
+          totals.citgis.toString(),
+          totals.buszoom.toString(),
+          totals.telemetria.toString()
+        ];
+        
+        xPosition = 15;
+        totalRowData.forEach((cellData, cellIndex) => {
+          doc.text(cellData, xPosition + 1, yPosition + 5);
+          xPosition += columnWidths[cellIndex];
+        });
+      }
+      
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setTextColor(...secondaryColor);
+        doc.setFontSize(8);
+        doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 20, 290);
+      }
+      
+      // Download do PDF
+      const fileName = `faturamento_servicos_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao gerar PDF. Verifique se a biblioteca jsPDF está instalada.",
+        variant: "destructive",
+      });
+    }
   };
 
-  // Gerar anos e meses
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 7 }, (_, i) => currentYear - 5 + i);
-  const months = [
-    { value: '1', label: 'Janeiro' },
-    { value: '2', label: 'Fevereiro' },
-    { value: '3', label: 'Março' },
-    { value: '4', label: 'Abril' },
-    { value: '5', label: 'Maio' },
-    { value: '6', label: 'Junho' },
-    { value: '7', label: 'Julho' },
-    { value: '8', label: 'Agosto' },
-    { value: '9', label: 'Setembro' },
-    { value: '10', label: 'Outubro' },
-    { value: '11', label: 'Novembro' },
-    { value: '12', label: 'Dezembro' }
-  ];
+  // Gerar opções de mês referência baseadas nos dados existentes
+  const mesReferenciaOptions = [...new Set(fleetData.map(item => formatMesReferencia(item.mes_referencia)))].sort().reverse();
 
   // Mostrar dados filtrados individualmente (não agrupados) para o histórico
   const sortedFilteredData = [...filteredData].sort((a, b) => {
@@ -559,7 +596,241 @@ const BillingServicesReport: React.FC = () => {
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>Mês Referência</TableHead>
+                  <TableHead>Simples C/Image</TableHead>
+                  <TableHead>Simples S/Image</TableHead>
+                  <TableHead>Seção</TableHead>
+                  <TableHead>Nuvem</TableHead>
+                  <TableHead>Total Bilhetagem</TableHead>
+                  <TableHead>CITGIS</TableHead>
+                  <TableHead>Buszoom</TableHead>
+                  <TableHead>Telemetria</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedFilteredData.map((item) => {
+                  const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
+                  
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.nome_empresa}</TableCell>
+                      <TableCell>{formatMesReferencia(item.mes_referencia)}</TableCell>
+                      <TableCell>{formatNumber(item.simples_com_imagem || 0)}</TableCell>
+                      <TableCell>{formatNumber(item.simples_sem_imagem || 0)}</TableCell>
+                      <TableCell>{formatNumber(item.secao || 0)}</TableCell>
+                      <TableCell>{formatNumber(nuvemTotal)}</TableCell>
+                      <TableCell className="font-semibold">{formatNumber(nuvemTotal)}</TableCell>
+                      <TableCell>{formatNumber(item.citgis || 0)}</TableCell>
+                      <TableCell>{formatNumber(item.buszoom || 0)}</TableCell>
+                      <TableCell>{formatNumber(item.telemetria || 0)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {/* Resumo de registros */}
+          <div className="mt-4 text-center">
+            <div className="text-lg font-medium text-gray-600">
+              Total de registros encontrados: <span className="font-bold text-primary">{filteredData.length}</span>
+            </div>
+            <div className="text-sm font-semibold text-blue-600 mt-2">
+              Total Geral de Bilhetagem: <span className="text-lg">{formatNumber(serviceTotals.qtdTotalNuvem)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dialog de Exportação */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gerar Relatório {exportType === 'xlsx' ? 'Excel' : 'PDF'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Filtro Empresa para Exportação */}
+              <div>
+                <Label>Empresa</Label>
+                <Select value={getSelectValue(exportFilters.empresa)} onValueChange={(value) => handleExportFilterChange('empresa', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as empresas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as empresas</SelectItem>
+                    {companies.map((company) => (
+                      <SelectItem key={company} value={company}>
+                        {company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro Mês Referência para Exportação */}
+              <div>
+                <Label>Mês Referência</Label>
+                <Select value={getSelectValue(exportFilters.mesReferencia)} onValueChange={(value) => handleExportFilterChange('mesReferencia', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os meses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os meses</SelectItem>
+                    {mesReferenciaOptions.map((mesRef) => (
+                      <SelectItem key={mesRef} value={mesRef}>
+                        {mesRef}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsExportDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={generateExport}>
+                Gerar {exportType === 'xlsx' ? 'Excel' : 'PDF'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default BillingServicesReport;    
+              <Label htmlFor="empresa">Empresa</Label>
+              <Select value={getSelectValue(filters.empresa)} onValueChange={(value) => handleFilterChange('empresa', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as empresas</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company} value={company}>
+                      {company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro Mês Referência */}
+            <div>
+              <Label htmlFor="mesReferencia">Mês Referência</Label>
+              <Select value={getSelectValue(filters.mesReferencia)} onValueChange={(value) => handleFilterChange('mesReferencia', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o mês referência" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {mesReferenciaOptions.map((mesRef) => (
+                    <SelectItem key={mesRef} value={mesRef}>
+                      {mesRef}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        {/* Simples C/Image */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Simples C/Image</div>
+              <div className="text-lg font-bold text-blue-600">{formatNumber(serviceTotals.qtdTotal)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Simples S/Image */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Simples S/Image</div>
+              <div className="text-lg font-bold text-green-600">{formatNumber(serviceTotals.qtdTotal2)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Seção</div>
+              <div className="text-lg font-bold text-purple-600">{formatNumber(serviceTotals.qtdTotal3)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Nuvem */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Nuvem</div>
+              <div className="text-lg font-bold text-orange-600">{formatNumber(serviceTotals.qtdTotalNuvem)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Bilhetagem (igual ao Nuvem) */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Total Bilhetagem</div>
+              <div className="text-lg font-bold text-blue-800">{formatNumber(serviceTotals.qtdTotalNuvem)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CITGIS */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">CITGIS</div>
+              <div className="text-lg font-bold text-teal-600">{formatNumber(serviceTotals.qtdTotal4)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Buszoom */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Buszoom</div>
+              <div className="text-lg font-bold text-indigo-600">{formatNumber(serviceTotals.qtdTotal5)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Telemetria */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Telemetria</div>
+              <div className="text-lg font-bold text-red-600">{formatNumber(serviceTotals.qtdTotal6)}</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Histórico dos Cadastros */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico dos Cadastros</CardTitle>
+        </CardHeader>
+		<CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Filtro Empresa */}
             <div>
               <Label htmlFor="empresa">Empresa</Label>
@@ -578,36 +849,18 @@ const BillingServicesReport: React.FC = () => {
               </Select>
             </div>
 
-            {/* Filtro Mês */}
+            {/* Filtro Mês Referência */}
             <div>
-              <Label htmlFor="mes">Mês</Label>
-              <Select value={getSelectValue(filters.mes)} onValueChange={(value) => handleFilterChange('mes', value)}>
+              <Label htmlFor="mesReferencia">Mês Referência</Label>
+              <Select value={getSelectValue(filters.mesReferencia)} onValueChange={(value) => handleFilterChange('mesReferencia', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o mês" />
+                  <SelectValue placeholder="Selecione o mês referência" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os meses</SelectItem>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Filtro Ano */}
-            <div>
-              <Label htmlFor="ano">Ano</Label>
-              <Select value={getSelectValue(filters.ano)} onValueChange={(value) => handleFilterChange('ano', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o ano" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os anos</SelectItem>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
+                  {mesReferenciaOptions.map((mesRef) => (
+                    <SelectItem key={mesRef} value={mesRef}>
+                      {mesRef}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -618,22 +871,22 @@ const BillingServicesReport: React.FC = () => {
       </Card>
 
       {/* Cards de Resultados - Otimizados para uma linha */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {/* Simples C/Imagem */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        {/* Simples C/Image */}
         <Card>
           <CardContent className="p-3">
             <div className="text-center">
-              <div className="text-xs font-medium text-gray-600 mb-1">Simples C/Imagem</div>
+              <div className="text-xs font-medium text-gray-600 mb-1">Simples C/Image</div>
               <div className="text-lg font-bold text-blue-600">{formatNumber(serviceTotals.qtdTotal)}</div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Simples S/Imagem */}
+        {/* Simples S/Image */}
         <Card>
           <CardContent className="p-3">
             <div className="text-center">
-              <div className="text-xs font-medium text-gray-600 mb-1">Simples S/Imagem</div>
+              <div className="text-xs font-medium text-gray-600 mb-1">Simples S/Image</div>
               <div className="text-lg font-bold text-green-600">{formatNumber(serviceTotals.qtdTotal2)}</div>
             </div>
           </CardContent>
@@ -649,12 +902,22 @@ const BillingServicesReport: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Nuvem e Total Bilhetagem */}
+        {/* Nuvem */}
         <Card>
           <CardContent className="p-3">
             <div className="text-center">
-              <div className="text-xs font-medium text-gray-600 mb-1">Nuvem e Total Bilhetagem</div>
+              <div className="text-xs font-medium text-gray-600 mb-1">Nuvem</div>
               <div className="text-lg font-bold text-orange-600">{formatNumber(serviceTotals.qtdTotalNuvem)}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Total Bilhetagem (igual ao Nuvem) */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <div className="text-xs font-medium text-gray-600 mb-1">Total Bilhetagem</div>
+              <div className="text-lg font-bold text-blue-800">{formatNumber(serviceTotals.qtdTotalNuvem)}</div>
             </div>
           </CardContent>
         </Card>
@@ -702,8 +965,8 @@ const BillingServicesReport: React.FC = () => {
                 <TableRow>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Mês Referência</TableHead>
-                  <TableHead>Simples C/Imagem</TableHead>
-                  <TableHead>Simples S/Imagem</TableHead>
+                  <TableHead>Simples C/Image</TableHead>
+                  <TableHead>Simples S/Image</TableHead>
                   <TableHead>Seção</TableHead>
                   <TableHead>Nuvem</TableHead>
                   <TableHead>Total Bilhetagem</TableHead>
@@ -715,7 +978,6 @@ const BillingServicesReport: React.FC = () => {
               <TableBody>
                 {sortedFilteredData.map((item) => {
                   const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
-                  const totalBilhetagem = nuvemTotal + (item.citgis || 0) + (item.buszoom || 0) + (item.telemetria || 0);
                   
                   return (
                     <TableRow key={item.id}>
@@ -725,7 +987,7 @@ const BillingServicesReport: React.FC = () => {
                       <TableCell>{formatNumber(item.simples_sem_imagem || 0)}</TableCell>
                       <TableCell>{formatNumber(item.secao || 0)}</TableCell>
                       <TableCell>{formatNumber(nuvemTotal)}</TableCell>
-                      <TableCell className="font-semibold">{formatNumber(totalBilhetagem)}</TableCell>
+                      <TableCell className="font-semibold">{formatNumber(nuvemTotal)}</TableCell>
                       <TableCell>{formatNumber(item.citgis || 0)}</TableCell>
                       <TableCell>{formatNumber(item.buszoom || 0)}</TableCell>
                       <TableCell>{formatNumber(item.telemetria || 0)}</TableCell>
@@ -742,7 +1004,7 @@ const BillingServicesReport: React.FC = () => {
               Total de registros encontrados: <span className="font-bold text-primary">{filteredData.length}</span>
             </div>
             <div className="text-sm font-semibold text-blue-600 mt-2">
-              Total Geral de Bilhetagem: <span className="text-lg">{formatNumber(serviceTotals.totalBilhetagem)}</span>
+              Total Geral de Bilhetagem: <span className="text-lg">{formatNumber(serviceTotals.qtdTotalNuvem)}</span>
             </div>
           </div>
         </CardContent>
@@ -755,7 +1017,7 @@ const BillingServicesReport: React.FC = () => {
             <DialogTitle>Gerar Relatório {exportType === 'xlsx' ? 'Excel' : 'PDF'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Filtro Empresa para Exportação */}
               <div>
                 <Label>Empresa</Label>
@@ -774,36 +1036,18 @@ const BillingServicesReport: React.FC = () => {
                 </Select>
               </div>
 
-              {/* Filtro Mês para Exportação */}
+              {/* Filtro Mês Referência para Exportação */}
               <div>
-                <Label>Mês</Label>
-                <Select value={getSelectValue(exportFilters.mes)} onValueChange={(value) => handleExportFilterChange('mes', value)}>
+                <Label>Mês Referência</Label>
+                <Select value={getSelectValue(exportFilters.mesReferencia)} onValueChange={(value) => handleExportFilterChange('mesReferencia', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os meses" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os meses</SelectItem>
-                    {months.map((month) => (
-                      <SelectItem key={month.value} value={month.value}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filtro Ano para Exportação */}
-              <div>
-                <Label>Ano</Label>
-                <Select value={getSelectValue(exportFilters.ano)} onValueChange={(value) => handleExportFilterChange('ano', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os anos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os anos</SelectItem>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
+                    {mesReferenciaOptions.map((mesRef) => (
+                      <SelectItem key={mesRef} value={mesRef}>
+                        {mesRef}
                       </SelectItem>
                     ))}
                   </SelectContent>
