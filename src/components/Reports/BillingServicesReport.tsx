@@ -54,8 +54,34 @@ const formatNumber = (num: number): string => {
 
 // Função para formatar mês/ano de referência
 const formatMesReferencia = (mesReferencia: string): string => {
-  const date = new Date(mesReferencia + '-01');
-  return date.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' });
+  if (!mesReferencia) return '';
+  
+  try {
+    // Se está no formato YYYY-MM-DD, extrair apenas YYYY-MM
+    let dateToFormat = mesReferencia;
+    if (mesReferencia.length === 10) {
+      dateToFormat = mesReferencia.substring(0, 7);
+    }
+    
+    // Se está no formato YYYY-MM, converter para MM/YYYY
+    if (dateToFormat.includes('-') && dateToFormat.length === 7) {
+      const [year, month] = dateToFormat.split('-');
+      return `${month}/${year}`;
+    }
+    
+    // Fallback: tentar criar uma data
+    const date = new Date(mesReferencia + (mesReferencia.includes('-01') ? '' : '-01'));
+    if (isNaN(date.getTime())) {
+      return mesReferencia; // Retorna o valor original se não conseguir formatar
+    }
+    
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${year}`;
+  } catch (error) {
+    console.error('Erro ao formatar data:', mesReferencia, error);
+    return mesReferencia;
+  }
 };
 
 const BillingServicesReport: React.FC = () => {
@@ -103,7 +129,7 @@ const BillingServicesReport: React.FC = () => {
       const { data, error } = await supabase
         .from('frota')
         .select('*')
-        .order('nome_empresa', { ascending: true });
+        .order('mes_referencia', { ascending: false }); // Ordenar por data decrescente
 
       if (error) {
         console.error('Erro ao carregar dados da frota:', error);
@@ -116,6 +142,7 @@ const BillingServicesReport: React.FC = () => {
       }
 
       const processedData = data || [];
+      console.log('Dados carregados da frota:', processedData);
       setFleetData(processedData);
 
       // Extrair empresas únicas
@@ -143,18 +170,52 @@ const BillingServicesReport: React.FC = () => {
 
     if (filters.mes && filters.mes !== 'all') {
       filtered = filtered.filter(item => {
-        const itemDate = new Date(item.mes_referencia + '-01');
-        return (itemDate.getMonth() + 1).toString() === filters.mes;
+        try {
+          // Extrair mês da data armazenada
+          let dateStr = item.mes_referencia;
+          if (dateStr.length === 10) {
+            dateStr = dateStr.substring(0, 7); // YYYY-MM
+          }
+          
+          const [year, month] = dateStr.split('-');
+          return month === filters.mes;
+        } catch (error) {
+          console.error('Erro ao filtrar por mês:', error);
+          return false;
+        }
       });
     }
 
     if (filters.ano && filters.ano !== 'all') {
       filtered = filtered.filter(item => {
-        const itemDate = new Date(item.mes_referencia + '-01');
-        return itemDate.getFullYear().toString() === filters.ano;
+        try {
+          // Extrair ano da data armazenada
+          let dateStr = item.mes_referencia;
+          if (dateStr.length === 10) {
+            dateStr = dateStr.substring(0, 7); // YYYY-MM
+          }
+          
+          const [year] = dateStr.split('-');
+          return year === filters.ano;
+        } catch (error) {
+          console.error('Erro ao filtrar por ano:', error);
+          return false;
+        }
       });
     }
 
+    // Ordenar por mês/ano de referência (decrescente)
+    filtered.sort((a, b) => {
+      try {
+        const dateA = new Date(a.mes_referencia + (a.mes_referencia.includes('-01') ? '' : '-01'));
+        const dateB = new Date(b.mes_referencia + (b.mes_referencia.includes('-01') ? '' : '-01'));
+        return dateB.getTime() - dateA.getTime();
+      } catch (error) {
+        return 0;
+      }
+    });
+
+    console.log('Dados filtrados:', filtered);
     setFilteredData(filtered);
     calculateTotals(filtered);
   };
@@ -222,20 +283,46 @@ const BillingServicesReport: React.FC = () => {
 
       if (exportFilters.mes && exportFilters.mes !== 'all') {
         dataToExport = dataToExport.filter(item => {
-          const itemDate = new Date(item.mes_referencia + '-01');
-          return (itemDate.getMonth() + 1).toString() === exportFilters.mes;
+          try {
+            let dateStr = item.mes_referencia;
+            if (dateStr.length === 10) {
+              dateStr = dateStr.substring(0, 7); // YYYY-MM
+            }
+            
+            const [year, month] = dateStr.split('-');
+            return month === exportFilters.mes;
+          } catch (error) {
+            return false;
+          }
         });
       }
 
       if (exportFilters.ano && exportFilters.ano !== 'all') {
         dataToExport = dataToExport.filter(item => {
-          const itemDate = new Date(item.mes_referencia + '-01');
-          return itemDate.getFullYear().toString() === exportFilters.ano;
+          try {
+            let dateStr = item.mes_referencia;
+            if (dateStr.length === 10) {
+              dateStr = dateStr.substring(0, 7); // YYYY-MM
+            }
+            
+            const [year] = dateStr.split('-');
+            return year === exportFilters.ano;
+          } catch (error) {
+            return false;
+          }
         });
       }
 
       // Ordenar por mês/ano de referência (decrescente)
-      dataToExport.sort((a, b) => new Date(b.mes_referencia).getTime() - new Date(a.mes_referencia).getTime());
+      dataToExport.sort((a, b) => {
+        try {
+          const dateA = new Date(a.mes_referencia + (a.mes_referencia.includes('-01') ? '' : '-01'));
+          const dateB = new Date(b.mes_referencia + (b.mes_referencia.includes('-01') ? '' : '-01'));
+          return dateB.getTime() - dateA.getTime();
+        } catch (error) {
+          return 0;
+        }
+      });
 
       if (exportType === 'xlsx') {
         await generateExcel(dataToExport);
@@ -269,7 +356,7 @@ const BillingServicesReport: React.FC = () => {
       
       return {
         'Empresa': item.nome_empresa,
-        'Mês/Ano Referência': formatMesReferencia(item.mes_referencia),
+        'Mês Referência': formatMesReferencia(item.mes_referencia),
         'Simples C/Imagem': item.simples_com_imagem || 0,
         'Simples S/Imagem': item.simples_sem_imagem || 0,
         'Seção': item.secao || 0,
@@ -281,9 +368,68 @@ const BillingServicesReport: React.FC = () => {
       };
     });
 
-    // Adicionar linha de totais se não for empresa específica
+    // Adicionar linha de totais sempre quando for "todas empresas"
     if (!exportFilters.empresa || exportFilters.empresa === 'all') {
-      const totals = data.reduce((acc, item) => {
+      // Agrupar por empresa e somar os totais
+      const empresaTotals = new Map();
+      
+      data.forEach(item => {
+        const empresa = item.nome_empresa;
+        if (!empresaTotals.has(empresa)) {
+          empresaTotals.set(empresa, {
+            simplesComImagem: 0,
+            simplesSemImagem: 0,
+            secao: 0,
+            citgis: 0,
+            buszoom: 0,
+            telemetria: 0
+          });
+        }
+        
+        const current = empresaTotals.get(empresa);
+        current.simplesComImagem += (item.simples_com_imagem || 0);
+        current.simplesSemImagem += (item.simples_sem_imagem || 0);
+        current.secao += (item.secao || 0);
+        current.citgis += (item.citgis || 0);
+        current.buszoom += (item.buszoom || 0);
+        current.telemetria += (item.telemetria || 0);
+      });
+
+      // Adicionar linha vazia para separar
+      excelData.push({
+        'Empresa': '',
+        'Mês Referência': '',
+        'Simples C/Imagem': '',
+        'Simples S/Imagem': '',
+        'Seção': '',
+        'Nuvem': '',
+        'Total Bilhetagem': '',
+        'CITGIS': '',
+        'Buszoom': '',
+        'Telemetria': ''
+      });
+
+      // Adicionar totais por empresa
+      empresaTotals.forEach((totals, empresa) => {
+        const nuvemTotal = totals.simplesComImagem + totals.simplesSemImagem + totals.secao;
+        const totalBilhetagem = nuvemTotal + totals.citgis + totals.buszoom + totals.telemetria;
+        
+        excelData.push({
+          'Empresa': `TOTAL ${empresa}`,
+          'Mês Referência': '',
+          'Simples C/Imagem': totals.simplesComImagem,
+          'Simples S/Imagem': totals.simplesSemImagem,
+          'Seção': totals.secao,
+          'Nuvem': nuvemTotal,
+          'Total Bilhetagem': totalBilhetagem,
+          'CITGIS': totais.citgis,
+          'Buszoom': totals.buszoom,
+          'Telemetria': totals.telemetria
+        });
+      });
+
+      // Adicionar total geral de todas empresas
+      const totalsGeral = data.reduce((acc, item) => {
         const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
         const totalBilhetagem = nuvemTotal + (item.citgis || 0) + (item.buszoom || 0) + (item.telemetria || 0);
         
@@ -308,17 +454,31 @@ const BillingServicesReport: React.FC = () => {
         telemetria: 0
       });
 
+      // Linha vazia antes do total geral
       excelData.push({
-        'Empresa': 'TOTAL GERAL',
-        'Mês/Ano Referência': '',
-        'Simples C/Imagem': totals.simplesComImagem,
-        'Simples S/Imagem': totals.simplesSemImagem,
-        'Seção': totals.secao,
-        'Nuvem': totals.nuvem,
-        'Total Bilhetagem': totals.totalBilhetagem,
-        'CITGIS': totals.citgis,
-        'Buszoom': totals.buszoom,
-        'Telemetria': totals.telemetria
+        'Empresa': '',
+        'Mês Referência': '',
+        'Simples C/Imagem': '',
+        'Simples S/Imagem': '',
+        'Seção': '',
+        'Nuvem': '',
+        'Total Bilhetagem': '',
+        'CITGIS': '',
+        'Buszoom': '',
+        'Telemetria': ''
+      });
+
+      excelData.push({
+        'Empresa': 'TOTAL GERAL DE TODAS EMPRESAS',
+        'Mês Referência': '',
+        'Simples C/Imagem': totalsGeral.simplesComImagem,
+        'Simples S/Imagem': totalsGeral.simplesSemImagem,
+        'Seção': totalsGeral.secao,
+        'Nuvem': totalsGeral.nuvem,
+        'Total Bilhetagem': totalsGeral.totalBilhetagem,
+        'CITGIS': totalsGeral.citgis,
+        'Buszoom': totalsGeral.buszoom,
+        'Telemetria': totalsGeral.telemetria
       });
     }
 
@@ -357,10 +517,16 @@ const BillingServicesReport: React.FC = () => {
     { value: '12', label: 'Dezembro' }
   ];
 
-  // Ordenar dados filtrados por mês/ano (decrescente) para o histórico
-  const sortedFilteredData = [...filteredData].sort((a, b) => 
-    new Date(b.mes_referencia).getTime() - new Date(a.mes_referencia).getTime()
-  );
+  // Mostrar dados filtrados individualmente (não agrupados) para o histórico
+  const sortedFilteredData = [...filteredData].sort((a, b) => {
+    try {
+      const dateA = new Date(a.mes_referencia + (a.mes_referencia.includes('-01') ? '' : '-01'));
+      const dateB = new Date(b.mes_referencia + (b.mes_referencia.includes('-01') ? '' : '-01'));
+      return dateB.getTime() - dateA.getTime();
+    } catch (error) {
+      return 0;
+    }
+  });
 
   if (loading) {
     return (
@@ -535,7 +701,7 @@ const BillingServicesReport: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Mês/Ano Referência</TableHead>
+                  <TableHead>Mês Referência</TableHead>
                   <TableHead>Simples C/Imagem</TableHead>
                   <TableHead>Simples S/Imagem</TableHead>
                   <TableHead>Seção</TableHead>
