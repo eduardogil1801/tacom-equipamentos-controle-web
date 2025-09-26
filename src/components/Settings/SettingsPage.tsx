@@ -9,13 +9,114 @@ import {
   Wrench, 
   Package,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  MapPin,
+  FileText,
+  Shield
 } from 'lucide-react';
 import MovementTypeManager from '@/components/Settings/MovementTypeManager';
-// Importar outros componentes de configuração conforme necessário
+
+// Componentes placeholder para as outras abas
+const EstadosManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <MapPin className="h-6 w-6" />
+        Gerenciar Estados
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Gerenciamento de estados em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
+
+const TiposEquipamentoManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <Package className="h-6 w-6" />
+        Tipos de Equipamento
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Configuração de tipos de equipamento em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
+
+const EmpresasManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <Building2 className="h-6 w-6" />
+        Empresas
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Configuração de empresas em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
+
+const ManutencaoManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <Wrench className="h-6 w-6" />
+        Manutenção
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Configuração de manutenção em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
+
+const UsuariosManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <Users className="h-6 w-6" />
+        Gerenciamento de Usuários
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Gerenciamento de usuários em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
+
+const PermissoesManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <Shield className="h-6 w-6" />
+        Gerenciamento de Permissões
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Gerenciamento de permissões em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
+
+const RelatoriosManager = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-3">
+        <FileText className="h-6 w-6" />
+        Permissões Específicas de Relatórios
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p className="text-gray-500">Configuração de relatórios em desenvolvimento...</p>
+    </CardContent>
+  </Card>
+);
 
 const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('movement-types');
+  const [activeTab, setActiveTab] = useState('tipos-movimentacao');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -25,30 +126,46 @@ const SettingsPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="movement-types" className="flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
-            Tipos de Movimentação
+        <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsTrigger value="estados" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Estados
           </TabsTrigger>
-          <TabsTrigger value="equipment-types" className="flex items-center gap-2">
+          <TabsTrigger value="tipos-equipamento" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Tipos de Equipamento
           </TabsTrigger>
-          <TabsTrigger value="companies" className="flex items-center gap-2">
+          <TabsTrigger value="tipos-movimentacao" className="flex items-center gap-2">
+            <Wrench className="h-4 w-4" />
+            Tipos de Movimentação
+          </TabsTrigger>
+          <TabsTrigger value="empresas" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Empresas
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-2">
+          <TabsTrigger value="manutencao" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Manutenção
+          </TabsTrigger>
+          <TabsTrigger value="usuarios" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Usuários
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Sistema
+          <TabsTrigger value="permissoes" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Permissões
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="movement-types" className="space-y-6">
+        <TabsContent value="estados" className="space-y-6">
+          <EstadosManager />
+        </TabsContent>
+
+        <TabsContent value="tipos-equipamento" className="space-y-6">
+          <TiposEquipamentoManager />
+        </TabsContent>
+
+        <TabsContent value="tipos-movimentacao" className="space-y-6">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -79,64 +196,23 @@ const SettingsPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="equipment-types" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Package className="h-6 w-6" />
-                Tipos de Equipamento
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Componente para gerenciar tipos de equipamento */}
-              <p className="text-gray-500">Configuração de tipos de equipamento em desenvolvimento...</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="empresas" className="space-y-6">
+          <EmpresasManager />
         </TabsContent>
 
-        <TabsContent value="companies" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Building2 className="h-6 w-6" />
-                Empresas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Componente para gerenciar empresas */}
-              <p className="text-gray-500">Configuração de empresas em desenvolvimento...</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="manutencao" className="space-y-6">
+          <ManutencaoManager />
         </TabsContent>
 
-        <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Users className="h-6 w-6" />
-                Usuários
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Componente para gerenciar usuários */}
-              <p className="text-gray-500">Configuração de usuários em desenvolvimento...</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="usuarios" className="space-y-6">
+          <UsuariosManager />
         </TabsContent>
 
-        <TabsContent value="system" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Settings className="h-6 w-6" />
-                Configurações do Sistema
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Outras configurações do sistema */}
-              <p className="text-gray-500">Configurações gerais do sistema em desenvolvimento...</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="permissoes" className="space-y-6">
+          <PermissoesManager />
+          
+          {/* Separar em uma seção própria para relatórios */}
+          <RelatoriosManager />
         </TabsContent>
       </Tabs>
     </div>
