@@ -8,7 +8,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useHybridAuth';
 import { Plus, Edit, Trash2, Download, Shield } from 'lucide-react';
-import { checkPermission } from '@/utils/permissions';
 
 interface FleetData {
   id: string;
@@ -28,7 +27,7 @@ interface FleetData {
 }
 
 const FleetManagement: React.FC = () => {
-  const { user } = useAuth();
+  const { user, checkPermission } = useAuth();
   const [fleetData, setFleetData] = useState<FleetData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
