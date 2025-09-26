@@ -123,88 +123,100 @@ export type Database = {
           updated_at?: string
           usuario_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "configuracoes_usuario_id_fkey"
-            columns: ["usuario_id"]
-            isOneToOne: false
-            referencedRelation: "usuarios"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       empresas: {
         Row: {
-          ativo: boolean | null
+          cnpj: string | null
+          contact: string | null
+          cor_primaria: string | null
+          cor_secundaria: string | null
           created_at: string
-          email: string | null
-          endereco: string | null
+          estado: string | null
+          estado_id: string | null
           id: string
-          nome: string
+          name: string
           telefone: string | null
           updated_at: string
         }
         Insert: {
-          ativo?: boolean | null
+          cnpj?: string | null
+          contact?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
-          email?: string | null
-          endereco?: string | null
+          estado?: string | null
+          estado_id?: string | null
           id?: string
-          nome: string
+          name: string
           telefone?: string | null
           updated_at?: string
         }
         Update: {
-          ativo?: boolean | null
+          cnpj?: string | null
+          contact?: string | null
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
-          email?: string | null
-          endereco?: string | null
+          estado?: string | null
+          estado_id?: string | null
           id?: string
-          nome?: string
+          name?: string
           telefone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "empresas_estado_id_fkey"
+            columns: ["estado_id"]
+            isOneToOne: false
+            referencedRelation: "estados"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       equipamentos: {
         Row: {
-          created_at: string
+          at_criado: string
+          at_update: string
+          data_entrada: string
           data_saida: string | null
-          empresa_atual: string | null
+          em_manutencao: boolean | null
+          estado: string | null
           id: string
-          id_empresa: string | null
+          id_empresa: string
           modelo: string | null
           numero_serie: string
-          observacoes: string | null
           status: string | null
-          tipo: string | null
-          updated_at: string
+          tipo: string
         }
         Insert: {
-          created_at?: string
+          at_criado?: string
+          at_update?: string
+          data_entrada: string
           data_saida?: string | null
-          empresa_atual?: string | null
+          em_manutencao?: boolean | null
+          estado?: string | null
           id?: string
-          id_empresa?: string | null
+          id_empresa: string
           modelo?: string | null
           numero_serie: string
-          observacoes?: string | null
           status?: string | null
-          tipo?: string | null
-          updated_at?: string
+          tipo: string
         }
         Update: {
-          created_at?: string
+          at_criado?: string
+          at_update?: string
+          data_entrada?: string
           data_saida?: string | null
-          empresa_atual?: string | null
+          em_manutencao?: boolean | null
+          estado?: string | null
           id?: string
-          id_empresa?: string | null
+          id_empresa?: string
           modelo?: string | null
           numero_serie?: string
-          observacoes?: string | null
           status?: string | null
-          tipo?: string | null
-          updated_at?: string
+          tipo?: string
         }
         Relationships: [
           {
@@ -218,25 +230,22 @@ export type Database = {
       }
       estados: {
         Row: {
-          codigo: string
-          created_at: string
+          ativo: boolean | null
+          created_at: string | null
           id: string
           nome: string
-          pais: string | null
         }
         Insert: {
-          codigo: string
-          created_at?: string
+          ativo?: boolean | null
+          created_at?: string | null
           id?: string
           nome: string
-          pais?: string | null
         }
         Update: {
-          codigo?: string
-          created_at?: string
+          ativo?: boolean | null
+          created_at?: string | null
           id?: string
           nome?: string
-          pais?: string | null
         }
         Relationships: []
       }
@@ -362,8 +371,6 @@ export type Database = {
           id_equipamento: string | null
           observacoes: string | null
           tipo_manutencao_id: string | null
-          defeito_reclamado_id: string | null    // NOVO CAMPO
-          defeito_encontrado_id: string | null   // NOVO CAMPO
           tipo_movimento: string
           usuario_responsavel: string | null
         }
@@ -375,8 +382,6 @@ export type Database = {
           id_equipamento?: string | null
           observacoes?: string | null
           tipo_manutencao_id?: string | null
-          defeito_reclamado_id?: string | null   // NOVO CAMPO
-          defeito_encontrado_id?: string | null  // NOVO CAMPO
           tipo_movimento: string
           usuario_responsavel?: string | null
         }
@@ -388,8 +393,6 @@ export type Database = {
           id_equipamento?: string | null
           observacoes?: string | null
           tipo_manutencao_id?: string | null
-          defeito_reclamado_id?: string | null   // NOVO CAMPO
-          defeito_encontrado_id?: string | null  // NOVO CAMPO
           tipo_movimento?: string
           usuario_responsavel?: string | null
         }
@@ -404,20 +407,6 @@ export type Database = {
           {
             foreignKeyName: "movimentacoes_tipo_manutencao_id_fkey"
             columns: ["tipo_manutencao_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_manutencao"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "movimentacoes_defeito_reclamado_id_fkey"    // NOVO RELACIONAMENTO
-            columns: ["defeito_reclamado_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_manutencao"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "movimentacoes_defeito_encontrado_id_fkey"   // NOVO RELACIONAMENTO
-            columns: ["defeito_encontrado_id"]
             isOneToOne: false
             referencedRelation: "tipos_manutencao"
             referencedColumns: ["id"]
@@ -452,7 +441,6 @@ export type Database = {
           created_at: string
           descricao: string
           id: string
-          categoria_defeito: 'defeito_reclamado' | 'defeito_encontrado' | 'outro' | null  // NOVO CAMPO
         }
         Insert: {
           ativo?: boolean | null
@@ -460,7 +448,6 @@ export type Database = {
           created_at?: string
           descricao: string
           id?: string
-          categoria_defeito?: 'defeito_reclamado' | 'defeito_encontrado' | 'outro' | null  // NOVO CAMPO
         }
         Update: {
           ativo?: boolean | null
@@ -468,7 +455,6 @@ export type Database = {
           created_at?: string
           descricao?: string
           id?: string
-          categoria_defeito?: 'defeito_reclamado' | 'defeito_encontrado' | 'outro' | null  // NOVO CAMPO
         }
         Relationships: []
       }
