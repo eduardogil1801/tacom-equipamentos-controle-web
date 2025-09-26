@@ -7,6 +7,7 @@ interface Company {
   id: string;
   name: string;
   cnpj?: string;
+  cod_operadora?: string; // Novo campo
 }
 
 interface FleetData {
@@ -39,7 +40,7 @@ const FleetFormFields: React.FC<FleetFormFieldsProps> = ({
   onInputChange,
   onLoadPreviousData
 }) => {
-  // Calcular automaticamente o campo Nuvem
+  // Calcular automaticamente o campo Nuvem (Total Bilhetagem)
   const calculateNuvem = () => {
     return formData.simples_sem_imagem + formData.simples_com_imagem + formData.secao;
   };
@@ -141,7 +142,7 @@ const FleetFormFields: React.FC<FleetFormFieldsProps> = ({
       </div>
 
       {/* Campos reorganizados conforme solicitação */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Simples S/Image */}
         <div className="space-y-2">
           <Label htmlFor="simples_sem_imagem">Simples S/Image</Label>
@@ -180,15 +181,29 @@ const FleetFormFields: React.FC<FleetFormFieldsProps> = ({
 
         {/* Nuvem (calculado automaticamente) */}
         <div className="space-y-2">
-          <Label htmlFor="nuvem">Nuvem (Total Bilhetagem)</Label>
+          <Label htmlFor="nuvem">Nuvem</Label>
           <Input
             id="nuvem"
             type="number"
             min="0"
             value={formData.nuvem}
             readOnly
-            className="bg-gray-100 font-medium text-blue-600"
+            className="bg-blue-50 border-blue-200 font-medium text-blue-700"
             title="Este campo é calculado automaticamente: Simples S/Image + Simples C/Image + Seção"
+          />
+        </div>
+
+        {/* Total Bilhetagem (igual ao Nuvem) */}
+        <div className="space-y-2">
+          <Label htmlFor="total_bilhetagem">Total Bilhetagem</Label>
+          <Input
+            id="total_bilhetagem"
+            type="number"
+            min="0"
+            value={formData.nuvem} // Mesmo valor da Nuvem
+            readOnly
+            className="bg-green-50 border-green-200 font-medium text-green-700"
+            title="Total Bilhetagem = Nuvem (Simples S/Image + Simples C/Image + Seção)"
           />
         </div>
       </div>

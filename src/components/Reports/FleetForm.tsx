@@ -10,6 +10,7 @@ interface Company {
   id: string;
   name: string;
   cnpj?: string;
+  cod_operadora?: string; // Novo campo
 }
 
 interface FleetData {
@@ -58,7 +59,7 @@ const FleetForm = () => {
     try {
       const { data, error } = await supabase
         .from('empresas')
-        .select('id, name, cnpj')
+        .select('id, name, cnpj, cod_operadora') // Incluir cod_operadora
         .order('name');
 
       if (error) throw error;
@@ -86,7 +87,7 @@ const FleetForm = () => {
       // Buscar informações da empresa selecionada no banco de dados
       const { data: companyData, error } = await supabase
         .from('empresas')
-        .select('id, name, cnpj')
+        .select('id, name, cnpj, cod_operadora') // Incluir cod_operadora
         .eq('name', companyName)
         .single();
 
@@ -102,8 +103,17 @@ const FleetForm = () => {
 
       console.log('Dados da empresa:', companyData);
 
-      // Usar o ID da empresa como código da operadora
-      const codOperadora = companyData.id || '';
+      // Usar o cod_operadora da empresa ao invés do ID
+      const codOperadora = companyData.cod_operadora || companyData.id || '';
+      
+      if (!companyData.cod_operadora) {
+        console.warn('Empresa não possui cod_operadora, usando ID como fallback');
+        toast({
+          title: "Aviso",
+          description: "Esta empresa não possui código de operadora cadastrado. Usando ID temporariamente.",
+          variant: "default",
+        });
+      }
       
       setFormData(prev => ({ 
         ...prev, 
