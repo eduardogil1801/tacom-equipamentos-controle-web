@@ -1,0 +1,411 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Edit, Trash, Save, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface Categoria {
+  id?: string;
+  codigo: string;
+  nome: string;
+  descricao: string;
+  cor: string;
+  ativo: boolean;
+}
+
+const CategoriasManutencaoManager: React.FC = () => {
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
+  const [formData, setFormData] = useState<Categoria>({
+    codigo: '',
+    nome: '',
+    descricao: '',
+    cor: '#6366f1',
+    ativo: true
+  });
+
+  useEffect(() => {
+    loadCategorias();
+  }, []);
+
+  const loadCategorias = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('categorias_manutencao')
+        .select('*')
+        .order('codigo');
+
+      if (error) throw error;
+      setCategorias(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar categorias de manutenção",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.codigo || !formData.nome) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (editingCategoria && editingCategoria.id) {
+        const { error } = await supabase
+          .from('categorias_manutencao')
+          .update({
+            codigo: formData.codigo,
+            nome: formData.nome,
+            descricao: formData.descricao,
+            cor: formData.cor,
+            ativo: formData.ativo,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingCategoria.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Categoria atualizada com sucesso!",
+        });
+      } else {
+        const { error } = await supabase
+          .from('categorias_manutencao')
+          .insert([{
+            codigo: formData.codigo,
+            nome: formData.nome,
+            descricao: formData.descricao,
+            cor: formData.cor,
+            ativo: formData.ativo
+          }]);
+
+        if (error) throw error;
+
+        toast({
+          title: "Sucesso",
+          description: "Categoria criada com sucesso!",
+        });
+      }
+
+      resetForm();
+      loadCategorias();
+    } catch (error: any) {
+      console.error('Erro ao salvar categoria:', error);
+      
+      if (error?.code === '23505') {
+        toast({
+          title: "Erro",
+          description: "Já existe uma categoria com este código.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao salvar categoria",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleEdit = (categoria: Categoria) => {
+    setEditingCategoria(categoria);
+    setFormData(categoria);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta categoria?')) {
+      return;
+    }
+
+    try {
+      // Verificar se a categoria está em uso
+      const { data: tipos, error: checkError } = await supabase
+        .from('tipos_manutencao')
+        .select('id')
+        .eq('categoria_id', id)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (tipos && tipos.length > 0) {
+        toast({
+          title: "Erro",
+          description: "Não é possível excluir esta categoria pois ela está sendo usada em tipos de manutenção.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('categorias_manutencao')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Categoria excluída com sucesso!",
+      });
+      
+      loadCategorias();
+    } catch (error) {
+      console.error('Erro ao excluir categoria:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir categoria",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      codigo: '',
+      nome: '',
+      descricao: '',
+      cor: '#6366f1',
+      ativo: true
+    });
+    setEditingCategoria(null);
+    setShowForm(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <div className="text-lg">Carregando categorias...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold">Categorias de Manutenção</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Gerencie as categorias como DR (Defeito Reclamado) e DE (Defeito Encontrado)
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Nova Categoria
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              {editingCategoria ? 'Editar Categoria' : 'Nova Categoria'}
+              <Button variant="ghost" size="sm" onClick={resetForm}>
+                <X className="h-4 w-4" />
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="ativo"
+                  checked={formData.ativo}
+                  onChange={(e) => setFormData({...formData, ativo: e.target.checked})}
+                />
+                <Label htmlFor="ativo">Ativo</Label>
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit" className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  {editingCategoria ? 'Atualizar' : 'Salvar'}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Categorias ({categorias.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {categorias.length === 0 ? (
+            <p className="text-center text-gray-500 py-4">
+              Nenhuma categoria cadastrada.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Cor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categorias.map((categoria) => (
+                  <TableRow key={categoria.id}>
+                    <TableCell className="font-mono font-semibold">{categoria.codigo}</TableCell>
+                    <TableCell>{categoria.nome}</TableCell>
+                    <TableCell>{categoria.descricao}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-6 h-6 rounded border"
+                          style={{ backgroundColor: categoria.cor }}
+                        />
+                        <span className="text-xs text-gray-500">{categoria.cor}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={categoria.ativo ? "default" : "secondary"}>
+                        {categoria.ativo ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(categoria)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => categoria.id && handleDelete(categoria.id)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Como usar as categorias</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Badge className="bg-red-500">DR</Badge>
+            <div>
+              <p className="font-semibold">Defeito Reclamado</p>
+              <p className="text-sm text-gray-600">
+                Defeito reportado inicialmente pelo cliente. Aparece no campo "DR - Defeito Reclamado" nas movimentações.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-3">
+            <Badge className="bg-orange-500">DE</Badge>
+            <div>
+              <p className="font-semibold">Defeito Encontrado</p>
+              <p className="text-sm text-gray-600">
+                Defeito realmente identificado durante a manutenção. Aparece no campo "DE - Defeito Encontrado" nas movimentações.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default CategoriasManutencaoManager;="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="codigo">Código *</Label>
+                  <Input
+                    id="codigo"
+                    value={formData.codigo}
+                    onChange={(e) => setFormData({...formData, codigo: e.target.value.toUpperCase()})}
+                    placeholder="Ex: DR, DE"
+                    maxLength={10}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nome">Nome *</Label>
+                  <Input
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                    placeholder="Ex: Defeito Reclamado"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="cor">Cor</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="cor"
+                      type="color"
+                      value={formData.cor}
+                      onChange={(e) => setFormData({...formData, cor: e.target.value})}
+                      className="w-20 h-10"
+                    />
+                    <Input
+                      value={formData.cor}
+                      onChange={(e) => setFormData({...formData, cor: e.target.value})}
+                      placeholder="#6366f1"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="descricao">Descrição</Label>
+                <Input
+                  id="descricao"
+                  value={formData.descricao}
+                  onChange={(e) => setFormData({...formData, descricao: e.target.value})}
+                  placeholder="Ex: Defeito reportado inicialmente pelo cliente"
+                />
+              </div>
+
+              <div className
