@@ -15,7 +15,6 @@ interface MaintenanceType {
   id: string;
   descricao: string;
   codigo: string;
-  categoria_id?: string;
 }
 
 interface EquipmentType {
@@ -30,8 +29,8 @@ interface MovementData {
   empresa_destino: string;
   empresa_origem?: string;
   tipo_manutencao_id: string;
-  defeito_reclamado_id: string;  // DR
-  defeito_encontrado_id: string; // DE
+  defeito_reclamado_id: string;
+  defeito_encontrado_id: string;
   tipo_equipamento: string;
   modelo_equipamento: string;
   status_equipamento: string;
@@ -42,7 +41,6 @@ interface MovementFormFieldsProps {
   companies: Company[];
   maintenanceTypes: MaintenanceType[];
   equipmentTypes: EquipmentType[];
-  categorias: Array<{id: string; codigo: string; nome: string; cor: string}>;
   isDestinationTacom: boolean;
   selectedEquipments: any[];
   onInputChange: (field: string, value: string) => void;
@@ -55,7 +53,6 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   companies,
   maintenanceTypes = [],
   equipmentTypes,
-  categorias = [],
   isDestinationTacom,
   selectedEquipments,
   onInputChange,
@@ -63,20 +60,16 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   onRemoveEquipment
 }) => {
   
-  // Encontrar categoria DR e DE
-  const categoriaDR = categorias.find(c => c.codigo === 'DR');
-  const categoriaDE = categorias.find(c => c.codigo === 'DE');
-
-  // Filtrar defeitos por categoria
-  const defeitosReclamados = maintenanceTypes.filter(
-    type => type.categoria_id === categoriaDR?.id
+  // Filtrar por código DR e DE
+  const defeitosReclamados = maintenanceTypes.filter(type => 
+    type.codigo.toUpperCase().startsWith('DR')
   );
   
-  const defeitosEncontrados = maintenanceTypes.filter(
-    type => type.categoria_id === categoriaDE?.id
+  const defeitosEncontrados = maintenanceTypes.filter(type => 
+    type.codigo.toUpperCase().startsWith('DE') || type.codigo.toUpperCase().startsWith('ER')
   );
 
-  // Verificar se deve mostrar campos de defeitos (para manutenção e relacionados)
+  // Verificar se deve mostrar campos de defeitos
   const shouldShowDefeitosFields = 
     movementData.tipo_movimento === 'manutencao' || 
     movementData.tipo_movimento === 'movimentacao_interna' || 
@@ -100,7 +93,6 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
     return companies;
   };
 
-  // Auto-preencher campos para movimentação interna e envio manutenção
   React.useEffect(() => {
     if (movementData.tipo_movimento === 'movimentacao_interna') {
       const tacomCompany = companies.find(c => c.name === 'TACOM SISTEMAS POA');
@@ -214,9 +206,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
                     value={company.id}
                     className="text-sm"
                   >
-                    <div className="w-full">
-                      {company.name}
-                    </div>
+                    {company.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -237,83 +227,76 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             />
           </div>
 
-          {/* NOVOS CAMPOS COM CATEGORIAS */}
+          {/* CAMPOS DR e DE - Corrigidos sem value vazio */}
           {shouldShowDefeitosFields && (
-            <div className="space-y-4">
-              {/* DR - Defeito Reclamado */}
+            <>
               <div>
-                <Label 
-                  htmlFor="defeito_reclamado_id"
-                  className="flex items-center gap-2"
-                >
-                  <span 
-                    className="inline-block w-3 h-3 rounded-full"
-                    style={{ backgroundColor: categoriaDR?.cor || '#ef4444' }}
-                  />
-                  DR - Defeito Reclamado
-                  {shouldShowDefeitosFields && ' *'}
+                <Label htmlFor="defeito_reclamado_id" className="text-red-600 font-semibold">
+                  DR - Defeito Reclamado *
                 </Label>
                 <Select
-                  value={movementData.defeito_reclamado_id}
-                  onValueChange={(value) => onInputChange('defeito_reclamado_id', value)}
+                  value={movementData.defeito_reclamado_id || 'NONE'}
+                  onValueChange={(value) => onInputChange('defeito_reclamado_id', value === 'NONE' ? '' : value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-red-300">
                     <SelectValue placeholder="Selecione o defeito reclamado" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="NONE">-- Nenhum --</SelectItem>
                     {defeitosReclamados.map((type) => (
                       <SelectItem key={type.id} value={type.id}>
                         {type.codigo} - {type.descricao}
                       </SelectItem>
                     ))}
+                    {defeitosReclamados.length === 0 && (
+                      <SelectItem value="NO_DATA" disabled>
+                        Nenhum defeito DR cadastrado
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-red-600 mt-1">
                   Defeito reportado inicialmente pelo cliente
                 </p>
               </div>
 
-              {/* DE - Defeito Encontrado */}
               <div>
-                <Label 
-                  htmlFor="defeito_encontrado_id"
-                  className="flex items-center gap-2"
-                >
-                  <span 
-                    className="inline-block w-3 h-3 rounded-full"
-                    style={{ backgroundColor: categoriaDE?.cor || '#f97316' }}
-                  />
+                <Label htmlFor="defeito_encontrado_id" className="text-orange-600 font-semibold">
                   DE - Defeito Encontrado
                 </Label>
                 <Select
-                  value={movementData.defeito_encontrado_id}
-                  onValueChange={(value) => onInputChange('defeito_encontrado_id', value)}
+                  value={movementData.defeito_encontrado_id || 'NONE'}
+                  onValueChange={(value) => onInputChange('defeito_encontrado_id', value === 'NONE' ? '' : value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-orange-300">
                     <SelectValue placeholder="Selecione o defeito encontrado" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="NONE">-- Nenhum --</SelectItem>
                     {defeitosEncontrados.map((type) => (
                       <SelectItem key={type.id} value={type.id}>
                         {type.codigo} - {type.descricao}
                       </SelectItem>
                     ))}
+                    {defeitosEncontrados.length === 0 && (
+                      <SelectItem value="NO_DATA" disabled>
+                        Nenhum defeito DE/ER cadastrado
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-600 mt-1">
+                <p className="text-xs text-orange-600 mt-1">
                   Defeito realmente identificado durante a manutenção
                 </p>
               </div>
-            </div>
+            </>
           )}
 
           <div>
             <Label htmlFor="modelo_equipamento">Modelo do Equipamento</Label>
             <Input
               id="modelo_equipamento"
-              value={movementData.modelo_equipamento}
+              value={movementData.modelo_equipamento || ''}
               onChange={(e) => onInputChange('modelo_equipamento', e.target.value)}
               placeholder="Ex: Com DVR, Sem DVR, etc."
             />
@@ -322,7 +305,6 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             </p>
           </div>
 
-          {/* Campo de status */}
           {(isDestinationTacom || 
             movementData.tipo_movimento === 'movimentacao_interna' || 
             movementData.tipo_movimento === 'envio_manutencao' ||
