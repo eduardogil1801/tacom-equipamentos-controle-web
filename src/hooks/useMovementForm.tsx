@@ -206,9 +206,11 @@ export const useMovementForm = () => {
 
   const updateOriginCompany = (equipments: Equipment[]) => {
     if (equipments.length > 0 && equipments[0].id_empresa) {
+      // Buscar o nome da empresa pelo ID
+      const company = companies.find(c => c.id === equipments[0].id_empresa);
       setMovementData(prev => ({
         ...prev,
-        empresa_origem: equipments[0].id_empresa
+        empresa_origem: company?.name || ''
       }));
     }
   };
