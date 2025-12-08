@@ -521,6 +521,7 @@ export type Database = {
         Row: {
           ativo: boolean | null
           categoria: string | null
+          categoria_defeito: string | null
           categoria_id: string | null
           codigo: string
           created_at: string
@@ -530,6 +531,7 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           categoria?: string | null
+          categoria_defeito?: string | null
           categoria_id?: string | null
           codigo: string
           created_at?: string
@@ -539,6 +541,7 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           categoria?: string | null
+          categoria_defeito?: string | null
           categoria_id?: string | null
           codigo?: string
           created_at?: string
