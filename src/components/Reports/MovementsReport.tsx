@@ -82,7 +82,7 @@ const MovementsReport: React.FC = () => {
               name
             )
           ),
-          tipos_manutencao (
+          tipos_manutencao!movimentacoes_tipo_manutencao_id_fkey (
             codigo,
             descricao
           )
@@ -90,7 +90,7 @@ const MovementsReport: React.FC = () => {
         .order('data_movimento', { ascending: false });
 
       if (movementsError) throw movementsError;
-      setMovements(movementsData || []);
+      setMovements((movementsData || []) as Movement[]);
 
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
