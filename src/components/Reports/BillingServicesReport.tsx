@@ -295,8 +295,8 @@ const BillingServicesReport: React.FC = () => {
     // Implementar geração de Excel usando SheetJS
     const XLSX = await import('xlsx');
     
-    // Preparar dados para o Excel
-    const excelData = data.map(item => {
+    // Preparar dados para o Excel com tipo any para permitir linha vazia
+    const excelData: Record<string, string | number>[] = data.map(item => {
       const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
       
       return {
@@ -306,7 +306,7 @@ const BillingServicesReport: React.FC = () => {
         'Simples S/Image': item.simples_sem_imagem || 0,
         'Seção': item.secao || 0,
         'Nuvem': nuvemTotal,
-        'Total Bilhetagem': nuvemTotal, // Total Bilhetagem = Nuvem
+        'Total Bilhetagem': nuvemTotal,
         'CITGIS': item.citgis || 0,
         'Buszoom': item.buszoom || 0,
         'Telemetria': item.telemetria || 0
@@ -342,14 +342,14 @@ const BillingServicesReport: React.FC = () => {
       excelData.push({
         'Empresa': '',
         'Mês Referência': '',
-        'Simples C/Image': '',
-        'Simples S/Image': '',
-        'Seção': '',
-        'Nuvem': '',
-        'Total Bilhetagem': '',
-        'CITGIS': '',
-        'Buszoom': '',
-        'Telemetria': ''
+        'Simples C/Image': 0,
+        'Simples S/Image': 0,
+        'Seção': 0,
+        'Nuvem': 0,
+        'Total Bilhetagem': 0,
+        'CITGIS': 0,
+        'Buszoom': 0,
+        'Telemetria': 0
       });
 
       // Linha de total
@@ -360,7 +360,7 @@ const BillingServicesReport: React.FC = () => {
         'Simples S/Image': totalsGeral.simplesSemImage,
         'Seção': totalsGeral.secao,
         'Nuvem': totalsGeral.nuvem,
-        'Total Bilhetagem': totalsGeral.nuvem, // Total Bilhetagem = Nuvem
+        'Total Bilhetagem': totalsGeral.nuvem,
         'CITGIS': totalsGeral.citgis,
         'Buszoom': totalsGeral.buszoom,
         'Telemetria': totalsGeral.telemetria
@@ -384,13 +384,13 @@ const BillingServicesReport: React.FC = () => {
       // Criar novo documento PDF
       const doc = new jsPDF();
       
-      // Configurar cores
-      const primaryColor = [41, 128, 185]; // Azul
-      const secondaryColor = [52, 73, 94]; // Cinza escuro
-      const accentColor = [231, 76, 60]; // Vermelho
+      // Configurar cores como tuplas tipadas
+      const primaryColor: [number, number, number] = [41, 128, 185];
+      const secondaryColor: [number, number, number] = [52, 73, 94];
+      const accentColor: [number, number, number] = [231, 76, 60];
       
       // Header do documento
-      doc.setFillColor(...primaryColor);
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(0, 0, 210, 25, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -399,7 +399,7 @@ const BillingServicesReport: React.FC = () => {
       
       // Informações do filtro
       let yPosition = 35;
-      doc.setTextColor(...secondaryColor);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
       doc.setFontSize(10);
       
       if (exportFilters.empresa && exportFilters.empresa !== 'all') {
@@ -424,7 +424,7 @@ const BillingServicesReport: React.FC = () => {
       let xPosition = 15;
       
       // Desenhar cabeçalho
-      doc.setFillColor(...primaryColor);
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(15, yPosition, 180, 8, 'F');
       
       doc.setTextColor(255, 255, 255);
@@ -438,7 +438,7 @@ const BillingServicesReport: React.FC = () => {
       yPosition += 8;
       
       // Dados da tabela
-      doc.setTextColor(...secondaryColor);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
       data.forEach((item, index) => {
         if (yPosition > 270) {
           doc.addPage();
@@ -501,7 +501,7 @@ const BillingServicesReport: React.FC = () => {
         });
         
         // Linha de total
-        doc.setFillColor(...accentColor);
+        doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
         doc.rect(15, yPosition, 180, 8, 'F');
         
         doc.setTextColor(255, 255, 255);
@@ -514,7 +514,7 @@ const BillingServicesReport: React.FC = () => {
           totals.simplesSemImage.toString(),
           totals.secao.toString(),
           totals.nuvem.toString(),
-          totals.nuvem.toString(), // Total Bilhetagem = Nuvem
+          totals.nuvem.toString(),
           totals.citgis.toString(),
           totals.buszoom.toString(),
           totals.telemetria.toString()
@@ -528,10 +528,10 @@ const BillingServicesReport: React.FC = () => {
       }
       
       // Footer
-      const pageCount = doc.internal.getNumberOfPages();
+      const pageCount = (doc as any).internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setTextColor(...secondaryColor);
+        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
         doc.setFontSize(8);
         doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
         doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 20, 290);

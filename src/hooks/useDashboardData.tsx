@@ -137,7 +137,7 @@ export const useDashboardData = () => {
         .from('movimentacoes')
         .select(`
           *,
-          tipos_manutencao (
+          tipos_manutencao!movimentacoes_tipo_manutencao_id_fkey (
             codigo,
             descricao
           )
@@ -149,7 +149,7 @@ export const useDashboardData = () => {
         throw maintenanceError;
       }
       console.log('Maintenance movements loaded:', maintenanceData?.length);
-      setMaintenanceMovements(maintenanceData || []);
+      setMaintenanceMovements((maintenanceData || []) as MaintenanceMovement[]);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {

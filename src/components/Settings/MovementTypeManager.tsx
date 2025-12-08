@@ -25,7 +25,7 @@ interface MovementType {
   id?: string;
   codigo: string;
   descricao: string;
-  categoria_defeito?: 'defeito_reclamado' | 'defeito_encontrado' | 'outro';
+  categoria_defeito?: string | null;
   ativo?: boolean;
 }
 
