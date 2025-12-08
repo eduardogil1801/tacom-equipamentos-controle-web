@@ -89,18 +89,12 @@ export const useMovementForm = () => {
     try {
       const { data, error } = await supabase
         .from('empresas')
-        .select('id, nome')
-        .eq('ativo', true)
-        .order('nome');
+        .select('id, name')
+        .order('name');
 
       if (error) throw error;
       
-      const companiesData = (data || []).map(company => ({
-        id: company.id,
-        name: company.nome
-      }));
-      
-      setCompanies(companiesData);
+      setCompanies((data || []) as Company[]);
     } catch (error) {
       console.error('Erro ao carregar empresas:', error);
       toast({
@@ -179,7 +173,7 @@ export const useMovementForm = () => {
   const loadEquipmentTypes = async () => {
     try {
       const { data, error } = await supabase
-        .from('tipos_equipamentos')
+        .from('tipos_equipamento')
         .select('id, nome')
         .eq('ativo', true)
         .order('nome');
