@@ -300,16 +300,13 @@ export const useMovementForm = () => {
 
         const updateData: any = {};
 
-        if (movementData.tipo_movimento === 'saida' || 
-            movementData.tipo_movimento === 'manutencao') {
-          // Buscar o ID da empresa destino pelo nome
-          const destCompany = companies.find(c => c.name === movementData.empresa_destino);
-          updateData.id_empresa = destCompany?.id || movementData.empresa_destino;
-        }
-
-        if (movementData.tipo_movimento === 'entrada') {
-          const destCompany = companies.find(c => c.name === movementData.empresa_destino);
-          updateData.id_empresa = destCompany?.id || movementData.empresa_destino;
+        // Atualizar empresa destino para qualquer tipo de movimentação
+        if (movementData.empresa_destino) {
+          // Buscar o ID da empresa destino pelo nome ou usar diretamente se for ID
+          const destCompany = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
+          if (destCompany) {
+            updateData.id_empresa = destCompany.id;
+          }
         }
 
         if (movementData.tipo_equipamento) {
