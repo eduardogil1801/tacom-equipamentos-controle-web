@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useHybridAuth';
-import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,6 +10,14 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type Movement = {
   id: string;
@@ -19,12 +26,30 @@ type Movement = {
   data_criacao: string;
   observacoes?: string;
   usuario_responsavel?: string;
+  defeito_reclamado_id?: string;
+  defeito_encontrado_id?: string;
+  tipo_manutencao_id?: string;
   equipamentos?: {
     numero_serie: string;
     tipo: string;
     empresas?: {
       name: string;
     };
+  };
+  defeito_reclamado?: {
+    codigo: string;
+    descricao: string;
+    categoria_defeito?: string;
+  };
+  defeito_encontrado?: {
+    codigo: string;
+    descricao: string;
+    categoria_defeito?: string;
+  };
+  tipo_manutencao?: {
+    codigo: string;
+    descricao: string;
+    categoria_defeito?: string;
   };
 };
 
@@ -48,6 +73,21 @@ const EquipmentMovement = () => {
             empresas (
               name
             )
+          ),
+          defeito_reclamado:tipos_manutencao!movimentacoes_defeito_reclamado_id_fkey (
+            codigo,
+            descricao,
+            categoria_defeito
+          ),
+          defeito_encontrado:tipos_manutencao!movimentacoes_defeito_encontrado_id_fkey (
+            codigo,
+            descricao,
+            categoria_defeito
+          ),
+          tipo_manutencao:tipos_manutencao!movimentacoes_tipo_manutencao_id_fkey (
+            codigo,
+            descricao,
+            categoria_defeito
           )
         `)
         .order('data_criacao', { ascending: false })
@@ -77,16 +117,16 @@ const EquipmentMovement = () => {
     fetchMovements();
   }, []);
 
-// Extrair códigos de equipamentos únicos
+  // Extrair códigos de equipamentos únicos
   const equipmentCodes = useMemo(() => {
     const codes = movements.map(m => m.equipamentos?.numero_serie).filter(Boolean) as string[];
     return [...new Set(codes)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [movements]);
   
-  // Filtrar códigos baseado na busca (só mostra se digitar código exato ou parcial)
+  // Filtrar códigos baseado na busca
   const [searchTerm, setSearchTerm] = useState('');
   const filteredCodes = useMemo(() => {
-    if (!searchTerm) return equipmentCodes.slice(0, 50); // Limitar quando sem busca
+    if (!searchTerm) return [];
     return equipmentCodes.filter(code => code.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [equipmentCodes, searchTerm]);
 
@@ -115,6 +155,23 @@ const EquipmentMovement = () => {
     setFilteredMovements(filtered);
   }, [movements, selectedEquipmentCode, selectedEquipmentType]);
 
+  // Função para obter informação de defeito
+  const getDefeitoInfo = (movement: Movement): string => {
+    if (movement.defeito_reclamado?.codigo) {
+      return `DR: ${movement.defeito_reclamado.codigo}`;
+    }
+    if (movement.defeito_encontrado?.codigo) {
+      return `DE: ${movement.defeito_encontrado.codigo}`;
+    }
+    if (movement.tipo_manutencao?.codigo && movement.tipo_manutencao?.categoria_defeito === 'outro') {
+      return `Outro: ${movement.tipo_manutencao.codigo}`;
+    }
+    if (movement.tipo_manutencao?.codigo) {
+      return movement.tipo_manutencao.codigo;
+    }
+    return '-';
+  };
+
   const currentUserName = user ? `${user.name} ${user.surname}` : 'Usuário não logado';
 
   return (
@@ -138,32 +195,39 @@ const EquipmentMovement = () => {
                     role="combobox"
                     className="w-full justify-between"
                   >
-                    {selectedEquipmentCode || "Buscar código..."}
+                    {selectedEquipmentCode || "Digite para buscar..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 z-50 bg-white">
+                <PopoverContent className="w-[300px] p-0 z-50 bg-background">
                   <Command shouldFilter={false}>
                     <CommandInput 
-                      placeholder="Digite o código completo..." 
+                      placeholder="Digite o código..." 
                       value={searchTerm}
                       onValueChange={setSearchTerm}
                     />
                     <CommandList>
-                      <CommandEmpty>Nenhum código encontrado.</CommandEmpty>
+                      {searchTerm.length === 0 && (
+                        <CommandEmpty>Digite para buscar...</CommandEmpty>
+                      )}
+                      {searchTerm.length > 0 && filteredCodes.length === 0 && (
+                        <CommandEmpty>Nenhum código encontrado.</CommandEmpty>
+                      )}
                       <CommandGroup>
-                        <CommandItem
-                          value="todos"
-                          onSelect={() => {
-                            setSelectedEquipmentCode('');
-                            setSelectedEquipmentType('');
-                            setSearchTerm('');
-                            setOpenEquipmentSearch(false);
-                          }}
-                        >
-                          <Check className={cn("mr-2 h-4 w-4", !selectedEquipmentCode ? "opacity-100" : "opacity-0")} />
-                          Todos
-                        </CommandItem>
+                        {selectedEquipmentCode && (
+                          <CommandItem
+                            value="limpar"
+                            onSelect={() => {
+                              setSelectedEquipmentCode('');
+                              setSelectedEquipmentType('');
+                              setSearchTerm('');
+                              setOpenEquipmentSearch(false);
+                            }}
+                          >
+                            <Check className="mr-2 h-4 w-4 opacity-0" />
+                            Limpar filtro
+                          </CommandItem>
+                        )}
                         {filteredCodes.map((code) => (
                           <CommandItem
                             key={code}
@@ -207,31 +271,33 @@ const EquipmentMovement = () => {
         </CardContent>
       </Card>
 
-      <p className="text-sm text-gray-600">Usuário logado: {currentUserName}</p>
+      <p className="text-sm text-muted-foreground">Usuário logado: {currentUserName}</p>
       
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border-b min-w-[180px]">Equipamento</th>
-              <th className="py-2 px-4 border-b min-w-[200px]">Empresa</th>
-              <th className="py-2 px-4 border-b">Tipo Movimento</th>
-              <th className="py-2 px-4 border-b">Data</th>
-              <th className="py-2 px-4 border-b">Responsável</th>
-              <th className="py-2 px-4 border-b">Observações</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[200px]">Equipamento</TableHead>
+              <TableHead className="w-[220px]">Empresa</TableHead>
+              <TableHead className="w-[140px]">Tipo Movimento</TableHead>
+              <TableHead className="w-[120px]">Defeito</TableHead>
+              <TableHead className="w-[150px]">Data</TableHead>
+              <TableHead className="w-[140px]">Responsável</TableHead>
+              <TableHead>Observações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredMovements.map((movement) => (
-              <tr key={movement.id}>
-                <td className="py-2 px-4 border-b min-w-[180px] whitespace-nowrap">
+              <TableRow key={movement.id}>
+                <TableCell className="font-medium">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
-                </td>
-                <td className="py-2 px-4 border-b min-w-[200px]">
+                </TableCell>
+                <TableCell>
                   {movement.equipamentos?.empresas?.name || 'N/A'}
-                </td>
-                <td className="py-2 px-4 border-b whitespace-nowrap">{movement.tipo_movimento}</td>
-                <td className="py-2 px-4 border-b whitespace-nowrap">
+                </TableCell>
+                <TableCell>{movement.tipo_movimento}</TableCell>
+                <TableCell>{getDefeitoInfo(movement)}</TableCell>
+                <TableCell>
                   {new Date(movement.data_criacao).toLocaleString('pt-BR', {
                     day: '2-digit',
                     month: '2-digit', 
@@ -239,16 +305,16 @@ const EquipmentMovement = () => {
                     hour: '2-digit',
                     minute: '2-digit'
                   })}
-                </td>
-                <td className="py-2 px-4 border-b whitespace-nowrap">{movement.usuario_responsavel || 'N/A'}</td>
-                <td className="py-2 px-4 border-b max-w-[300px]">{movement.observacoes || '-'}</td>
-              </tr>
+                </TableCell>
+                <TableCell>{movement.usuario_responsavel || 'N/A'}</TableCell>
+                <TableCell className="max-w-[300px] truncate">{movement.observacoes || '-'}</TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-muted-foreground">
         Exibindo {filteredMovements.length} de {movements.length} registros
       </p>
     </div>
