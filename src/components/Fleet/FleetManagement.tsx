@@ -216,8 +216,11 @@ const FleetManagement: React.FC = () => {
           {/* Atalho para Relatório de Faturamento por Serviço */}
           <Button 
             onClick={() => {
-              // Navegar para relatórios com filtro de billing services
-              window.dispatchEvent(new CustomEvent('navigateToReport', { detail: 'billing-services' }));
+              // Navegar para relatórios com filtro de billing services usando navigate
+              const event = new CustomEvent('navigateToPage', { 
+                detail: { page: 'reports', report: 'billing-services' }
+              });
+              window.dispatchEvent(event);
             }}
             variant="outline"
             className="flex items-center gap-2"

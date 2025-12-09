@@ -134,20 +134,41 @@ const FleetForm: React.FC<FleetFormProps> = ({ editingData, onSaveSuccess }) => 
     try {
       console.log('Empresa selecionada:', companyName);
       
+      // Se estamos em modo de edição e a empresa é a mesma, não buscar novamente
+      if (editingData && editingData.nome_empresa === companyName && formData.cod_operadora) {
+        console.log('Modo edição - mantendo dados existentes');
+        return;
+      }
+      
       // Buscar informações da empresa selecionada no banco de dados
       const { data: companyData, error } = await supabase
         .from('empresas')
-        .select('id, name, cnpj, cod_operadora') // Incluir cod_operadora
+        .select('id, name, cnpj, cod_operadora')
         .eq('name', companyName)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching company data:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao buscar dados da empresa",
-          variant: "destructive",
-        });
+        // Não mostrar erro se estamos em modo de edição
+        if (!editingData) {
+          toast({
+            title: "Erro",
+            description: "Erro ao buscar dados da empresa",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      if (!companyData) {
+        console.log('Empresa não encontrada no banco, usando nome diretamente');
+        // Se empresa não encontrada, manter os dados atuais (útil para edição)
+        if (!editingData) {
+          setFormData(prev => ({ 
+            ...prev, 
+            nome_empresa: companyName
+          }));
+        }
         return;
       }
 
@@ -160,7 +181,7 @@ const FleetForm: React.FC<FleetFormProps> = ({ editingData, onSaveSuccess }) => 
         console.warn('Empresa não possui cod_operadora, usando ID como fallback');
         toast({
           title: "Aviso",
-          description: "Esta empresa não possui código de operadora cadastrado. Usando ID temporariamente.",
+          description: "Esta empresa não possui código de operadora cadastrado.",
           variant: "default",
         });
       }
@@ -173,11 +194,13 @@ const FleetForm: React.FC<FleetFormProps> = ({ editingData, onSaveSuccess }) => 
 
     } catch (error) {
       console.error('Error handling company change:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao processar seleção da empresa",
-        variant: "destructive",
-      });
+      if (!editingData) {
+        toast({
+          title: "Erro",
+          description: "Erro ao processar seleção da empresa",
+          variant: "destructive",
+        });
+      }
     }
   };
 
