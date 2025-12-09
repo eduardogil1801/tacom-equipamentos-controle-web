@@ -77,11 +77,18 @@ const EquipmentMovement = () => {
     fetchMovements();
   }, []);
 
-  // Extrair códigos de equipamentos únicos
+// Extrair códigos de equipamentos únicos
   const equipmentCodes = useMemo(() => {
     const codes = movements.map(m => m.equipamentos?.numero_serie).filter(Boolean) as string[];
-    return [...new Set(codes)].sort();
+    return [...new Set(codes)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [movements]);
+  
+  // Filtrar códigos baseado na busca (só mostra se digitar código exato ou parcial)
+  const [searchTerm, setSearchTerm] = useState('');
+  const filteredCodes = useMemo(() => {
+    if (!searchTerm) return equipmentCodes.slice(0, 50); // Limitar quando sem busca
+    return equipmentCodes.filter(code => code.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [equipmentCodes, searchTerm]);
 
   // Extrair tipos de equipamento para o código selecionado
   const equipmentTypesForCode = useMemo(() => {
@@ -135,30 +142,36 @@ const EquipmentMovement = () => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0 z-50 bg-white">
-                  <Command>
-                    <CommandInput placeholder="Digite o código..." />
+                <PopoverContent className="w-[300px] p-0 z-50 bg-white">
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Digite o código completo..." 
+                      value={searchTerm}
+                      onValueChange={setSearchTerm}
+                    />
                     <CommandList>
                       <CommandEmpty>Nenhum código encontrado.</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
-                          value=""
+                          value="todos"
                           onSelect={() => {
                             setSelectedEquipmentCode('');
                             setSelectedEquipmentType('');
+                            setSearchTerm('');
                             setOpenEquipmentSearch(false);
                           }}
                         >
                           <Check className={cn("mr-2 h-4 w-4", !selectedEquipmentCode ? "opacity-100" : "opacity-0")} />
                           Todos
                         </CommandItem>
-                        {equipmentCodes.map((code) => (
+                        {filteredCodes.map((code) => (
                           <CommandItem
                             key={code}
                             value={code}
                             onSelect={() => {
                               setSelectedEquipmentCode(code);
                               setSelectedEquipmentType('');
+                              setSearchTerm('');
                               setOpenEquipmentSearch(false);
                             }}
                           >
@@ -200,8 +213,8 @@ const EquipmentMovement = () => {
         <table className="min-w-full bg-white border border-gray-300">
           <thead>
             <tr>
-              <th className="py-2 px-4 border-b">Equipamento</th>
-              <th className="py-2 px-4 border-b">Empresa</th>
+              <th className="py-2 px-4 border-b min-w-[180px]">Equipamento</th>
+              <th className="py-2 px-4 border-b min-w-[200px]">Empresa</th>
               <th className="py-2 px-4 border-b">Tipo Movimento</th>
               <th className="py-2 px-4 border-b">Data</th>
               <th className="py-2 px-4 border-b">Responsável</th>
@@ -211,14 +224,14 @@ const EquipmentMovement = () => {
           <tbody>
             {filteredMovements.map((movement) => (
               <tr key={movement.id}>
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b min-w-[180px] whitespace-nowrap">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
                 </td>
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b min-w-[200px]">
                   {movement.equipamentos?.empresas?.name || 'N/A'}
                 </td>
-                <td className="py-2 px-4 border-b">{movement.tipo_movimento}</td>
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b whitespace-nowrap">{movement.tipo_movimento}</td>
+                <td className="py-2 px-4 border-b whitespace-nowrap">
                   {new Date(movement.data_criacao).toLocaleString('pt-BR', {
                     day: '2-digit',
                     month: '2-digit', 
@@ -227,8 +240,8 @@ const EquipmentMovement = () => {
                     minute: '2-digit'
                   })}
                 </td>
-                <td className="py-2 px-4 border-b">{movement.usuario_responsavel || 'N/A'}</td>
-                <td className="py-2 px-4 border-b">{movement.observacoes || '-'}</td>
+                <td className="py-2 px-4 border-b whitespace-nowrap">{movement.usuario_responsavel || 'N/A'}</td>
+                <td className="py-2 px-4 border-b max-w-[300px]">{movement.observacoes || '-'}</td>
               </tr>
             ))}
           </tbody>

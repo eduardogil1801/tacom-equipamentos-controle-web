@@ -20,17 +20,31 @@ const Index = () => {
   const { user, isAuthenticated, checkPermission } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  // Prevenir mudanças de página não intencionais
+  // Prevenir mudanças de página não intencionais e escutar eventos de navegação
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       // Não mostrar aviso se estiver navegando normalmente
       return;
     };
 
+    // Listener para navegação via custom event
+    const handleNavigateToPage = (event: CustomEvent) => {
+      const { page, report } = event.detail;
+      if (page) {
+        setCurrentPage(page);
+        // Se for para relatórios com um relatório específico, armazenar para uso
+        if (report) {
+          sessionStorage.setItem('selectedReport', report);
+        }
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('navigateToPage', handleNavigateToPage as EventListener);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('navigateToPage', handleNavigateToPage as EventListener);
     };
   }, []);
 

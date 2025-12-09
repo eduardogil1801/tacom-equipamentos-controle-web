@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -124,6 +124,31 @@ const ReportsPage: React.FC = () => {
   const { hasReportPermission, loading } = useReportPermissions();
   const navigate = useNavigate();
 
+  // Verificar se há um relatório selecionado via sessionStorage (navegação externa)
+  useEffect(() => {
+    const selectedReport = sessionStorage.getItem('selectedReport');
+    if (selectedReport) {
+      // Mapear nomes simples para keys completas
+      const reportKeyMap: { [key: string]: string } = {
+        'billing-services': 'billing-services-report',
+        'companies': 'companies-report',
+        'equipment-status': 'equipment-status-report',
+        'equipment-distribution': 'equipment-distribution-report',
+        'movements': 'movements-report',
+        'inventory': 'inventory-report',
+        'equipment-history': 'equipment-history-report',
+        'maintenance': 'maintenance-report',
+        'monthly': 'monthly-report',
+        'inventory-stock': 'inventory-stock-report',
+        'equipment-history-detail': 'equipment-history-detail-report'
+      };
+      
+      const reportKey = reportKeyMap[selectedReport] || selectedReport;
+      setActiveReport(reportKey);
+      sessionStorage.removeItem('selectedReport');
+    }
+  }, []);
+
   // Filtrar relatórios baseado nas permissões do usuário
   const availableReports = allReports.filter(report => hasReportPermission(report.key));
 
@@ -132,7 +157,7 @@ const ReportsPage: React.FC = () => {
   };
 
   const handleBackToMenu = () => {
-    navigate(-1);
+    setActiveReport(null);
   };
 
   if (loading) {
