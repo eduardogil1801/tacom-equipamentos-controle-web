@@ -302,11 +302,14 @@ export const useMovementForm = () => {
 
         if (movementData.tipo_movimento === 'saida' || 
             movementData.tipo_movimento === 'manutencao') {
-          updateData.empresa_atual_id = movementData.empresa_destino;
+          // Buscar o ID da empresa destino pelo nome
+          const destCompany = companies.find(c => c.name === movementData.empresa_destino);
+          updateData.id_empresa = destCompany?.id || movementData.empresa_destino;
         }
 
         if (movementData.tipo_movimento === 'entrada') {
-          updateData.empresa_atual_id = movementData.empresa_destino;
+          const destCompany = companies.find(c => c.name === movementData.empresa_destino);
+          updateData.id_empresa = destCompany?.id || movementData.empresa_destino;
         }
 
         if (movementData.tipo_equipamento) {
