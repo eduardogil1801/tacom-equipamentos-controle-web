@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import MovementStatusSelector from './MovementStatusSelector';
 import MovementEquipmentSelector from './MovementEquipmentSelector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Company {
   id: string;
@@ -31,6 +36,7 @@ interface MovementData {
   tipo_manutencao_id: string;
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
+  outro_defeito_id?: string;
   tipo_equipamento: string;
   modelo_equipamento: string;
   status_equipamento: string;
@@ -60,14 +66,31 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   onRemoveEquipment
 }) => {
   
+  // Estados para os popovers
+  const [openDR, setOpenDR] = useState(false);
+  const [openDE, setOpenDE] = useState(false);
+  const [openOutro, setOpenOutro] = useState(false);
+
   // Filtrar por código DR e DE
-  const defeitosReclamados = maintenanceTypes.filter(type => 
-    type.codigo.toUpperCase().startsWith('DR')
-  );
+  const defeitosReclamados = useMemo(() => 
+    maintenanceTypes.filter(type => 
+      type.codigo.toUpperCase().startsWith('DR')
+    ), [maintenanceTypes]);
   
-  const defeitosEncontrados = maintenanceTypes.filter(type => 
-    type.codigo.toUpperCase().startsWith('DE') || type.codigo.toUpperCase().startsWith('ER')
-  );
+  const defeitosEncontrados = useMemo(() => 
+    maintenanceTypes.filter(type => 
+      type.codigo.toUpperCase().startsWith('DE') || type.codigo.toUpperCase().startsWith('ER')
+    ), [maintenanceTypes]);
+  
+  // Filtrar Outros Defeitos (categoria_defeito = 'outro')
+  const outrosDefeitos = useMemo(() => 
+    maintenanceTypes.filter(type => {
+      // Primeiro verifica categoria_defeito se disponível
+      if ((type as any).categoria_defeito === 'outro') return true;
+      // Fallback para códigos que não começam com DR ou DE
+      const code = type.codigo.toUpperCase();
+      return !code.startsWith('DR') && !code.startsWith('DE') && !code.startsWith('ER');
+    }), [maintenanceTypes]);
 
   // Verificar se deve mostrar campos de defeitos
   const shouldShowDefeitosFields = 
@@ -76,6 +99,11 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
     movementData.tipo_movimento === 'envio_manutencao' ||
     movementData.tipo_movimento === 'devolucao' ||
     movementData.tipo_movimento === 'retorno_manutencao';
+
+  // Verificar se DR é obrigatório (somente se Outro Defeito não está selecionado)
+  const isDRRequired = shouldShowDefeitosFields && 
+    movementData.tipo_movimento === 'manutencao' && 
+    !movementData.outro_defeito_id;
 
   const getDestinationCompanies = () => {
     if (movementData.tipo_movimento === 'envio_manutencao') {
@@ -91,6 +119,13 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
       );
     }
     return companies;
+  };
+
+  // Obter label do item selecionado
+  const getSelectedLabel = (items: MaintenanceType[], selectedId: string | undefined) => {
+    if (!selectedId) return '';
+    const item = items.find(i => i.id === selectedId);
+    return item ? `${item.codigo} - ${item.descricao}` : '';
   };
 
   React.useEffect(() => {
@@ -212,10 +247,8 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        {/* Lado Direito */}
-        <div className="space-y-4">
+          {/* Data da Movimentação - Movido para abaixo de Empresa Destino */}
           <div>
             <Label htmlFor="data_movimento">Data da Movimentação *</Label>
             <Input
@@ -226,65 +259,220 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               required
             />
           </div>
+        </div>
 
-          {/* CAMPOS DR e DE - Corrigidos sem value vazio */}
+        {/* Lado Direito */}
+        <div className="space-y-4">
+          {/* CAMPOS DR, DE e OUTROS DEFEITOS com Autocomplete */}
           {shouldShowDefeitosFields && (
             <>
+              {/* Outros Defeitos - Novo campo no topo direito */}
+              <div>
+                <Label htmlFor="outro_defeito_id" className="text-purple-600 font-semibold">
+                  Outros Defeitos {!movementData.defeito_reclamado_id && movementData.tipo_movimento === 'manutencao' ? '*' : ''}
+                </Label>
+                <Popover open={openOutro} onOpenChange={setOpenOutro}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openOutro}
+                      className="w-full justify-between border-purple-300"
+                    >
+                      {movementData.outro_defeito_id
+                        ? getSelectedLabel(outrosDefeitos, movementData.outro_defeito_id)
+                        : "Digite ou selecione..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0 z-50 bg-white" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar código..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum defeito encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value=""
+                            onSelect={() => {
+                              onInputChange('outro_defeito_id', '');
+                              setOpenOutro(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !movementData.outro_defeito_id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            -- Nenhum --
+                          </CommandItem>
+                          {outrosDefeitos.map((type) => (
+                            <CommandItem
+                              key={type.id}
+                              value={`${type.codigo} ${type.descricao}`}
+                              onSelect={() => {
+                                onInputChange('outro_defeito_id', type.id);
+                                // Limpar DR quando seleciona outro defeito
+                                if (type.id) {
+                                  onInputChange('defeito_reclamado_id', '');
+                                }
+                                setOpenOutro(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  movementData.outro_defeito_id === type.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {type.codigo} - {type.descricao}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-purple-600 mt-1">
+                  Selecione quando não for DR ou DE. Torna DR opcional.
+                </p>
+              </div>
+
+              {/* DR - Defeito Reclamado com Autocomplete */}
               <div>
                 <Label htmlFor="defeito_reclamado_id" className="text-red-600 font-semibold">
-                  DR - Defeito Reclamado *
+                  DR - Defeito Reclamado {isDRRequired ? '*' : ''}
                 </Label>
-                <Select
-                  value={movementData.defeito_reclamado_id || 'NONE'}
-                  onValueChange={(value) => onInputChange('defeito_reclamado_id', value === 'NONE' ? '' : value)}
-                >
-                  <SelectTrigger className="border-red-300">
-                    <SelectValue placeholder="Selecione o defeito reclamado" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value="NONE">-- Nenhum --</SelectItem>
-                    {defeitosReclamados.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.codigo} - {type.descricao}
-                      </SelectItem>
-                    ))}
-                    {defeitosReclamados.length === 0 && (
-                      <SelectItem value="NO_DATA" disabled>
-                        Nenhum defeito DR cadastrado
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Popover open={openDR} onOpenChange={setOpenDR}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openDR}
+                      className="w-full justify-between border-red-300"
+                    >
+                      {movementData.defeito_reclamado_id
+                        ? getSelectedLabel(defeitosReclamados, movementData.defeito_reclamado_id)
+                        : "Digite ou selecione..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0 z-50 bg-white" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar código DR..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum defeito encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value=""
+                            onSelect={() => {
+                              onInputChange('defeito_reclamado_id', '');
+                              setOpenDR(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !movementData.defeito_reclamado_id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            -- Nenhum --
+                          </CommandItem>
+                          {defeitosReclamados.map((type) => (
+                            <CommandItem
+                              key={type.id}
+                              value={`${type.codigo} ${type.descricao}`}
+                              onSelect={() => {
+                                onInputChange('defeito_reclamado_id', type.id);
+                                // Limpar outro defeito quando seleciona DR
+                                if (type.id) {
+                                  onInputChange('outro_defeito_id', '');
+                                }
+                                setOpenDR(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  movementData.defeito_reclamado_id === type.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {type.codigo} - {type.descricao}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <p className="text-xs text-red-600 mt-1">
                   Defeito reportado inicialmente pelo cliente
                 </p>
               </div>
 
+              {/* DE - Defeito Encontrado com Autocomplete */}
               <div>
                 <Label htmlFor="defeito_encontrado_id" className="text-orange-600 font-semibold">
                   DE - Defeito Encontrado
                 </Label>
-                <Select
-                  value={movementData.defeito_encontrado_id || 'NONE'}
-                  onValueChange={(value) => onInputChange('defeito_encontrado_id', value === 'NONE' ? '' : value)}
-                >
-                  <SelectTrigger className="border-orange-300">
-                    <SelectValue placeholder="Selecione o defeito encontrado" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value="NONE">-- Nenhum --</SelectItem>
-                    {defeitosEncontrados.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.codigo} - {type.descricao}
-                      </SelectItem>
-                    ))}
-                    {defeitosEncontrados.length === 0 && (
-                      <SelectItem value="NO_DATA" disabled>
-                        Nenhum defeito DE/ER cadastrado
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Popover open={openDE} onOpenChange={setOpenDE}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openDE}
+                      className="w-full justify-between border-orange-300"
+                    >
+                      {movementData.defeito_encontrado_id
+                        ? getSelectedLabel(defeitosEncontrados, movementData.defeito_encontrado_id)
+                        : "Digite ou selecione..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0 z-50 bg-white" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar código DE..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum defeito encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value=""
+                            onSelect={() => {
+                              onInputChange('defeito_encontrado_id', '');
+                              setOpenDE(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !movementData.defeito_encontrado_id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            -- Nenhum --
+                          </CommandItem>
+                          {defeitosEncontrados.map((type) => (
+                            <CommandItem
+                              key={type.id}
+                              value={`${type.codigo} ${type.descricao}`}
+                              onSelect={() => {
+                                onInputChange('defeito_encontrado_id', type.id);
+                                setOpenDE(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  movementData.defeito_encontrado_id === type.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {type.codigo} - {type.descricao}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <p className="text-xs text-orange-600 mt-1">
                   Defeito realmente identificado durante a manutenção
                 </p>

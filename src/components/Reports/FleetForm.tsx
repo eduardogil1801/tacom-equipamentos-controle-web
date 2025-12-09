@@ -26,9 +26,30 @@ interface FleetData {
   nuvem: number;
 }
 
-const FleetForm = () => {
+interface FleetFormProps {
+  editingData?: {
+    id: string;
+    nome_empresa: string;
+    cod_operadora: string;
+    mes_referencia: string;
+    simples_sem_imagem: number;
+    simples_com_imagem: number;
+    secao: number;
+    nuvem: number;
+    telemetria: number;
+    citgis: number;
+    buszoom: number;
+    total: number;
+    usuario_responsavel: string;
+    created_at: string;
+  } | null;
+  onSaveSuccess?: () => void;
+}
+
+const FleetForm: React.FC<FleetFormProps> = ({ editingData, onSaveSuccess }) => {
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FleetData>({
     nome_empresa: '',
     cod_operadora: '',
@@ -54,6 +75,35 @@ const FleetForm = () => {
   useEffect(() => {
     loadCompanies();
   }, []);
+
+  // Carregar dados para edição quando editingData mudar
+  useEffect(() => {
+    if (editingData) {
+      console.log('Carregando dados para edição:', editingData);
+      setEditingId(editingData.id);
+      
+      // Formatar o mês de referência para o formato do input
+      let mesRef = editingData.mes_referencia;
+      if (mesRef && mesRef.length === 10) {
+        mesRef = mesRef.substring(0, 7); // YYYY-MM-DD -> YYYY-MM
+      }
+      
+      setFormData({
+        nome_empresa: editingData.nome_empresa || '',
+        cod_operadora: editingData.cod_operadora || '',
+        mes_referencia: mesRef || '',
+        simples_com_imagem: editingData.simples_com_imagem || 0,
+        simples_sem_imagem: editingData.simples_sem_imagem || 0,
+        secao: editingData.secao || 0,
+        telemetria: editingData.telemetria || 0,
+        citgis: editingData.citgis || 0,
+        buszoom: editingData.buszoom || 0,
+        nuvem: editingData.nuvem || 0
+      });
+    } else {
+      setEditingId(null);
+    }
+  }, [editingData]);
 
   const loadCompanies = async () => {
     try {
@@ -291,13 +341,17 @@ const FleetForm = () => {
 
         console.log('Registro criado com sucesso:', insertData);
 
-        toast({
-          title: "Sucesso",
-          description: `Dados da frota de ${formData.mes_referencia} salvos com sucesso!`,
-        });
-      }
+      toast({
+        title: "Sucesso",
+        description: `Dados da frota de ${formData.mes_referencia} salvos com sucesso!`,
+      });
+    }
 
-      // Resetar formulário
+    // Se tiver callback de sucesso, chamar
+    if (onSaveSuccess) {
+      onSaveSuccess();
+    } else {
+      // Resetar formulário apenas se não houver callback
       setFormData({
         nome_empresa: '',
         cod_operadora: '',
@@ -310,6 +364,8 @@ const FleetForm = () => {
         buszoom: 0,
         nuvem: 0
       });
+      setEditingId(null);
+    }
 
     } catch (error) {
       console.error('Error saving fleet data:', error);

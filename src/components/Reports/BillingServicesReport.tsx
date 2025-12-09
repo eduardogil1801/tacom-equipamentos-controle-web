@@ -685,9 +685,12 @@ const BillingServicesReport: React.FC = () => {
             <div className="text-lg font-medium text-gray-600">
               Total de registros encontrados: <span className="font-bold text-primary">{filteredData.length}</span>
             </div>
-            <div className="text-sm font-semibold text-blue-600 mt-2">
-              Total Geral de Bilhetagem: <span className="text-lg">{formatNumber(serviceTotals.qtdTotalNuvem)}</span>
-            </div>
+            {/* Só mostrar Total Geral de Bilhetagem quando não há filtro de empresa */}
+            {(!filters.empresa || filters.empresa === 'all' || filters.empresa === '') && (
+              <div className="text-sm font-semibold text-blue-600 mt-2">
+                Total Geral de Bilhetagem: <span className="text-lg">{formatNumber(serviceTotals.qtdTotalNuvem)}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

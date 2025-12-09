@@ -77,9 +77,9 @@ const ChatFloat: React.FC = () => {
 
   return (
     <>
-      {/* Botão flutuante */}
+      {/* Botão flutuante - ajustado para não sobrepor botões de ação */}
       {(!selectedUser || !isOpen) && (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div className="fixed bottom-24 right-6 z-50">
           <Button
             onClick={() => setIsOpen(true)}
             className="h-14 w-14 rounded-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg transition-all duration-300 transform hover:scale-105"

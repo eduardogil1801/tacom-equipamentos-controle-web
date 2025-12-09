@@ -160,19 +160,7 @@ const FleetFormFields: React.FC<FleetFormFieldsProps> = ({
 
       {/* Campos reorganizados conforme solicitação */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Simples S/Image */}
-        <div className="space-y-2">
-          <Label htmlFor="simples_sem_imagem">Simples S/Image</Label>
-          <Input
-            id="simples_sem_imagem"
-            type="number"
-            min="0"
-            value={formData.simples_sem_imagem}
-            onChange={(e) => handleNumericChange('simples_sem_imagem', e.target.value)}
-          />
-        </div>
-
-        {/* Simples C/Image */}
+        {/* Simples C/Image - Agora primeiro */}
         <div className="space-y-2">
           <Label htmlFor="simples_com_imagem">Simples C/Image</Label>
           <Input
@@ -181,6 +169,18 @@ const FleetFormFields: React.FC<FleetFormFieldsProps> = ({
             min="0"
             value={formData.simples_com_imagem}
             onChange={(e) => handleNumericChange('simples_com_imagem', e.target.value)}
+          />
+        </div>
+
+        {/* Simples S/Image - Agora segundo */}
+        <div className="space-y-2">
+          <Label htmlFor="simples_sem_imagem">Simples S/Image</Label>
+          <Input
+            id="simples_sem_imagem"
+            type="number"
+            min="0"
+            value={formData.simples_sem_imagem}
+            onChange={(e) => handleNumericChange('simples_sem_imagem', e.target.value)}
           />
         </div>
 

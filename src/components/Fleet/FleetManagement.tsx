@@ -5,8 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useHybridAuth';
-import { Plus, Edit, Trash2, Download, Shield, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Download, Shield, ArrowLeft, FileText } from 'lucide-react';
 import FleetForm from '@/components/Reports/FleetForm';
+import { useNavigate } from 'react-router-dom';
 
 interface FleetData {
   id: string;
@@ -177,7 +178,7 @@ const FleetManagement: React.FC = () => {
     });
   };
 
-  // Se está mostrando o formulário, renderizar o FleetForm
+  // Se está mostrando o formulário, renderizar o FleetForm com dados de edição
   if (showForm) {
     return (
       <div>
@@ -193,8 +194,8 @@ const FleetManagement: React.FC = () => {
           </Button>
         </div>
         
-        {/* Renderizar o formulário */}
-        <FleetForm />
+        {/* Renderizar o formulário com dados de edição se existir */}
+        <FleetForm editingData={editingFleet} onSaveSuccess={handleBackToList} />
       </div>
     );
   }
@@ -212,6 +213,18 @@ const FleetManagement: React.FC = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestão de Frota</h1>
         <div className="flex gap-2">
+          {/* Atalho para Relatório de Faturamento por Serviço */}
+          <Button 
+            onClick={() => {
+              // Navegar para relatórios com filtro de billing services
+              window.dispatchEvent(new CustomEvent('navigateToReport', { detail: 'billing-services' }));
+            }}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Faturamento por Serviço
+          </Button>
           <Button 
             onClick={exportToExcel}
             variant="outline"
