@@ -254,12 +254,12 @@ const EquipmentMovement = () => {
             {equipmentTypesForCode.length > 1 && (
               <div>
                 <Label>Tipo de Equipamento</Label>
-                <Select value={selectedEquipmentType} onValueChange={setSelectedEquipmentType}>
+              <Select value={selectedEquipmentType || "all"} onValueChange={(val) => setSelectedEquipmentType(val === "all" ? "" : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {equipmentTypesForCode.map((type) => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
