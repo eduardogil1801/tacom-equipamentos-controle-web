@@ -15,108 +15,39 @@ import {
   Shield
 } from 'lucide-react';
 import MovementTypeManager from '@/components/Settings/MovementTypeManager';
-
-// Componentes placeholder para as outras abas
-const EstadosManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <MapPin className="h-6 w-6" />
-        Gerenciar Estados
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Gerenciamento de estados em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
-
-const TiposEquipamentoManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <Package className="h-6 w-6" />
-        Tipos de Equipamento
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Configuração de tipos de equipamento em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
-
-const EmpresasManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <Building2 className="h-6 w-6" />
-        Empresas
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Configuração de empresas em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
-
-const ManutencaoManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <Wrench className="h-6 w-6" />
-        Manutenção
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Configuração de manutenção em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
-
-const UsuariosManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <Users className="h-6 w-6" />
-        Gerenciamento de Usuários
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Gerenciamento de usuários em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
-
-const PermissoesManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <Shield className="h-6 w-6" />
-        Gerenciamento de Permissões
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Gerenciamento de permissões em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
-
-const RelatoriosManager = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-3">
-        <FileText className="h-6 w-6" />
-        Permissões Específicas de Relatórios
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-gray-500">Configuração de relatórios em desenvolvimento...</p>
-    </CardContent>
-  </Card>
-);
+import StateManager from '@/components/Settings/StateManager';
+import EquipmentTypeManager from '@/components/Settings/EquipmentTypeManager';
+import MaintenanceRulesManager from '@/components/Settings/MaintenanceRulesManager';
+import UserManagement from '@/components/Users/UserManagement';
+import PermissionManagement from '@/components/Users/PermissionManagement';
+import ReportPermissionManagement from '@/components/Users/ReportPermissionManagement';
+import CompanyList from '@/components/Company/CompanyList';
+import { useAuth } from '@/hooks/useHybridAuth';
 
 const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('tipos-movimentacao');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('estados');
+
+  // Verificar se é administrador
+  if (user?.userType !== 'administrador') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-96">
+          <Card className="w-full max-w-md">
+            <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+              <Shield className="h-16 w-16 text-gray-400 mb-4" />
+              <h2 className="text-xl font-semibold text-gray-600 mb-2">
+                Acesso Restrito
+              </h2>
+              <p className="text-gray-500">
+                Apenas administradores podem acessar as configurações do sistema.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -158,11 +89,11 @@ const SettingsPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="estados" className="space-y-6">
-          <EstadosManager />
+          <StateManager />
         </TabsContent>
 
         <TabsContent value="tipos-equipamento" className="space-y-6">
-          <TiposEquipamentoManager />
+          <EquipmentTypeManager />
         </TabsContent>
 
         <TabsContent value="tipos-movimentacao" className="space-y-6">
@@ -197,22 +128,22 @@ const SettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="empresas" className="space-y-6">
-          <EmpresasManager />
+          <CompanyList />
         </TabsContent>
 
         <TabsContent value="manutencao" className="space-y-6">
-          <ManutencaoManager />
+          <MaintenanceRulesManager />
         </TabsContent>
 
         <TabsContent value="usuarios" className="space-y-6">
-          <UsuariosManager />
+          <UserManagement />
         </TabsContent>
 
         <TabsContent value="permissoes" className="space-y-6">
-          <PermissoesManager />
+          <PermissionManagement />
           
           {/* Separar em uma seção própria para relatórios */}
-          <RelatoriosManager />
+          <ReportPermissionManagement />
         </TabsContent>
       </Tabs>
     </div>

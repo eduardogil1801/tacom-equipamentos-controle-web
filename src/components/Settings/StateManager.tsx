@@ -135,13 +135,7 @@ const StateManager: React.FC = () => {
     setShowForm(false);
   };
 
-  if (!checkPermission('settings', 'create')) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">Acesso negado. Apenas administradores podem gerenciar estados.</p>
-      </div>
-    );
-  }
+  // Verificação de permissão removida - SettingsPage já verifica se é admin
 
   if (loading) {
     return (
