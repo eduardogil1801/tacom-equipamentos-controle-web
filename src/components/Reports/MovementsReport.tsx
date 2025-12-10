@@ -303,18 +303,18 @@ const MovementsReport: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <div className="min-w-[1000px]">
-              <table className="w-full border-collapse border border-gray-200 table-fixed">
+            <div className="min-w-[1200px]">
+              <table className="w-full border-collapse border border-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[90px]">Data</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[100px]">Tipo</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[80px]">Nº Série</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[110px]">Equipamento</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[130px]">Origem</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[130px]">Destino</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[140px]">Responsável</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900">Observações</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Data</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Tipo</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Nº Série</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Equipamento</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Origem</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Destino</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Responsável</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Observações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -323,9 +323,9 @@ const MovementsReport: React.FC = () => {
                     
                     return (
                       <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                        <td className="p-3 text-sm">{formatDateForDisplay(movement.data_movimento)}</td>
+                        <td className="p-3 text-sm whitespace-nowrap">{formatDateForDisplay(movement.data_movimento)}</td>
                         <td className="p-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                             movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
                             movement.tipo_movimento === 'saida' ? 'bg-red-100 text-red-800' :
                             movement.tipo_movimento === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
@@ -344,30 +344,25 @@ const MovementsReport: React.FC = () => {
                              movement.tipo_movimento}
                           </span>
                         </td>
-                        <td className="p-3 text-sm font-mono">{movement.equipamentos?.numero_serie || '-'}</td>
-                        <td className="p-3 text-sm">{movement.equipamentos?.tipo || '-'}</td>
+                        <td className="p-3 text-sm font-mono whitespace-nowrap">{movement.equipamentos?.numero_serie || '-'}</td>
+                        <td className="p-3 text-sm whitespace-nowrap">{movement.equipamentos?.tipo || '-'}</td>
                         <td className="p-3">
-                          <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-medium block truncate" title={origem}>
+                          <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap" title={origem}>
                             {origem}
                           </span>
                         </td>
                         <td className="p-3">
-                          <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-medium block truncate" title={destino}>
+                          <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-medium whitespace-nowrap" title={destino}>
                             {destino}
                           </span>
                         </td>
-                        <td className="p-3 text-sm">{movement.usuario_responsavel || '-'}</td>
+                        <td className="p-3 text-sm whitespace-nowrap">{movement.usuario_responsavel || '-'}</td>
                         <td className="p-3 text-sm">
-                          <div className="max-w-[150px] overflow-hidden">
-                            {movement.observacoes ? (
-                              <span 
-                                className="block truncate"
-                                title={movement.observacoes}
-                              >
-                                {movement.observacoes.replace(/Movimentado?\s+de\s+.+?\s+para\s+.+?(?:\s*$|\.)/i, '').trim() || '-'}
-                              </span>
-                            ) : '-'}
-                          </div>
+                          {movement.observacoes ? (
+                            <span title={movement.observacoes}>
+                              {movement.observacoes.replace(/Movimentado?\s+de\s+.+?\s+para\s+.+?(?:\s*$|\.)/i, '').trim() || '-'}
+                            </span>
+                          ) : '-'}
                         </td>
                       </tr>
                     );
