@@ -304,16 +304,17 @@ const MovementsReport: React.FC = () => {
         <CardContent>
           <div className="overflow-x-auto">
             <div className="min-w-[1000px]">
-              <table className="w-full border-collapse border border-gray-200">
+              <table className="w-full border-collapse border border-gray-200 table-fixed">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[100px]">Data</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Tipo</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[100px]">Nº Série</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Equipamento</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[250px]">Origem → Destino</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Responsável</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[150px]">Observações</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[90px]">Data</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[100px]">Tipo</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[80px]">Nº Série</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[110px]">Equipamento</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[130px]">Origem</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[130px]">Destino</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 w-[140px]">Responsável</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900">Observações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -346,15 +347,14 @@ const MovementsReport: React.FC = () => {
                         <td className="p-3 text-sm font-mono">{movement.equipamentos?.numero_serie || '-'}</td>
                         <td className="p-3 text-sm">{movement.equipamentos?.tipo || '-'}</td>
                         <td className="p-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-medium max-w-[100px] truncate" title={origem}>
-                              {origem}
-                            </span>
-                            <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                            <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-medium max-w-[100px] truncate" title={destino}>
-                              {destino}
-                            </span>
-                          </div>
+                          <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-medium block truncate" title={origem}>
+                            {origem}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-medium block truncate" title={destino}>
+                            {destino}
+                          </span>
                         </td>
                         <td className="p-3 text-sm">{movement.usuario_responsavel || '-'}</td>
                         <td className="p-3 text-sm">
