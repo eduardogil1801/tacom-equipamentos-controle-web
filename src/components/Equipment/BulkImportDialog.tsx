@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, Download, FileSpreadsheet, AlertCircle } from 'lucide-react';
-// import * as XLSX from 'xlsx'; // Removed for compatibility
+import * as XLSX from 'xlsx';
 
 interface BulkImportDialogProps {
   isOpen: boolean;
@@ -42,18 +42,90 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   };
 
   const previewFile = async (file: File) => {
-    toast({
-      title: "Funcionalidade Indisponível",
-      description: "A importação de Excel não está disponível no momento.",
-      variant: "destructive",
-    });
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      
+      console.log('Dados lidos do Excel:', jsonData);
+      
+      if (jsonData.length === 0) {
+        toast({
+          title: "Arquivo Vazio",
+          description: "O arquivo não contém dados para importar.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { valid, errors } = validateData(jsonData);
+      
+      if (errors.length > 0) {
+        toast({
+          title: "Erros na Validação",
+          description: `Encontrados ${errors.length} erros. Verifique o console para detalhes.`,
+          variant: "destructive",
+        });
+        console.error('Erros de validação:', errors);
+      }
+
+      setPreviewData(valid.slice(0, 5));
+      
+      toast({
+        title: "Arquivo Carregado",
+        description: `${valid.length} equipamentos válidos encontrados.`,
+      });
+    } catch (error) {
+      console.error('Erro ao ler arquivo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível ler o arquivo Excel.",
+        variant: "destructive",
+      });
+    }
   };
 
   const downloadTemplate = () => {
+    const templateData = [
+      {
+        'Tipo': 'VALIDADOR',
+        'Número de Série': '12345',
+        'Modelo': 'DMX500',
+        'Empresa': 'Nome da Empresa',
+        'Estado': 'Rio Grande do Sul',
+        'Status': 'disponivel'
+      },
+      {
+        'Tipo': 'GPS',
+        'Número de Série': '67890',
+        'Modelo': 'GT-200',
+        'Empresa': 'Nome da Empresa',
+        'Estado': 'São Paulo',
+        'Status': 'em_uso'
+      }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    
+    // Ajustar largura das colunas
+    ws['!cols'] = [
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 15 }
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Equipamentos');
+    XLSX.writeFile(wb, 'template_equipamentos.xlsx');
+    
     toast({
-      title: "Funcionalidade Indisponível",
-      description: "O download do template não está disponível no momento.",
-      variant: "destructive",
+      title: "Template Baixado",
+      description: "O template foi baixado com sucesso.",
     });
   };
 
@@ -75,7 +147,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       const empresa = (row['Empresa'] || row['empresa'] || '').toString().trim();
       const estado = (row['Estado'] || row['estado'] || '').toString().trim();
       
-      // CORREÇÃO: Mapear status corretamente
       let statusFromFile = '';
       if (row['Status'] || row['status']) {
         statusFromFile = (row['Status'] || row['status']).toString().trim();
@@ -95,33 +166,29 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
-      // CORREÇÃO: Mapear status preservando o valor original
-      const validStatuses = ['disponivel', 'em_uso', 'manutencao', 'aguardando_manutencao', 'danificado', 'indisponivel', 'devolvido'];
-      let finalStatus = 'disponivel';
+      const statusMap: { [key: string]: string } = {
+        'disponivel': 'disponivel',
+        'disponível': 'disponivel',
+        'em_uso': 'em_uso',
+        'em uso': 'em_uso',
+        'manutencao': 'manutencao',
+        'manutenção': 'manutencao',
+        'aguardando_manutencao': 'aguardando_manutencao',
+        'aguardando manutenção': 'aguardando_manutencao',
+        'danificado': 'danificado',
+        'indisponivel': 'indisponivel',
+        'indisponível': 'indisponivel',
+        'devolvido': 'devolvido'
+      };
       
+      let finalStatus = 'disponivel';
       if (statusFromFile) {
-        const statusMap: { [key: string]: string } = {
-          'disponivel': 'disponivel',
-          'disponível': 'disponivel',
-          'em_uso': 'em_uso',
-          'em uso': 'em_uso',
-          'manutencao': 'manutencao',
-          'manutenção': 'manutencao',
-          'aguardando_manutencao': 'aguardando_manutencao',
-          'aguardando manutenção': 'aguardando_manutencao',
-          'danificado': 'danificado',
-          'indisponivel': 'indisponivel',
-          'indisponível': 'indisponivel',
-          'devolvido': 'devolvido'
-        };
-        
         const statusNormalizado = statusFromFile.toLowerCase().trim();
         if (statusMap[statusNormalizado]) {
           finalStatus = statusMap[statusNormalizado];
           console.log(`Linha ${rowNumber}: Status "${statusFromFile}" mapeado para "${finalStatus}"`);
         } else {
           console.warn(`Linha ${rowNumber}: Status "${statusFromFile}" não reconhecido, usando "disponivel"`);
-          errors.push(`Linha ${rowNumber}: Status "${statusFromFile}" inválido. Valores válidos: ${Object.keys(statusMap).join(', ')}`);
         }
       }
 
@@ -160,14 +227,113 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     try {
       console.log('=== INICIANDO PROCESSAMENTO DA IMPORTAÇÃO ===');
       
-      toast({
-        title: "Funcionalidade Indisponível",
-        description: "A importação de Excel não está disponível no momento.",
-        variant: "destructive",
-      });
-      return;
+      // Ler arquivo Excel
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      return;
+      const { valid, errors } = validateData(jsonData);
+
+      if (valid.length === 0) {
+        toast({
+          title: "Nenhum Equipamento Válido",
+          description: "Nenhum equipamento passou na validação.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Buscar empresas para mapear nomes para IDs
+      const { data: empresas, error: empresasError } = await supabase
+        .from('empresas')
+        .select('id, name');
+
+      if (empresasError) throw empresasError;
+
+      const empresaMap = new Map(empresas?.map(e => [e.name.toLowerCase(), e.id]) || []);
+
+      // Preparar dados para inserção
+      const equipamentosParaInserir = [];
+      const errosInsercao: string[] = [];
+
+      for (const eq of valid) {
+        const empresaId = empresaMap.get(eq.empresa.toLowerCase());
+        
+        if (!empresaId) {
+          errosInsercao.push(`Empresa "${eq.empresa}" não encontrada no sistema`);
+          continue;
+        }
+
+        equipamentosParaInserir.push({
+          tipo: eq.tipo,
+          numero_serie: eq.numero_serie,
+          modelo: eq.modelo || null,
+          id_empresa: empresaId,
+          estado: eq.estado || null,
+          status: eq.status || 'disponivel',
+          data_entrada: new Date().toISOString().split('T')[0]
+        });
+      }
+
+      if (equipamentosParaInserir.length === 0) {
+        toast({
+          title: "Erro",
+          description: "Nenhum equipamento pôde ser preparado para inserção. Verifique os nomes das empresas.",
+          variant: "destructive",
+        });
+        console.error('Erros de inserção:', errosInsercao);
+        return;
+      }
+
+      // Verificar duplicatas no banco
+      const { data: existingEquipments, error: checkError } = await supabase
+        .from('equipamentos')
+        .select('numero_serie, tipo');
+
+      if (checkError) throw checkError;
+
+      const existingSet = new Set(existingEquipments?.map(e => `${e.tipo}-${e.numero_serie}`) || []);
+      
+      const equipamentosNovos = equipamentosParaInserir.filter(eq => {
+        const key = `${eq.tipo}-${eq.numero_serie}`;
+        if (existingSet.has(key)) {
+          errosInsercao.push(`Equipamento ${eq.tipo} - ${eq.numero_serie} já existe no sistema`);
+          return false;
+        }
+        return true;
+      });
+
+      if (equipamentosNovos.length === 0) {
+        toast({
+          title: "Todos Duplicados",
+          description: "Todos os equipamentos já existem no sistema.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Inserir equipamentos
+      const { error: insertError } = await supabase
+        .from('equipamentos')
+        .insert(equipamentosNovos);
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Importação Concluída!",
+        description: `${equipamentosNovos.length} equipamentos importados com sucesso.${errosInsercao.length > 0 ? ` ${errosInsercao.length} erros encontrados.` : ''}`,
+      });
+
+      if (errosInsercao.length > 0) {
+        console.warn('Erros durante importação:', errosInsercao);
+      }
+
+      onImportComplete();
+      onClose();
+      setFile(null);
+      setPreviewData([]);
 
     } catch (error) {
       console.error('=== ERRO GERAL NA IMPORTAÇÃO ===', error);
@@ -281,6 +447,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <li>• Equipamentos com mesmo número mas tipos diferentes são aceitos</li>
               <li>• Duplicatas são verificadas por tipo + número de série</li>
               <li>• A data de entrada será definida como a data atual</li>
+              <li>• <strong>O nome da empresa deve ser exatamente igual ao cadastrado no sistema</strong></li>
             </ul>
           </div>
 
