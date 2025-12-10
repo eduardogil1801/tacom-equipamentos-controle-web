@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Package } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { FileDown, Package, ChevronDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -14,35 +15,54 @@ interface EquipmentData {
   count: number;
 }
 
+const statusLabels: { [key: string]: string } = {
+  'disponivel': 'Disponível',
+  'em_uso': 'Em Uso',
+  'manutencao': 'Manutenção',
+  'aguardando_manutencao': 'Aguardando Manutenção',
+  'danificado': 'Danificado',
+  'indisponivel': 'Indisponível',
+  'devolvido': 'Devolvido'
+};
+
+const statusColors: { [key: string]: string } = {
+  'disponivel': '#16A34A',
+  'em_uso': '#DC2626',
+  'manutencao': '#CA8A04',
+  'aguardando_manutencao': '#F59E0B',
+  'danificado': '#EF4444',
+  'indisponivel': '#9333EA',
+  'devolvido': '#6B7280'
+};
+
 const EquipmentDistributionReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [equipmentData, setEquipmentData] = useState<EquipmentData[]>([]);
-  const [filters, setFilters] = useState({
-    tipo: '',
-    status: ''
-  });
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
-  }, [filters]);
+  }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('equipamentos')
         .select('tipo, modelo, status');
 
-      if (filters.tipo && filters.tipo !== 'all') {
-        query = query.eq('tipo', filters.tipo);
-      }
-      if (filters.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
+
+      // Extrair tipos e status únicos
+      const types = [...new Set(data?.map(eq => `${eq.tipo}${eq.modelo ? ` ${eq.modelo}` : ''}`) || [])].sort();
+      const statuses = [...new Set(data?.map(eq => eq.status).filter(Boolean) || [])].sort();
+      
+      setAvailableTypes(types);
+      setAvailableStatuses(statuses);
 
       // Processar dados para contagem
       const processedData = data?.reduce((acc: EquipmentData[], equipment) => {
@@ -75,11 +95,26 @@ const EquipmentDistributionReport: React.FC = () => {
     }
   };
 
+  // Filtrar dados baseado nas seleções
+  const filteredData = useMemo(() => {
+    let filtered = equipmentData;
+    
+    if (selectedTypes.length > 0) {
+      filtered = filtered.filter(item => selectedTypes.includes(item.tipo));
+    }
+    
+    if (selectedStatuses.length > 0) {
+      filtered = filtered.filter(item => selectedStatuses.includes(item.status));
+    }
+    
+    return filtered;
+  }, [equipmentData, selectedTypes, selectedStatuses]);
+
   const exportToCSV = () => {
     const headers = ['Tipo/Modelo', 'Status', 'Quantidade'];
     const csvContent = [
       headers.join(','),
-      ...equipmentData.map(item => [
+      ...filteredData.map(item => [
         `"${item.tipo}"`,
         `"${item.status}"`,
         item.count
@@ -102,29 +137,51 @@ const EquipmentDistributionReport: React.FC = () => {
     });
   };
 
-  // Dados para gráfico de barras
-  const chartData = equipmentData.reduce((acc: any[], item) => {
-    const existing = acc.find(d => d.tipo === item.tipo);
-    if (existing) {
-      existing[item.status] = (existing[item.status] || 0) + item.count;
-    } else {
-      acc.push({ tipo: item.tipo, [item.status]: item.count });
-    }
-    return acc;
-  }, []);
+  // Dados para gráfico de barras horizontais por status
+  const statusChartData = useMemo(() => {
+    const grouped = filteredData.reduce((acc: { [key: string]: number }, item) => {
+      const statusLabel = statusLabels[item.status] || item.status;
+      acc[statusLabel] = (acc[statusLabel] || 0) + item.count;
+      return acc;
+    }, {});
 
-  // Dados para gráfico de pizza por status
-  const statusData = equipmentData.reduce((acc: any[], item) => {
-    const existing = acc.find(d => d.name === item.status);
-    if (existing) {
-      existing.value += item.count;
-    } else {
-      acc.push({ name: item.status, value: item.count });
-    }
-    return acc;
-  }, []);
+    return Object.entries(grouped)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredData]);
 
-  const COLORS = ['#DC2626', '#16A34A', '#2563EB', '#CA8A04', '#9333EA', '#C2410C'];
+  // Dados para gráfico de barras por tipo
+  const chartData = useMemo(() => {
+    return filteredData.reduce((acc: any[], item) => {
+      const existing = acc.find(d => d.tipo === item.tipo);
+      if (existing) {
+        existing[item.status] = (existing[item.status] || 0) + item.count;
+      } else {
+        acc.push({ tipo: item.tipo, [item.status]: item.count });
+      }
+      return acc;
+    }, []).sort((a, b) => {
+      const totalA = Object.values(a).filter(v => typeof v === 'number').reduce((sum: number, v) => sum + (v as number), 0);
+      const totalB = Object.values(b).filter(v => typeof v === 'number').reduce((sum: number, v) => sum + (v as number), 0);
+      return totalB - totalA;
+    });
+  }, [filteredData]);
+
+  const toggleType = (type: string) => {
+    setSelectedTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const toggleStatus = (status: string) => {
+    setSelectedStatuses(prev => 
+      prev.includes(status) 
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
+  };
 
   if (loading) {
     return (
@@ -137,52 +194,102 @@ const EquipmentDistributionReport: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Distribuição de Equipamentos</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Distribuição de Equipamentos por Status</h1>
         <Button onClick={exportToCSV} className="flex items-center gap-2">
           <FileDown className="h-4 w-4" />
           Exportar CSV
         </Button>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros com Multi-Select */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Filtro de Tipos */}
             <div>
-              <Select value={filters.tipo || 'all'} onValueChange={(value) => setFilters({...filters, tipo: value === 'all' ? '' : value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os tipos</SelectItem>
-                  <SelectItem value="CCIT 4.0">CCIT 4.0</SelectItem>
-                  <SelectItem value="CCIT 5.0">CCIT 5.0</SelectItem>
-                  <SelectItem value="PM (Painel de Motorista)">PM (Painel de Motorista)</SelectItem>
-                  <SelectItem value="UPEX">UPEX</SelectItem>
-                  <SelectItem value="Connections 4.0">Connections 4.0</SelectItem>
-                  <SelectItem value="CONNECTION 5.0">CONNECTION 5.0</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-2 block">Tipos de Equipamento</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {selectedTypes.length === 0 
+                      ? 'Todos os tipos' 
+                      : `${selectedTypes.length} tipo(s) selecionado(s)`}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 max-h-60 overflow-y-auto">
+                  <div className="space-y-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => setSelectedTypes([])}
+                    >
+                      Limpar seleção
+                    </Button>
+                    {availableTypes.map(type => (
+                      <div key={type} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`type-${type}`}
+                          checked={selectedTypes.includes(type)}
+                          onCheckedChange={() => toggleType(type)}
+                        />
+                        <label 
+                          htmlFor={`type-${type}`}
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {type}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
+
+            {/* Filtro de Status */}
             <div>
-              <Select value={filters.status || 'all'} onValueChange={(value) => setFilters({...filters, status: value === 'all' ? '' : value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="disponivel">Disponível</SelectItem>
-                  <SelectItem value="recuperados">Recuperados</SelectItem>
-                  <SelectItem value="aguardando_despacho_contagem">Aguardando Despacho</SelectItem>
-                  <SelectItem value="enviados_manutencao_contagem">Enviados Manutenção</SelectItem>
-                  <SelectItem value="aguardando_manutencao">Aguardando Manutenção</SelectItem>
-                  <SelectItem value="em_uso">Em Uso</SelectItem>
-                  <SelectItem value="danificado">Danificado</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-2 block">Status</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {selectedStatuses.length === 0 
+                      ? 'Todos os status' 
+                      : `${selectedStatuses.length} status selecionado(s)`}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-60 max-h-60 overflow-y-auto">
+                  <div className="space-y-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => setSelectedStatuses([])}
+                    >
+                      Limpar seleção
+                    </Button>
+                    {availableStatuses.map(status => (
+                      <div key={status} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`status-${status}`}
+                          checked={selectedStatuses.includes(status)}
+                          onCheckedChange={() => toggleStatus(status)}
+                        />
+                        <label 
+                          htmlFor={`status-${status}`}
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {statusLabels[status] || status}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardContent>
@@ -192,10 +299,10 @@ const EquipmentDistributionReport: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição por Tipo/Modelo</CardTitle>
+            <CardTitle>Quantidade por Tipo de Equipamento</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
@@ -203,41 +310,55 @@ const EquipmentDistributionReport: React.FC = () => {
                   angle={-45}
                   textAnchor="end"
                   height={100}
-                  fontSize={12}
+                  fontSize={11}
+                  interval={0}
                 />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="disponivel" fill="#16A34A" name="Disponível" />
-                <Bar dataKey="recuperados" fill="#2563EB" name="Recuperados" />
-                <Bar dataKey="em_uso" fill="#CA8A04" name="Em Uso" />
-                <Bar dataKey="danificado" fill="#DC2626" name="Danificado" />
+                <Legend />
+                {availableStatuses.map((status) => (
+                  <Bar 
+                    key={status} 
+                    dataKey={status} 
+                    fill={statusColors[status] || '#8884d8'} 
+                    name={statusLabels[status] || status}
+                    stackId="a"
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
+        {/* Gráfico de Barras Horizontal por Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição por Status</CardTitle>
+            <CardTitle>Total de Equipamentos por Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart 
+                data={statusChartData} 
+                layout="vertical"
+                margin={{ left: 20, right: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  width={120}
+                  tick={{ fontSize: 12 }}
+                />
                 <Tooltip />
-              </PieChart>
+                <Bar 
+                  dataKey="value" 
+                  fill="#3B82F6" 
+                  radius={[0, 4, 4, 0]}
+                >
+                  <LabelList dataKey="value" position="right" fill="#374151" fontSize={12} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -262,7 +383,7 @@ const EquipmentDistributionReport: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {equipmentData
+                {filteredData
                   .sort((a, b) => b.count - a.count)
                   .map((item, index) => (
                   <tr key={index} className="border-b hover:bg-gray-50">
@@ -271,10 +392,11 @@ const EquipmentDistributionReport: React.FC = () => {
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         item.status === 'disponivel' ? 'bg-green-100 text-green-800' :
                         item.status === 'danificado' ? 'bg-red-100 text-red-800' :
-                        item.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
+                        item.status === 'em_uso' ? 'bg-red-100 text-red-800' :
+                        item.status === 'indisponivel' ? 'bg-purple-100 text-purple-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {item.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        {statusLabels[item.status] || item.status}
                       </span>
                     </td>
                     <td className="p-3 text-2xl font-bold text-primary">{item.count}</td>
@@ -282,7 +404,7 @@ const EquipmentDistributionReport: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            {equipmentData.length === 0 && (
+            {filteredData.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 Nenhum dado encontrado com os filtros selecionados
               </div>

@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Search } from 'lucide-react';
+import { Download, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-// import jsPDF from 'jspdf'; // Removed for compatibility
-// import 'jspdf-autotable'; // Removed for compatibility
 
 interface Movement {
   id: string;
@@ -22,6 +20,7 @@ interface Movement {
   equipamentos: {
     numero_serie: string;
     tipo: string;
+    id_empresa: string;
     empresas?: {
       name: string;
     };
@@ -38,10 +37,16 @@ interface User {
   username: string;
 }
 
+interface Company {
+  id: string;
+  name: string;
+}
+
 const MovementsReport: React.FC = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [filteredMovements, setFilteredMovements] = useState<Movement[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [availableSerialNumbers, setAvailableSerialNumbers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -78,6 +83,7 @@ const MovementsReport: React.FC = () => {
           equipamentos (
             numero_serie,
             tipo,
+            id_empresa,
             empresas (
               name
             )
@@ -100,6 +106,15 @@ const MovementsReport: React.FC = () => {
 
       if (userError) throw userError;
       setUsers(userData || []);
+
+      // Carregar empresas para mapear IDs para nomes
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('empresas')
+        .select('id, name')
+        .order('name');
+
+      if (companiesError) throw companiesError;
+      setCompanies(companiesData || []);
 
     } catch (error) {
       console.error('Erro ao carregar movimentações:', error);
@@ -156,6 +171,27 @@ const MovementsReport: React.FC = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
+  // Extrair empresa origem e destino das observações
+  const parseMovementDetails = (movement: Movement): { origem: string; destino: string } => {
+    const observacoes = movement.observacoes || '';
+    
+    // Padrão: "Movimentado de EMPRESA_ORIGEM para EMPRESA_DESTINO"
+    const match = observacoes.match(/Movimentado?\s+de\s+(.+?)\s+para\s+(.+?)(?:\s*$|\.)/i);
+    
+    if (match) {
+      return {
+        origem: match[1].trim(),
+        destino: match[2].trim()
+      };
+    }
+    
+    // Se não encontrou o padrão, usa a empresa atual como destino
+    return {
+      origem: '-',
+      destino: movement.equipamentos?.empresas?.name || '-'
+    };
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -192,6 +228,7 @@ const MovementsReport: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="movimentacao">Alocação</SelectItem>
+                  <SelectItem value="movimentacao_interna">Movimentação Interna</SelectItem>
                   <SelectItem value="manutencao">Manutenção</SelectItem>
                   <SelectItem value="devolucao">Devolução</SelectItem>
                   <SelectItem value="retorno_manutencao">Retorno de Manutenção</SelectItem>
@@ -266,59 +303,75 @@ const MovementsReport: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <div className="min-w-[800px]">
+            <div className="min-w-[1000px]">
               <table className="w-full border-collapse border border-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[100px]">Data</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Tipo</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Número Série</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[140px]">Tipo Equipamento</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[150px]">Empresa</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[100px]">Nº Série</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Equipamento</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[250px]">Origem → Destino</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[120px]">Responsável</th>
-                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[200px]">Observações</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 min-w-[150px]">Observações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMovements.map(movement => (
-                    <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                      <td className="p-3 text-sm">{formatDateForDisplay(movement.data_movimento)}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
-                          movement.tipo_movimento === 'saida' ? 'bg-red-100 text-red-800' :
-                          movement.tipo_movimento === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
-                          movement.tipo_movimento === 'movimentacao' ? 'bg-blue-100 text-blue-800' :
-                          movement.tipo_movimento === 'devolucao' ? 'bg-purple-100 text-purple-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {movement.tipo_movimento === 'movimentacao' ? 'Alocação' :
-                           movement.tipo_movimento === 'manutencao' ? 'Manutenção' :
-                           movement.tipo_movimento === 'devolucao' ? 'Devolução' :
-                           movement.tipo_movimento === 'retorno_manutencao' ? 'Retorno Manutenção' :
-                           movement.tipo_movimento === 'entrada' ? 'Entrada' :
-                           movement.tipo_movimento === 'saida' ? 'Saída' :
-                           movement.tipo_movimento}
-                        </span>
-                      </td>
-                      <td className="p-3 text-sm font-mono">{movement.equipamentos?.numero_serie || '-'}</td>
-                      <td className="p-3 text-sm">{movement.equipamentos?.tipo || '-'}</td>
-                      <td className="p-3 text-sm">{movement.equipamentos?.empresas?.name || '-'}</td>
-                      <td className="p-3 text-sm">{movement.usuario_responsavel || '-'}</td>
-                      <td className="p-3 text-sm">
-                        <div className="max-w-[200px] overflow-hidden">
-                          {movement.observacoes ? (
-                            <span 
-                              className="block truncate"
-                              title={movement.observacoes}
-                            >
-                              {movement.observacoes}
+                  {filteredMovements.map(movement => {
+                    const { origem, destino } = parseMovementDetails(movement);
+                    
+                    return (
+                      <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                        <td className="p-3 text-sm">{formatDateForDisplay(movement.data_movimento)}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
+                            movement.tipo_movimento === 'saida' ? 'bg-red-100 text-red-800' :
+                            movement.tipo_movimento === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
+                            movement.tipo_movimento === 'movimentacao' ? 'bg-blue-100 text-blue-800' :
+                            movement.tipo_movimento === 'movimentacao_interna' ? 'bg-cyan-100 text-cyan-800' :
+                            movement.tipo_movimento === 'devolucao' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {movement.tipo_movimento === 'movimentacao' ? 'Alocação' :
+                             movement.tipo_movimento === 'movimentacao_interna' ? 'Mov. Interna' :
+                             movement.tipo_movimento === 'manutencao' ? 'Manutenção' :
+                             movement.tipo_movimento === 'devolucao' ? 'Devolução' :
+                             movement.tipo_movimento === 'retorno_manutencao' ? 'Ret. Manutenção' :
+                             movement.tipo_movimento === 'entrada' ? 'Entrada' :
+                             movement.tipo_movimento === 'saida' ? 'Saída' :
+                             movement.tipo_movimento}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm font-mono">{movement.equipamentos?.numero_serie || '-'}</td>
+                        <td className="p-3 text-sm">{movement.equipamentos?.tipo || '-'}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-medium max-w-[100px] truncate" title={origem}>
+                              {origem}
                             </span>
-                          ) : '-'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-medium max-w-[100px] truncate" title={destino}>
+                              {destino}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-sm">{movement.usuario_responsavel || '-'}</td>
+                        <td className="p-3 text-sm">
+                          <div className="max-w-[150px] overflow-hidden">
+                            {movement.observacoes ? (
+                              <span 
+                                className="block truncate"
+                                title={movement.observacoes}
+                              >
+                                {movement.observacoes.replace(/Movimentado?\s+de\s+.+?\s+para\s+.+?(?:\s*$|\.)/i, '').trim() || '-'}
+                              </span>
+                            ) : '-'}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
