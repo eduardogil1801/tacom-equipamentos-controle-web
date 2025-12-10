@@ -8,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Download, Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-// import jsPDF from 'jspdf'; // Removed for compatibility
 
 interface Equipment {
   id: string;
@@ -19,9 +18,9 @@ interface Equipment {
   data_saida?: string;
   status: string;
   estado: string;
-  operadoras?: {
+  empresas?: {
     name: string;
-  };
+  } | null;
 }
 
 interface Company {
@@ -52,18 +51,18 @@ const InventoryReport = () => {
 
   const fetchData = async () => {
     try {
-      // Buscar equipamentos com join das operadoras
+      // Buscar equipamentos com join das empresas
       const { data: equipmentData, error: equipmentError } = await supabase
         .from('equipamentos')
         .select(`
           *,
-          operadoras:empresas(name)
+          empresas(name)
         `)
         .order('data_entrada', { ascending: false });
 
       if (equipmentError) throw equipmentError;
 
-      // Buscar operadoras
+      // Buscar empresas
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
         .select('id, name')
@@ -71,7 +70,7 @@ const InventoryReport = () => {
 
       if (companyError) throw companyError;
 
-      setEquipments(equipmentData || []);
+      setEquipments((equipmentData || []) as Equipment[]);
       setCompanies(companyData || []);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
@@ -89,7 +88,7 @@ const InventoryReport = () => {
     let filtered = equipments;
 
     if (filters.operadora) {
-      filtered = filtered.filter(eq => eq.operadoras?.name === filters.operadora);
+      filtered = filtered.filter(eq => eq.empresas?.name === filters.operadora);
     }
 
     if (filters.status) {
@@ -118,7 +117,7 @@ const InventoryReport = () => {
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({
       ...prev,
-      [key]: value
+      [key]: value === 'all' ? '' : value
     }));
   };
 
@@ -159,12 +158,15 @@ const InventoryReport = () => {
         <CardContent className="space-y-4">
           {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <Select value={filters.operadora} onValueChange={(value) => handleFilterChange('operadora', value)}>
+            <Select 
+              value={filters.operadora || 'all'} 
+              onValueChange={(value) => handleFilterChange('operadora', value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Operadora" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {companies.map((company) => (
                   <SelectItem key={company.id} value={company.name}>
                     {company.name}
@@ -173,25 +175,33 @@ const InventoryReport = () => {
               </SelectContent>
             </Select>
 
-            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+            <Select 
+              value={filters.status || 'all'} 
+              onValueChange={(value) => handleFilterChange('status', value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="disponivel">Disponível</SelectItem>
                 <SelectItem value="em_uso">Em Uso</SelectItem>
                 <SelectItem value="manutencao">Manutenção</SelectItem>
                 <SelectItem value="defeito">Defeito</SelectItem>
+                <SelectItem value="danificado">Danificado</SelectItem>
+                <SelectItem value="indisponivel">Indisponível</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={filters.estado} onValueChange={(value) => handleFilterChange('estado', value)}>
+            <Select 
+              value={filters.estado || 'all'} 
+              onValueChange={(value) => handleFilterChange('estado', value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="novo">Novo</SelectItem>
                 <SelectItem value="usado">Usado</SelectItem>
                 <SelectItem value="recondicionado">Recondicionado</SelectItem>
@@ -249,7 +259,7 @@ const InventoryReport = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="text-2xl font-bold text-red-600">
-                  {filteredEquipments.filter(eq => eq.status === 'manutencao' || eq.status === 'defeito').length}
+                  {filteredEquipments.filter(eq => eq.status === 'manutencao' || eq.status === 'defeito' || eq.status === 'danificado').length}
                 </div>
                 <p className="text-sm text-gray-600">Manutenção/Defeito</p>
               </CardContent>
@@ -264,7 +274,7 @@ const InventoryReport = () => {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Modelo</TableHead>
                   <TableHead>Número de Série</TableHead>
-                  <TableHead>Operadora</TableHead>
+                  <TableHead>Empresa</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Data Entrada</TableHead>
@@ -277,21 +287,24 @@ const InventoryReport = () => {
                     <TableCell>{equipment.tipo}</TableCell>
                     <TableCell>{equipment.modelo || '-'}</TableCell>
                     <TableCell>{equipment.numero_serie}</TableCell>
-                    <TableCell>{equipment.operadoras?.name || '-'}</TableCell>
+                    <TableCell>{equipment.empresas?.name || '-'}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         equipment.status === 'disponivel' ? 'bg-green-100 text-green-800' :
                         equipment.status === 'em_uso' ? 'bg-blue-100 text-blue-800' :
                         equipment.status === 'manutencao' ? 'bg-yellow-100 text-yellow-800' :
+                        equipment.status === 'indisponivel' ? 'bg-purple-100 text-purple-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {equipment.status === 'disponivel' ? 'Disponível' :
                          equipment.status === 'em_uso' ? 'Em Uso' :
                          equipment.status === 'manutencao' ? 'Manutenção' :
+                         equipment.status === 'indisponivel' ? 'Indisponível' :
+                         equipment.status === 'danificado' ? 'Danificado' :
                          'Defeito'}
                       </span>
                     </TableCell>
-                    <TableCell>{equipment.estado}</TableCell>
+                    <TableCell>{equipment.estado || '-'}</TableCell>
                     <TableCell>
                       {equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : '-'}
                     </TableCell>
