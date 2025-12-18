@@ -301,9 +301,10 @@ export const useMovementForm = () => {
         const updateData: any = {};
 
         // Atualizar empresa destino para qualquer tipo de movimentação
+        let destCompany: Company | undefined;
         if (movementData.empresa_destino) {
           // Buscar o ID da empresa destino pelo nome ou usar diretamente se for ID
-          const destCompany = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
+          destCompany = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
           if (destCompany) {
             updateData.id_empresa = destCompany.id;
           }
@@ -317,8 +318,14 @@ export const useMovementForm = () => {
           updateData.modelo = movementData.modelo_equipamento;
         }
 
+        // Lógica de status: se o usuário selecionou um status, usa ele
+        // Se não selecionou e o destino NÃO é TACOM, define como "em_uso" automaticamente
         if (movementData.status_equipamento) {
           updateData.status = movementData.status_equipamento;
+        } else if (destCompany && !destCompany.name.toUpperCase().includes('TACOM')) {
+          // Equipamento indo para empresa externa (não TACOM) = em uso
+          updateData.status = 'em_uso';
+          console.log('✅ Status automaticamente definido como "em_uso" para empresa não-TACOM');
         }
 
         if (Object.keys(updateData).length > 0) {
