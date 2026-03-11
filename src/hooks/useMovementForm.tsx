@@ -258,9 +258,18 @@ export const useMovementForm = () => {
         return;
       }
 
-      const currentUserName = user?.name && user?.surname ? 
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para registrar movimentações",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const currentUserName = user.name && user.surname ? 
         `${user.name} ${user.surname}` : 
-        user?.username || 'Usuário não identificado';
+        user.username;
 
       for (const equipment of selectedEquipments) {
         console.log(`\n=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
