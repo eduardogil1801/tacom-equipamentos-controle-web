@@ -161,15 +161,21 @@ const EquipmentMovement = () => {
       return { origem: match[1], destino: match[2] };
     }
     
-    if (movement.tipo_movimento === 'entrada') {
-      return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
-    }
-    
-    if (movement.tipo_movimento === 'saida') {
+    // Movimentações de envio/transferência
+    if (movement.tipo_movimento === 'envio' || movement.tipo_movimento === 'transferencia') {
       return { origem: movement.equipamentos?.empresas?.name || '-', destino: '-' };
     }
     
-    return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+    if (movement.tipo_movimento === 'entrada') {
+      return { origem: '', destino: movement.equipamentos?.empresas?.name || '-' };
+    }
+    
+    if (movement.tipo_movimento === 'saida') {
+      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '' };
+    }
+    
+    // Movimentações internas - deixar em branco
+    return { origem: '', destino: '' };
   };
 
   // Função para obter informação de defeito
@@ -312,8 +318,8 @@ const EquipmentMovement = () => {
                 <TableCell className="font-medium">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{origem}</TableCell>
-                <TableCell className="whitespace-nowrap">{destino}</TableCell>
+                <TableCell className="whitespace-nowrap">{origem ? `De: ${origem}` : ''}</TableCell>
+                <TableCell className="whitespace-nowrap">{destino ? `Para: ${destino}` : ''}</TableCell>
                 <TableCell>{movement.tipo_movimento}</TableCell>
                 <TableCell>{getDefeitoInfo(movement)}</TableCell>
                 <TableCell>
