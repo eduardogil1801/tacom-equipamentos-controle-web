@@ -432,6 +432,8 @@ export type Database = {
           defeito_encontrado_id: string | null
           defeito_reclamado_id: string | null
           detalhes_manutencao: string | null
+          empresa_destino_nome: string | null
+          empresa_origem_nome: string | null
           id: string
           id_equipamento: string | null
           observacoes: string | null
@@ -445,6 +447,8 @@ export type Database = {
           defeito_encontrado_id?: string | null
           defeito_reclamado_id?: string | null
           detalhes_manutencao?: string | null
+          empresa_destino_nome?: string | null
+          empresa_origem_nome?: string | null
           id?: string
           id_equipamento?: string | null
           observacoes?: string | null
@@ -458,6 +462,8 @@ export type Database = {
           defeito_encontrado_id?: string | null
           defeito_reclamado_id?: string | null
           detalhes_manutencao?: string | null
+          empresa_destino_nome?: string | null
+          empresa_origem_nome?: string | null
           id?: string
           id_equipamento?: string | null
           observacoes?: string | null
