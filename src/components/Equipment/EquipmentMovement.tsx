@@ -332,7 +332,9 @@ const EquipmentMovement = () => {
                 <TableCell>{movement.usuario_responsavel || 'N/A'}</TableCell>
                 <TableCell className="max-w-[300px] truncate">{movement.observacoes || '-'}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
+
           </TableBody>
         </Table>
       </div>
