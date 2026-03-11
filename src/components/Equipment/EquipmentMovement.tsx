@@ -155,27 +155,27 @@ const EquipmentMovement = () => {
   const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
     const obs = movement.observacoes || '';
     
-    // Parse "Movimentado de X para Y"
-    const match = obs.match(/Movimentado de (.+?) para (.+)/i);
+    // Parse "Movimentado de X para Y" (pode ter " | obs extras" no final)
+    const match = obs.match(/Movimentado de (.+?) para ([^|]+)/i);
     if (match) {
-      return { origem: match[1], destino: match[2] };
+      return { origem: match[1].trim(), destino: match[2].trim() };
     }
     
-    // Movimentações de envio/transferência
-    if (movement.tipo_movimento === 'envio' || movement.tipo_movimento === 'transferencia') {
-      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '-' };
-    }
-    
-    if (movement.tipo_movimento === 'entrada') {
-      return { origem: '', destino: movement.equipamentos?.empresas?.name || '-' };
-    }
-    
-    if (movement.tipo_movimento === 'saida') {
-      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '' };
-    }
-    
-    // Movimentações internas - deixar em branco
     return { origem: '', destino: '' };
+  };
+
+  // Função para extrair observações do usuário (sem a parte de origem/destino)
+  const getUserObservations = (movement: Movement): string => {
+    const obs = movement.observacoes || '';
+    const match = obs.match(/Movimentado de .+? para [^|]+\|\s*(.+)/i);
+    if (match) {
+      return match[1].trim();
+    }
+    // Se não tem o padrão "Movimentado de...", mostra a obs completa
+    if (!obs.match(/Movimentado de/i)) {
+      return obs || '-';
+    }
+    return '-';
   };
 
   // Função para obter informação de defeito
@@ -332,7 +332,7 @@ const EquipmentMovement = () => {
                   })}
                 </TableCell>
                 <TableCell>{movement.usuario_responsavel || 'N/A'}</TableCell>
-                <TableCell className="max-w-[300px] truncate">{movement.observacoes || '-'}</TableCell>
+                <TableCell className="max-w-[300px] truncate">{getUserObservations(movement)}</TableCell>
               </TableRow>
               );
             })}
