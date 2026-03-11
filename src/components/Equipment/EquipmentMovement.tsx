@@ -155,6 +155,27 @@ const EquipmentMovement = () => {
     setFilteredMovements(filtered);
   }, [movements, selectedEquipmentCode, selectedEquipmentType]);
 
+  // Função para extrair origem e destino da observação
+  const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
+    const obs = movement.observacoes || '';
+    
+    // Parse "Movimentado de X para Y"
+    const match = obs.match(/Movimentado de (.+?) para (.+)/i);
+    if (match) {
+      return { origem: match[1], destino: match[2] };
+    }
+    
+    if (movement.tipo_movimento === 'entrada') {
+      return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+    }
+    
+    if (movement.tipo_movimento === 'saida') {
+      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '-' };
+    }
+    
+    return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+  };
+
   // Função para obter informação de defeito
   const getDefeitoInfo = (movement: Movement): string => {
     if (movement.defeito_reclamado?.codigo) {
