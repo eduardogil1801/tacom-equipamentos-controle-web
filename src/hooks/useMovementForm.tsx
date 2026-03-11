@@ -274,23 +274,20 @@ export const useMovementForm = () => {
       for (const equipment of selectedEquipments) {
         console.log(`\n=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
 
-        // Construir observações com origem e destino
+        // Determinar origem e destino
         const origemCompany = companies.find(c => c.id === equipment.id_empresa);
         const destCompanyInfo = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
         const origemNome = origemCompany?.name || movementData.empresa_origem || 'N/A';
         const destinoNome = destCompanyInfo?.name || movementData.empresa_destino || 'N/A';
-        
-        let observacoesCompletas = `Movimentado de ${origemNome} para ${destinoNome}`;
-        if (movementData.observacoes && movementData.observacoes.trim()) {
-          observacoesCompletas += ` | ${movementData.observacoes.trim()}`;
-        }
 
         const movementInsertData: any = {
           id_equipamento: equipment.id,
           tipo_movimento: movementData.tipo_movimento,
           data_movimento: movementData.data_movimento,
           usuario_responsavel: currentUserName,
-          observacoes: observacoesCompletas
+          observacoes: movementData.observacoes || null,
+          empresa_origem_nome: origemNome,
+          empresa_destino_nome: destinoNome
         };
 
         if (hasNewFields && movementData.defeito_reclamado_id) {

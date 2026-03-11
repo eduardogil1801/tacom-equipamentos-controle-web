@@ -26,6 +26,8 @@ type Movement = {
   data_criacao: string;
   observacoes?: string;
   usuario_responsavel?: string;
+  empresa_origem_nome?: string;
+  empresa_destino_nome?: string;
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
   tipo_manutencao_id?: string;
@@ -153,9 +155,16 @@ const EquipmentMovement = () => {
 
   // Função para extrair origem e destino da observação
   const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
-    const obs = movement.observacoes || '';
+    // Usar as colunas dedicadas se disponíveis
+    if (movement.empresa_origem_nome || movement.empresa_destino_nome) {
+      return {
+        origem: movement.empresa_origem_nome || '',
+        destino: movement.empresa_destino_nome || ''
+      };
+    }
     
-    // Parse "Movimentado de X para Y" (pode ter " | obs extras" no final)
+    // Fallback: parse do observacoes
+    const obs = movement.observacoes || '';
     const match = obs.match(/Movimentado de (.+?) para ([^|]+)/i);
     if (match) {
       return { origem: match[1].trim(), destino: match[2].trim() };
@@ -167,14 +176,10 @@ const EquipmentMovement = () => {
   // Função para extrair observações do usuário (sem a parte de origem/destino)
   const getUserObservations = (movement: Movement): string => {
     const obs = movement.observacoes || '';
+    if (obs === 'Entrada automática do equipamento') return obs;
     const match = obs.match(/Movimentado de .+? para [^|]+\|\s*(.+)/i);
-    if (match) {
-      return match[1].trim();
-    }
-    // Se não tem o padrão "Movimentado de...", mostra a obs completa
-    if (!obs.match(/Movimentado de/i)) {
-      return obs || '-';
-    }
+    if (match) return match[1].trim();
+    if (!obs.match(/Movimentado de/i)) return obs || '-';
     return '-';
   };
 
