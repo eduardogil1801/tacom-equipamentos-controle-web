@@ -234,7 +234,7 @@ const EquipmentTable: React.FC<EquipmentTableProps> = ({
                       <TableCell className="font-medium">{equipment.numero_serie}</TableCell>
                       <TableCell>{equipment.empresas?.name || 'N/A'}</TableCell>
                       <TableCell>{getStatusBadge(equipment.status)}</TableCell>
-                      <TableCell>{getMaintenanceType(equipment.id, maintenanceMovements)}</TableCell>
+                      <TableCell>{getMaintenanceType(equipment.id, equipment.status, maintenanceMovements)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
