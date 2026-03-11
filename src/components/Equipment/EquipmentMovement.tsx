@@ -155,6 +155,27 @@ const EquipmentMovement = () => {
     setFilteredMovements(filtered);
   }, [movements, selectedEquipmentCode, selectedEquipmentType]);
 
+  // Função para extrair origem e destino da observação
+  const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
+    const obs = movement.observacoes || '';
+    
+    // Parse "Movimentado de X para Y"
+    const match = obs.match(/Movimentado de (.+?) para (.+)/i);
+    if (match) {
+      return { origem: match[1], destino: match[2] };
+    }
+    
+    if (movement.tipo_movimento === 'entrada') {
+      return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+    }
+    
+    if (movement.tipo_movimento === 'saida') {
+      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '-' };
+    }
+    
+    return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+  };
+
   // Função para obter informação de defeito
   const getDefeitoInfo = (movement: Movement): string => {
     if (movement.defeito_reclamado?.codigo) {
@@ -278,7 +299,8 @@ const EquipmentMovement = () => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[200px]">Equipamento</TableHead>
-              <TableHead className="w-[220px]">Empresa</TableHead>
+              <TableHead className="w-[180px]">Origem</TableHead>
+              <TableHead className="w-[180px]">Destino</TableHead>
               <TableHead className="w-[140px]">Tipo Movimento</TableHead>
               <TableHead className="w-[120px]">Defeito</TableHead>
               <TableHead className="w-[150px]">Data</TableHead>
@@ -287,14 +309,15 @@ const EquipmentMovement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMovements.map((movement) => (
+            {filteredMovements.map((movement) => {
+              const { origem, destino } = getOrigemDestino(movement);
+              return (
               <TableRow key={movement.id}>
                 <TableCell className="font-medium">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
                 </TableCell>
-                <TableCell>
-                  {movement.equipamentos?.empresas?.name || 'N/A'}
-                </TableCell>
+                <TableCell className="whitespace-nowrap">{origem}</TableCell>
+                <TableCell className="whitespace-nowrap">{destino}</TableCell>
                 <TableCell>{movement.tipo_movimento}</TableCell>
                 <TableCell>{getDefeitoInfo(movement)}</TableCell>
                 <TableCell>
@@ -309,7 +332,9 @@ const EquipmentMovement = () => {
                 <TableCell>{movement.usuario_responsavel || 'N/A'}</TableCell>
                 <TableCell className="max-w-[300px] truncate">{movement.observacoes || '-'}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
+
           </TableBody>
         </Table>
       </div>
