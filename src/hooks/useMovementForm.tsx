@@ -278,7 +278,7 @@ export const useMovementForm = () => {
         const origemCompany = companies.find(c => c.id === equipment.id_empresa);
         const destCompanyInfo = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
         const origemNome = origemCompany?.name || movementData.empresa_origem || 'N/A';
-        const destinoNome = destCompany?.name || movementData.empresa_destino || 'N/A';
+        const destinoNome = destCompanyInfo?.name || movementData.empresa_destino || 'N/A';
         
         let observacoesCompletas = `Movimentado de ${origemNome} para ${destinoNome}`;
         if (movementData.observacoes && movementData.observacoes.trim()) {
