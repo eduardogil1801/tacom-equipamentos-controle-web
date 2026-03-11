@@ -299,7 +299,8 @@ const EquipmentMovement = () => {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[200px]">Equipamento</TableHead>
-              <TableHead className="w-[220px]">Empresa</TableHead>
+              <TableHead className="w-[180px]">Origem</TableHead>
+              <TableHead className="w-[180px]">Destino</TableHead>
               <TableHead className="w-[140px]">Tipo Movimento</TableHead>
               <TableHead className="w-[120px]">Defeito</TableHead>
               <TableHead className="w-[150px]">Data</TableHead>
@@ -308,14 +309,15 @@ const EquipmentMovement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredMovements.map((movement) => (
+            {filteredMovements.map((movement) => {
+              const { origem, destino } = getOrigemDestino(movement);
+              return (
               <TableRow key={movement.id}>
                 <TableCell className="font-medium">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
                 </TableCell>
-                <TableCell>
-                  {movement.equipamentos?.empresas?.name || 'N/A'}
-                </TableCell>
+                <TableCell className="whitespace-nowrap">{origem}</TableCell>
+                <TableCell className="whitespace-nowrap">{destino}</TableCell>
                 <TableCell>{movement.tipo_movimento}</TableCell>
                 <TableCell>{getDefeitoInfo(movement)}</TableCell>
                 <TableCell>
