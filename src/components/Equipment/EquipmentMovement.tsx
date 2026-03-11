@@ -26,6 +26,8 @@ type Movement = {
   data_criacao: string;
   observacoes?: string;
   usuario_responsavel?: string;
+  empresa_origem_nome?: string;
+  empresa_destino_nome?: string;
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
   tipo_manutencao_id?: string;
