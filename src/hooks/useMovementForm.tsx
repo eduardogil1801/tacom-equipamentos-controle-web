@@ -276,7 +276,7 @@ export const useMovementForm = () => {
 
         // Construir observações com origem e destino
         const origemCompany = companies.find(c => c.id === equipment.id_empresa);
-        const destCompany = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
+        const destCompanyInfo = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
         const origemNome = origemCompany?.name || movementData.empresa_origem || 'N/A';
         const destinoNome = destCompany?.name || movementData.empresa_destino || 'N/A';
         
