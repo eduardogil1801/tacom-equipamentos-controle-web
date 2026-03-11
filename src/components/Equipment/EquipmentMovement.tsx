@@ -26,8 +26,6 @@ type Movement = {
   data_criacao: string;
   observacoes?: string;
   usuario_responsavel?: string;
-  empresa_origem_nome?: string;
-  empresa_destino_nome?: string;
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
   tipo_manutencao_id?: string;
@@ -98,7 +96,11 @@ const EquipmentMovement = () => {
       if (error) {
         console.error('Erro ao buscar movimentos:', error);
       } else {
-        const filteredData = data || [];
+        const filteredData = data?.filter(movement => 
+          movement.usuario_responsavel && 
+          movement.usuario_responsavel !== 'Sistema' && 
+          movement.usuario_responsavel !== 'Usuário não identificado'
+        ) || [];
         
         const uniqueMovements = filteredData.filter((movement, index, array) => {
           const key = `${movement.id_equipamento}-${movement.tipo_movimento}-${movement.data_movimento}`;
@@ -155,32 +157,23 @@ const EquipmentMovement = () => {
 
   // Função para extrair origem e destino da observação
   const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
-    // Usar as colunas dedicadas se disponíveis
-    if (movement.empresa_origem_nome || movement.empresa_destino_nome) {
-      return {
-        origem: movement.empresa_origem_nome || '',
-        destino: movement.empresa_destino_nome || ''
-      };
-    }
-    
-    // Fallback: parse do observacoes
     const obs = movement.observacoes || '';
-    const match = obs.match(/Movimentado de (.+?) para ([^|]+)/i);
+    
+    // Parse "Movimentado de X para Y"
+    const match = obs.match(/Movimentado de (.+?) para (.+)/i);
     if (match) {
-      return { origem: match[1].trim(), destino: match[2].trim() };
+      return { origem: match[1], destino: match[2] };
     }
     
-    return { origem: '', destino: '' };
-  };
-
-  // Função para extrair observações do usuário (sem a parte de origem/destino)
-  const getUserObservations = (movement: Movement): string => {
-    const obs = movement.observacoes || '';
-    if (obs === 'Entrada automática do equipamento') return obs;
-    const match = obs.match(/Movimentado de .+? para [^|]+\|\s*(.+)/i);
-    if (match) return match[1].trim();
-    if (!obs.match(/Movimentado de/i)) return obs || '-';
-    return '-';
+    if (movement.tipo_movimento === 'entrada') {
+      return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+    }
+    
+    if (movement.tipo_movimento === 'saida') {
+      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '-' };
+    }
+    
+    return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
   };
 
   // Função para obter informação de defeito
@@ -279,7 +272,7 @@ const EquipmentMovement = () => {
             </div>
 
             {/* Filtro por Tipo de Equipamento */}
-            {selectedEquipmentCode && equipmentTypesForCode.length > 1 && (
+            {equipmentTypesForCode.length > 1 && (
               <div>
                 <Label>Tipo de Equipamento</Label>
               <Select value={selectedEquipmentType || "all"} onValueChange={(val) => setSelectedEquipmentType(val === "all" ? "" : val)}>
@@ -323,8 +316,8 @@ const EquipmentMovement = () => {
                 <TableCell className="font-medium">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{origem && origem !== 'Entrada no sistema' ? `De: ${origem}` : ''}</TableCell>
-                <TableCell className="whitespace-nowrap">{destino ? `Para: ${destino}` : ''}</TableCell>
+                <TableCell className="whitespace-nowrap">{origem}</TableCell>
+                <TableCell className="whitespace-nowrap">{destino}</TableCell>
                 <TableCell>{movement.tipo_movimento}</TableCell>
                 <TableCell>{getDefeitoInfo(movement)}</TableCell>
                 <TableCell>
@@ -337,7 +330,7 @@ const EquipmentMovement = () => {
                   })}
                 </TableCell>
                 <TableCell>{movement.usuario_responsavel || 'N/A'}</TableCell>
-                <TableCell className="max-w-[300px] truncate">{getUserObservations(movement)}</TableCell>
+                <TableCell className="max-w-[300px] truncate">{movement.observacoes || '-'}</TableCell>
               </TableRow>
               );
             })}
