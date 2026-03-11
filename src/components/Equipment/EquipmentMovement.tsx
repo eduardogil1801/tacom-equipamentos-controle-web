@@ -96,11 +96,7 @@ const EquipmentMovement = () => {
       if (error) {
         console.error('Erro ao buscar movimentos:', error);
       } else {
-        const filteredData = data?.filter(movement => 
-          movement.usuario_responsavel && 
-          movement.usuario_responsavel !== 'Sistema' && 
-          movement.usuario_responsavel !== 'Usuário não identificado'
-        ) || [];
+        const filteredData = data || [];
         
         const uniqueMovements = filteredData.filter((movement, index, array) => {
           const key = `${movement.id_equipamento}-${movement.tipo_movimento}-${movement.data_movimento}`;
