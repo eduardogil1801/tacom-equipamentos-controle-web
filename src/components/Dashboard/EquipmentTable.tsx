@@ -80,7 +80,11 @@ const getStatusBadge = (status?: string) => {
   }
 };
 
-const getMaintenanceType = (equipmentId: string, maintenanceMovements: MaintenanceMovement[]): string => {
+const getMaintenanceType = (equipmentId: string, status: string | undefined, maintenanceMovements: MaintenanceMovement[]): string => {
+  // Só mostrar tipo de manutenção se o status for manutenção ou aguardando manutenção
+  if (status !== 'manutencao' && status !== 'aguardando_manutencao') {
+    return '-';
+  }
   const maintenance = maintenanceMovements.find(m => m.id_equipamento === equipmentId);
   if (maintenance?.tipos_manutencao) {
     return maintenance.tipos_manutencao.descricao;
