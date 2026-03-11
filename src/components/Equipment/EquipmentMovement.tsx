@@ -274,7 +274,7 @@ const EquipmentMovement = () => {
             </div>
 
             {/* Filtro por Tipo de Equipamento */}
-            {equipmentTypesForCode.length > 1 && (
+            {selectedEquipmentCode && equipmentTypesForCode.length > 1 && (
               <div>
                 <Label>Tipo de Equipamento</Label>
               <Select value={selectedEquipmentType || "all"} onValueChange={(val) => setSelectedEquipmentType(val === "all" ? "" : val)}>
