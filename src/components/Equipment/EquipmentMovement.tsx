@@ -318,8 +318,8 @@ const EquipmentMovement = () => {
                 <TableCell className="font-medium">
                   {movement.equipamentos?.numero_serie || 'N/A'} - {movement.equipamentos?.tipo || 'N/A'}
                 </TableCell>
-                <TableCell className="whitespace-nowrap">{origem}</TableCell>
-                <TableCell className="whitespace-nowrap">{destino}</TableCell>
+                <TableCell className="whitespace-nowrap">{origem ? `De: ${origem}` : ''}</TableCell>
+                <TableCell className="whitespace-nowrap">{destino ? `Para: ${destino}` : ''}</TableCell>
                 <TableCell>{movement.tipo_movimento}</TableCell>
                 <TableCell>{getDefeitoInfo(movement)}</TableCell>
                 <TableCell>
