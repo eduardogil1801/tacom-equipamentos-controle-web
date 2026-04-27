@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { 
-  Menu, 
-  LayoutDashboard, 
-  Package, 
-  Building2, 
-  FileText, 
-  Truck, 
-  ClipboardList, 
-  Users, 
-  Settings, 
+import {
+  Menu,
+  LayoutDashboard,
+  Package,
+  Building2,
+  FileText,
+  Truck,
+  ClipboardList,
+  Users,
+  Settings,
   LogOut,
   ArrowRightLeft,
-  History
+  History,
+  Film
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useHybridAuth';
 import ConnectionStatus from '@/components/ConnectionStatus';
@@ -48,7 +49,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
     { key: 'fleet', label: 'Frota', icon: Truck, page: 'fleet' },
     { key: 'protocol', label: 'Protocolo', icon: ClipboardList, page: 'protocol' },
     { key: 'users', label: 'Usuários', icon: Users, page: 'users' },
-    { key: 'settings', label: 'Configurações', icon: Settings, page: 'settings' }
+    { key: 'settings', label: 'Configurações', icon: Settings, page: 'settings' },
+    { key: 'videos', label: 'Vídeos', icon: Film, page: 'videos' }
   ];
 
   // Filtrar módulos baseado nas permissões do usuário
@@ -58,6 +60,9 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({ currentPage, onPage
       return true;
     }
     
+    // Vídeos são acessíveis a todos os usuários autenticados
+    if (module.key === 'videos') return true;
+
     // Para usuários operacionais, verificar permissão de visualização
     // Movimentação e Histórico usam a mesma permissão de equipamentos
     const moduleKey = (module.key === 'movements' || module.key === 'history') ? 'equipments' : module.key;
