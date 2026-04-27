@@ -59,6 +59,10 @@ const VideoPage: React.FC = () => {
         setFiles([]);
         setFolder(result.folder || '');
       }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erro inesperado ao comunicar com o processo principal.';
+      setError(msg);
+      setFiles([]);
     } finally {
       setLoading(false);
     }

@@ -152,7 +152,15 @@ ipcMain.handle('list-video-files', () => {
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
     return { success: true, files, folder };
   } catch (err) {
-    return { success: false, error: err.message, files: [] };
+    const mensagensErro = {
+      'EACCES': 'Sem permissão para acessar a pasta.',
+      'EPERM':  'Operação não permitida na pasta.',
+      'ENOTDIR':'O caminho indicado não é uma pasta válida.',
+      'EBUSY':  'A pasta está em uso por outro processo.',
+    };
+    const codigo = err.code || '';
+    const mensagem = mensagensErro[codigo] || `Erro ao ler a pasta: ${err.message}`;
+    return { success: false, error: mensagem, files: [] };
   }
 });
 
