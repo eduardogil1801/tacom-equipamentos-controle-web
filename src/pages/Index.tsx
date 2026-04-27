@@ -10,6 +10,7 @@ import CompanyManager from '@/components/Company/CompanyManager';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
+import VideoPage from '@/components/Videos/VideoPage';
 import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
 import ChatFloat from '@/components/Chat/ChatFloat';
 import { useAuth } from '@/hooks/useHybridAuth';
@@ -63,7 +64,8 @@ const Index = () => {
       'companies': 'companies',
       'protocol': 'protocol',
       'reports': 'reports',
-      'settings': 'settings'
+      'settings': 'settings',
+      'videos': 'videos'
     };
 
     const moduleKey = modulePermissions[page as keyof typeof modulePermissions];
@@ -132,6 +134,8 @@ const Index = () => {
           return renderNoPermission();
         }
         return <SettingsPage />;
+      case 'videos':
+        return <VideoPage />;
       default:
         // Dashboard sempre é acessível
         return <Dashboard />;
