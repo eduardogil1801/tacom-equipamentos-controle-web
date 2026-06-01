@@ -9,6 +9,7 @@ import FleetManagement from '@/components/Fleet/FleetManagement';
 import CompanyManager from '@/components/Company/CompanyManager';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
+import UserManagement from '@/components/Users/UserManagement';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
 import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
 import ChatFloat from '@/components/Chat/ChatFloat';
