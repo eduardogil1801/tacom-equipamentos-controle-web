@@ -9,6 +9,7 @@ import FleetManagement from '@/components/Fleet/FleetManagement';
 import CompanyManager from '@/components/Company/CompanyManager';
 import ReportsPage from '@/components/Reports/ReportsPage';
 import SettingsPage from '@/components/Settings/SettingsPage';
+import UserManagement from '@/components/Users/UserManagement';
 import ProtocolPage from '@/components/Protocol/ProtocolPage';
 import ResponsiveHeader from '@/components/Layout/ResponsiveHeader';
 import ChatFloat from '@/components/Chat/ChatFloat';
@@ -63,7 +64,8 @@ const Index = () => {
       'companies': 'companies',
       'protocol': 'protocol',
       'reports': 'reports',
-      'settings': 'settings'
+      'settings': 'settings',
+      'users': 'users'
     };
 
     const moduleKey = modulePermissions[page as keyof typeof modulePermissions];
@@ -132,6 +134,11 @@ const Index = () => {
           return renderNoPermission();
         }
         return <SettingsPage />;
+      case 'users':
+        if (user?.userType !== 'administrador' && !checkPermission('users', 'view')) {
+          return renderNoPermission();
+        }
+        return <UserManagement />;
       default:
         // Dashboard sempre é acessível
         return <Dashboard />;
