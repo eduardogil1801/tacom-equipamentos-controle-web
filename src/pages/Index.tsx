@@ -134,6 +134,11 @@ const Index = () => {
           return renderNoPermission();
         }
         return <SettingsPage />;
+      case 'users':
+        if (user?.userType !== 'administrador' && !checkPermission('users', 'view')) {
+          return renderNoPermission();
+        }
+        return <UserManagement />;
       default:
         // Dashboard sempre é acessível
         return <Dashboard />;
