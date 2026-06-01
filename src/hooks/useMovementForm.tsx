@@ -318,15 +318,19 @@ export const useMovementForm = () => {
           updateData.modelo = movementData.modelo_equipamento;
         }
 
-        // Lógica de status: se o usuário selecionou um status, usa ele
-        // Se não selecionou e o destino NÃO é TACOM, define como "em_uso" automaticamente
-        if (movementData.status_equipamento) {
-          updateData.status = movementData.status_equipamento;
-        } else if (destCompany && !destCompany.name.toUpperCase().includes('TACOM')) {
-          // Equipamento indo para empresa externa (não TACOM) = em uso
+        // Lógica de status:
+        // - Se destino NÃO é TACOM, força "em_uso" (status de manutenção só vale dentro da TACOM)
+        // - Caso contrário, usa o status selecionado pelo usuário
+        const isDestTacom = destCompany ? destCompany.name.toUpperCase().includes('TACOM') : false;
+        if (destCompany && !isDestTacom) {
           updateData.status = 'em_uso';
-          console.log('✅ Status automaticamente definido como "em_uso" para empresa não-TACOM');
+          if (movementData.status_equipamento && movementData.status_equipamento !== 'em_uso') {
+            console.log('⚠️ Status ajustado para "em_uso": empresa destino não é TACOM');
+          }
+        } else if (movementData.status_equipamento) {
+          updateData.status = movementData.status_equipamento;
         }
+
 
         if (Object.keys(updateData).length > 0) {
           console.log('Atualizando equipamento com dados:', updateData);
