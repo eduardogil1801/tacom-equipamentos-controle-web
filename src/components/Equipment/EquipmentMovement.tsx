@@ -159,23 +159,30 @@ const EquipmentMovement = () => {
 
   // Função para extrair origem e destino da observação
   const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
-    const obs = movement.observacoes || '';
-    
-    // Parse "Movimentado de X para Y"
-    const match = obs.match(/Movimentado de (.+?) para (.+)/i);
-    if (match) {
-      return { origem: match[1], destino: match[2] };
+    // Priorizar colunas dedicadas
+    let origem = movement.empresa_origem_nome || '';
+    let destino = movement.empresa_destino_nome || '';
+
+    // Fallback: parse observações "Movimentado de X para Y"
+    if (!origem || !destino) {
+      const obs = movement.observacoes || '';
+      const match = obs.match(/Movimentado de (.+?) para (.+)/i);
+      if (match) {
+        origem = origem || match[1];
+        destino = destino || match[2];
+      }
     }
-    
-    if (movement.tipo_movimento === 'entrada') {
-      return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+
+    // Fallback final baseado no tipo
+    const empresaAtual = movement.equipamentos?.empresas?.name || '-';
+    if (!origem) {
+      origem = movement.tipo_movimento === 'entrada' ? '-' : empresaAtual;
     }
-    
-    if (movement.tipo_movimento === 'saida') {
-      return { origem: movement.equipamentos?.empresas?.name || '-', destino: '-' };
+    if (!destino) {
+      destino = movement.tipo_movimento === 'saida' ? '-' : empresaAtual;
     }
-    
-    return { origem: '-', destino: movement.equipamentos?.empresas?.name || '-' };
+
+    return { origem, destino };
   };
 
   // Função para obter informação de defeito
