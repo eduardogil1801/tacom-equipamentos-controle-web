@@ -157,33 +157,54 @@ const EquipmentMovement = () => {
     setFilteredMovements(filtered);
   }, [movements, selectedEquipmentCode, selectedEquipmentType]);
 
-  // Função para extrair origem e destino da observação
-  const getOrigemDestino = (movement: Movement): { origem: string; destino: string } => {
-    // Priorizar colunas dedicadas
-    let origem = movement.empresa_origem_nome || '';
-    let destino = movement.empresa_destino_nome || '';
+  // Mapa de origem/destino calculado cronologicamente por equipamento
+  const origemDestinoMap = useMemo(() => {
+    const map = new Map<string, { origem: string; destino: string }>();
+    // Agrupar por equipamento (numero_serie)
+    const byEquip = new Map<string, Movement[]>();
+    movements.forEach((m) => {
+      const key = m.equipamentos?.numero_serie || m.id;
+      if (!byEquip.has(key)) byEquip.set(key, []);
+      byEquip.get(key)!.push(m);
+    });
 
-    // Fallback: parse observações "Movimentado de X para Y"
-    if (!origem || !destino) {
-      const obs = movement.observacoes || '';
-      const match = obs.match(/Movimentado de (.+?) para (.+)/i);
-      if (match) {
-        origem = origem || match[1];
-        destino = destino || match[2];
-      }
-    }
+    byEquip.forEach((list) => {
+      // Ordenar cronologicamente (mais antigo primeiro)
+      const sorted = [...list].sort(
+        (a, b) => new Date(a.data_criacao).getTime() - new Date(b.data_criacao).getTime()
+      );
 
-    // Fallback final baseado no tipo
-    const empresaAtual = movement.equipamentos?.empresas?.name || '-';
-    if (!origem) {
-      origem = movement.tipo_movimento === 'entrada' ? '-' : empresaAtual;
-    }
-    if (!destino) {
-      destino = movement.tipo_movimento === 'saida' ? '-' : empresaAtual;
-    }
+      sorted.forEach((m, idx) => {
+        // Destino: prioriza coluna dedicada, senão empresa atual do equipamento
+        const empresaAtual = m.equipamentos?.empresas?.name || '-';
+        const destino = m.empresa_destino_nome || empresaAtual;
 
-    return { origem, destino };
-  };
+        // Origem: prioriza coluna dedicada; senão pega destino da movimentação anterior
+        let origem = m.empresa_origem_nome || '';
+        if (!origem) {
+          if (idx > 0) {
+            const prev = sorted[idx - 1];
+            origem =
+              prev.empresa_destino_nome ||
+              prev.equipamentos?.empresas?.name ||
+              '-';
+          } else {
+            // Primeira movimentação: tentar parse de observações
+            const obs = m.observacoes || '';
+            const match = obs.match(/Movimentado de (.+?) para (.+)/i);
+            origem = match ? match[1] : empresaAtual;
+          }
+        }
+
+        map.set(m.id, { origem, destino });
+      });
+    });
+
+    return map;
+  }, [movements]);
+
+  const getOrigemDestino = (movement: Movement) =>
+    origemDestinoMap.get(movement.id) || { origem: '-', destino: '-' };
 
   // Função para obter informação de defeito
   const getDefeitoInfo = (movement: Movement): string => {
