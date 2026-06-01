@@ -29,6 +29,8 @@ type Movement = {
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
   tipo_manutencao_id?: string;
+  empresa_origem_nome?: string;
+  empresa_destino_nome?: string;
   equipamentos?: {
     numero_serie: string;
     tipo: string;
