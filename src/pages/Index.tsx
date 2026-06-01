@@ -64,7 +64,8 @@ const Index = () => {
       'companies': 'companies',
       'protocol': 'protocol',
       'reports': 'reports',
-      'settings': 'settings'
+      'settings': 'settings',
+      'users': 'users'
     };
 
     const moduleKey = modulePermissions[page as keyof typeof modulePermissions];
