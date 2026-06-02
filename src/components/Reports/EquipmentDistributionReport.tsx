@@ -369,11 +369,13 @@ const EquipmentDistributionReport: React.FC = () => {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip />
-                <Bar 
-                  dataKey="value" 
-                  fill="#3B82F6" 
+                <Bar
+                  dataKey="value"
                   radius={[0, 4, 4, 0]}
                 >
+                  {statusChartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color} />
+                  ))}
                   <LabelList dataKey="value" position="right" fill="#374151" fontSize={12} />
                 </Bar>
               </BarChart>
