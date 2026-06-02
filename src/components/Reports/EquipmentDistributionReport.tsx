@@ -199,13 +199,25 @@ const EquipmentDistributionReport: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Distribuição de Equipamentos por Status</h1>
-        <Button onClick={exportToCSV} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Exportar CSV
-        </Button>
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <h1 className="text-2xl font-bold text-foreground">Distribuição de Equipamentos por Status</h1>
+        <ReportExportBar
+          getData={() => ({
+            title: 'Distribuição de Equipamentos por Status',
+            fileName: `distribuicao_equipamentos_${new Date().toISOString().slice(0, 10)}`,
+            headers: ['Tipo/Modelo', 'Status', 'Quantidade'],
+            rows: filteredData
+              .slice()
+              .sort((a, b) => b.count - a.count)
+              .map(item => [
+                item.tipo,
+                statusLabels[item.status] || item.status,
+                item.count,
+              ]),
+          })}
+        />
       </div>
+
 
       {/* Filtros com Multi-Select */}
       <Card>
