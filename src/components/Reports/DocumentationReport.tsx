@@ -370,11 +370,18 @@ const generateDocPDF = async ({ title, subtitle, fileName, sections }: DocPDFOpt
   drawHeader();
   let y = 32;
 
+  const resetTextStyle = () => {
+    doc.setTextColor(...TEXT_DARK);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+  };
+
   const ensureSpace = (needed: number) => {
     if (y + needed > pageH - 14) {
       doc.addPage();
       drawHeader();
       y = 32;
+      resetTextStyle();
     }
   };
 
@@ -615,13 +622,21 @@ const reportsDoc: Section[] = [
       'Card "Entradas": quantas vezes um equipamento foi recebido por uma empresa.',
       'Card "Saidas": quantas vezes um equipamento deixou uma empresa.',
       'Card "Transferencias": movimentacoes entre duas empresas diferentes.',
-      'Coluna Data: data real da movimentacao (preenchida pelo usuario).',
+      'Coluna Data: data real da movimentacao (preenchida pelo usuario, formato DD/MM/AAAA).',
+      'Coluna Hora: hora exata em que a movimentacao foi registrada no sistema (HH:MM), util para auditoria fina.',
       'Coluna Tipo: Entrada, Saida ou Movimentacao.',
       'Coluna Equipamento: codigo/numero de serie do item movimentado.',
-      'Coluna Origem: empresa de onde o equipamento saiu (vazio em Entradas).',
-      'Coluna Destino: empresa para onde o equipamento foi (vazio em Saidas).',
-      'Coluna Defeito: DR, DE ou Outro, quando a movimentacao envolveu manutencao.',
+      'Coluna Origem: empresa de onde o equipamento saiu (vazio em Entradas puras).',
+      'Coluna Destino: empresa para onde o equipamento foi (vazio em Saidas puras).',
+      'Coluna Categoria de Defeito: DR (Defeito de Recolhimento), DE (Defeito de Entrega) ou Outro, quando a movimentacao envolveu manutencao. Fica em branco em movimentacoes que nao sao de manutencao.',
+      'Coluna Defeito Reclamado: descricao do problema reportado pelo cliente.',
+      'Coluna Defeito Encontrado: diagnostico tecnico real apos analise.',
+      'Coluna Tipo de Manutencao: detalhe tecnico do reparo (ex: troca de fonte, atualizacao de firmware).',
       'Coluna Usuario: quem registrou a movimentacao no sistema (trilha de auditoria).',
+      'Filtro Periodo (data inicial / data final): restringe ao intervalo desejado.',
+      'Filtro Empresa: limita as movimentacoes de uma empresa especifica (origem OU destino).',
+      'Filtro Tipo: Entrada, Saida ou Movimentacao.',
+      'Filtro Categoria de Defeito: mostra apenas movimentacoes DR, DE ou Outros.',
       'Dica: para auditoria, filtre por periodo e exporte em PDF; o arquivo fica datado e oficial.',
     ],
   },
@@ -719,6 +734,12 @@ const reportsDoc: Section[] = [
       'Coluna Defeito Reclamado: o que o cliente reportou.',
       'Coluna Defeito Encontrado: o que a equipe tecnica realmente identificou.',
       'Coluna Empresa: cliente envolvido.',
+      'Filtro Periodo (data inicial / data final): restringe as manutencoes ao intervalo desejado.',
+      'Filtro Empresa: limita o relatorio a uma empresa especifica.',
+      'Filtro Categoria de Defeito: DR, DE ou Outros — isola um tipo de problema para analise focada.',
+      'Filtro Tipo de Manutencao: filtra pelo tipo tecnico (troca de fonte, firmware, preventiva, etc).',
+      'Filtro Tipo de Equipamento: limita a um tipo (ex: so CCIT 5.0) para identificar familias problematicas.',
+      'Filtro Numero de Serie: investiga o historico de manutencoes de UM equipamento especifico.',
       'Dica: muitas ocorrencias DE indicam falha no processo de checagem antes da entrega; muitas DR indicam problema de qualidade do equipamento ou uso indevido.',
     ],
   },
