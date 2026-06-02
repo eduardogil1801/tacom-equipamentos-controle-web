@@ -218,19 +218,26 @@ const MovementsReport: React.FC = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
+  const fmtMaint = (m?: MaintRef) => m ? `${m.codigo} - ${m.descricao}` : '-';
+
   const buildExport = () => ({
     title: 'Relatório de Movimentações',
     fileName: `movimentacoes_${new Date().toISOString().slice(0, 10)}`,
-    headers: ['Data', 'Tipo', 'Nº Série', 'Equipamento', 'Origem', 'Destino', 'Responsável', 'Observações'],
+    headers: ['Data', 'Hora', 'Tipo', 'Nº Série', 'Equipamento', 'Origem', 'Destino', 'Tipo Manutenção', 'Defeito Reclamado', 'Defeito Encontrado', 'Responsável', 'Observações'],
     rows: filteredMovements.map(m => {
       const { origem, destino } = getOrigemDestino(m);
+      const dt = m.data_criacao ? new Date(m.data_criacao) : null;
       return [
         formatDateForDisplay(m.data_movimento),
+        dt ? dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-',
         m.tipo_movimento,
         m.equipamentos?.numero_serie || '-',
         m.equipamentos?.tipo || '-',
         origem,
         destino,
+        fmtMaint(m.tipos_manutencao),
+        fmtMaint(m.defeito_reclamado),
+        fmtMaint(m.defeito_encontrado),
         m.usuario_responsavel || '-',
         m.observacoes || '-',
       ];
