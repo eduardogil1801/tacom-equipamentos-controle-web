@@ -357,11 +357,15 @@ const MovementsReport: React.FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Data</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Hora</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Tipo</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Nº Série</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Equipamento</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Origem</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Destino</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Tipo Manutenção</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Defeito Reclamado</th>
+                    <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Defeito Encontrado</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Responsável</th>
                     <th className="text-left p-3 border-b border-gray-200 font-medium text-gray-900 whitespace-nowrap">Observações</th>
                   </tr>
@@ -369,10 +373,19 @@ const MovementsReport: React.FC = () => {
                 <tbody>
                   {filteredMovements.map(movement => {
                     const { origem, destino } = getOrigemDestino(movement);
-                    
+                    const dt = movement.data_criacao ? new Date(movement.data_criacao) : null;
+                    const hora = dt ? dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '-';
+                    const renderMaint = (m?: MaintRef) =>
+                      m ? (
+                        <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-medium whitespace-nowrap" title={`${m.codigo} - ${m.descricao}`}>
+                          {m.codigo}
+                        </span>
+                      ) : <span className="text-gray-400">-</span>;
+
                     return (
                       <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                         <td className="p-3 text-sm whitespace-nowrap">{formatDateForDisplay(movement.data_movimento)}</td>
+                        <td className="p-3 text-sm whitespace-nowrap">{hora}</td>
                         <td className="p-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                             movement.tipo_movimento === 'entrada' ? 'bg-green-100 text-green-800' :
@@ -405,6 +418,9 @@ const MovementsReport: React.FC = () => {
                             {destino}
                           </span>
                         </td>
+                        <td className="p-3">{renderMaint(movement.tipos_manutencao)}</td>
+                        <td className="p-3">{renderMaint(movement.defeito_reclamado)}</td>
+                        <td className="p-3">{renderMaint(movement.defeito_encontrado)}</td>
                         <td className="p-3 text-sm whitespace-nowrap">{movement.usuario_responsavel || '-'}</td>
                         <td className="p-3 text-sm">
                           {movement.observacoes ? (
