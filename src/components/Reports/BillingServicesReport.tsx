@@ -504,8 +504,8 @@ const BillingServicesReport: React.FC = () => {
         margin: { left: 8, right: 8 },
         styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak' },
         headStyles: { fillColor: headerGray, textColor: 255, fontStyle: 'bold', halign: 'center' },
-        footStyles: { fillColor: totalGray, textColor: 255, fontStyle: 'bold', halign: 'right' },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
+        footStyles: { fillColor: totalRed, textColor: 255, fontStyle: 'bold', halign: 'right' },
+        alternateRowStyles: { fillColor: [248, 235, 235] },
         columnStyles,
         didDrawPage: (d) => {
           const total = doc.getNumberOfPages();
