@@ -57,6 +57,9 @@ export const useMovementForm = () => {
   const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasNewFields, setHasNewFields] = useState(false);
+  const [confirmation, setConfirmation] = useState<{ title: string; messages: string[] } | null>(null);
+  const pendingExecuteRef = useRef<(() => Promise<void>) | null>(null);
+  
   
   const [movementData, setMovementData] = useState<MovementData>({
     tipo_movimento: '',
