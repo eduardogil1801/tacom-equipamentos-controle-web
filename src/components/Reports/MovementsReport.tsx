@@ -235,12 +235,9 @@ const MovementsReport: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900">Relatório de Movimentações</h1>
-        <Button onClick={generatePDF} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Gerar PDF
-        </Button>
+        <ReportExportBar getData={buildExport} />
       </div>
 
       <Card>
