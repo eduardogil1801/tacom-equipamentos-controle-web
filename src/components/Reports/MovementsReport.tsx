@@ -321,18 +321,29 @@ const MovementsReport: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="numeroSerie">Número de Série</Label>
+              <Label htmlFor="pesquisaNumero">Pesquisar Nº de Série</Label>
+              <Input
+                id="pesquisaNumero"
+                type="text"
+                placeholder="Digite para pesquisar..."
+                value={filters.pesquisaNumero}
+                onChange={(e) => handleFilterChange('pesquisaNumero', e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="tipoEquipamento">Tipo de Equipamento</Label>
               <Select 
-                value={filters.numeroSerie || 'all'} 
-                onValueChange={(value) => handleFilterChange('numeroSerie', value === 'all' ? '' : value)}
+                value={filters.tipoEquipamento || 'all'} 
+                onValueChange={(value) => handleFilterChange('tipoEquipamento', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os números de série" />
+                  <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os números de série</SelectItem>
-                  {availableSerialNumbers.map(serial => (
-                    <SelectItem key={serial} value={serial}>{serial}</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {equipmentTypes.map(type => (
+                    <SelectItem key={type.id} value={type.nome}>{type.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
