@@ -9,6 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
 
+interface MaintRef {
+  codigo: string;
+  descricao: string;
+}
+
 interface Movement {
   id: string;
   tipo_movimento: string;
@@ -27,10 +32,9 @@ interface Movement {
       name: string;
     };
   };
-  tipos_manutencao?: {
-    codigo: string;
-    descricao: string;
-  };
+  tipos_manutencao?: MaintRef;
+  defeito_reclamado?: MaintRef;
+  defeito_encontrado?: MaintRef;
 }
 
 interface User {
