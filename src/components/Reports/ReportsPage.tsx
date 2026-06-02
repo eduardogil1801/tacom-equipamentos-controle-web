@@ -84,8 +84,8 @@ const allReports: ReportItem[] = [
   },
   {
     key: 'billing-services-report',
-    title: 'Faturamento por Serviço',
-    description: 'Relatório de faturamento consolidado por tipo de serviço',
+    title: 'Frota',
+    description: 'Relatório de frota e serviços consolidados por empresa',
     icon: <Truck className="h-6 w-6" />,
     component: BillingServicesReport
   },

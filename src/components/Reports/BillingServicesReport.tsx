@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Printer } from 'lucide-react';
+import { exportCSV as utilExportCSV, printReport as utilPrintReport } from '@/utils/reportExports';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -369,116 +370,66 @@ const BillingServicesReport: React.FC = () => {
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Faturamento por Serviço');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Frota');
 
     // Download do arquivo
-    const fileName = `faturamento_servicos_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `frota_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
   const generatePDF = async (data: FleetData[]) => {
     try {
-      // Importar jsPDF dinamicamente
       const { jsPDF } = await import('jspdf');
-      
-      // Criar novo documento PDF
-      const doc = new jsPDF();
-      
-      // Configurar cores como tuplas tipadas
-      const primaryColor: [number, number, number] = [41, 128, 185];
-      const secondaryColor: [number, number, number] = [52, 73, 94];
-      const accentColor: [number, number, number] = [231, 76, 60];
-      
-      // Header do documento
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(0, 0, 210, 25, 'F');
-      
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+
+      const headerGray: [number, number, number] = [110, 110, 110];
+      const totalGray: [number, number, number] = [80, 80, 80];
+
+      doc.setFillColor(headerGray[0], headerGray[1], headerGray[2]);
+      doc.rect(0, 0, pageW, 18, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.text('RELATÓRIO DE FATURAMENTO POR SERVIÇO', 105, 16, { align: 'center' });
-      
-      // Informações do filtro
-      let yPosition = 35;
-      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-      doc.setFontSize(10);
-      
+      doc.setFontSize(15);
+      doc.text('RELATÓRIO DE FROTA', pageW / 2, 12, { align: 'center' });
+
+      let yPosition = 24;
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
+
       if (exportFilters.empresa && exportFilters.empresa !== 'all') {
-        doc.text(`Empresa: ${exportFilters.empresa}`, 20, yPosition);
-        yPosition += 5;
+        doc.text(`Empresa: ${exportFilters.empresa}`, 10, yPosition);
+        yPosition += 4;
       }
-      
       if (exportFilters.mesReferencia && exportFilters.mesReferencia !== 'all') {
-        doc.text(`Mês Referência: ${exportFilters.mesReferencia}`, 20, yPosition);
-        yPosition += 5;
+        doc.text(`Mês Referência: ${exportFilters.mesReferencia}`, 10, yPosition);
+        yPosition += 4;
       }
-      
-      yPosition += 10;
-      
-      // Cabeçalho da tabela
-      const tableHeaders = [
-        'Empresa', 'Mês Ref.', 'Simples C/Image', 'Simples S/Image', 
+
+      const headers = [
+        'Empresa', 'Mês Ref.', 'Simples C/Image', 'Simples S/Image',
         'Seção', 'Nuvem', 'Total Bilhet.', 'CITGIS', 'Buszoom', 'Telemetria'
       ];
-      
-      const columnWidths = [25, 18, 18, 18, 15, 15, 18, 15, 15, 15];
-      let xPosition = 15;
-      
-      // Desenhar cabeçalho
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(15, yPosition, 180, 8, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      
-      tableHeaders.forEach((header, index) => {
-        doc.text(header, xPosition + 1, yPosition + 5);
-        xPosition += columnWidths[index];
-      });
-      
-      yPosition += 8;
-      
-      // Dados da tabela
-      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-      data.forEach((item, index) => {
-        if (yPosition > 270) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
+
+      const rows = data.map(item => {
         const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
-        
-        // Alternar cores das linhas
-        if (index % 2 === 0) {
-          doc.setFillColor(248, 249, 250);
-          doc.rect(15, yPosition, 180, 6, 'F');
-        }
-        
-        const rowData = [
+        return [
           item.nome_empresa,
           formatMesReferencia(item.mes_referencia),
-          (item.simples_com_imagem || 0).toString(),
-          (item.simples_sem_imagem || 0).toString(),
-          (item.secao || 0).toString(),
-          nuvemTotal.toString(),
-          nuvemTotal.toString(), // Total Bilhetagem = Nuvem
-          (item.citgis || 0).toString(),
-          (item.buszoom || 0).toString(),
-          (item.telemetria || 0).toString()
+          formatNumber(item.simples_com_imagem || 0),
+          formatNumber(item.simples_sem_imagem || 0),
+          formatNumber(item.secao || 0),
+          formatNumber(nuvemTotal),
+          formatNumber(nuvemTotal),
+          formatNumber(item.citgis || 0),
+          formatNumber(item.buszoom || 0),
+          formatNumber(item.telemetria || 0),
         ];
-        
-        xPosition = 15;
-        rowData.forEach((cellData, cellIndex) => {
-          doc.text(cellData, xPosition + 1, yPosition + 4);
-          xPosition += columnWidths[cellIndex];
-        });
-        
-        yPosition += 6;
       });
-      
-      // Adicionar totais se for "todas empresas"
+
+      let footRow: string[] | undefined;
       if (!exportFilters.empresa || exportFilters.empresa === 'all') {
-        yPosition += 5;
-        
         const totals = data.reduce((acc, item) => {
           const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
           return {
@@ -488,66 +439,53 @@ const BillingServicesReport: React.FC = () => {
             nuvem: acc.nuvem + nuvemTotal,
             citgis: acc.citgis + (item.citgis || 0),
             buszoom: acc.buszoom + (item.buszoom || 0),
-            telemetria: acc.telemetria + (item.telemetria || 0)
+            telemetria: acc.telemetria + (item.telemetria || 0),
           };
-        }, {
-          simplesComImage: 0,
-          simplesSemImage: 0,
-          secao: 0,
-          nuvem: 0,
-          citgis: 0,
-          buszoom: 0,
-          telemetria: 0
-        });
-        
-        // Linha de total
-        doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-        doc.rect(15, yPosition, 180, 8, 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
-        
-        const totalRowData = [
-          'TOTAL GERAL',
-          '',
-          totals.simplesComImage.toString(),
-          totals.simplesSemImage.toString(),
-          totals.secao.toString(),
-          totals.nuvem.toString(),
-          totals.nuvem.toString(),
-          totals.citgis.toString(),
-          totals.buszoom.toString(),
-          totals.telemetria.toString()
+        }, { simplesComImage: 0, simplesSemImage: 0, secao: 0, nuvem: 0, citgis: 0, buszoom: 0, telemetria: 0 });
+
+        footRow = [
+          'TOTAL GERAL', '',
+          formatNumber(totals.simplesComImage),
+          formatNumber(totals.simplesSemImage),
+          formatNumber(totals.secao),
+          formatNumber(totals.nuvem),
+          formatNumber(totals.nuvem),
+          formatNumber(totals.citgis),
+          formatNumber(totals.buszoom),
+          formatNumber(totals.telemetria),
         ];
-        
-        xPosition = 15;
-        totalRowData.forEach((cellData, cellIndex) => {
-          doc.text(cellData, xPosition + 1, yPosition + 5);
-          xPosition += columnWidths[cellIndex];
-        });
       }
-      
-      // Footer
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.setFontSize(8);
-        doc.text(`Página ${i} de ${pageCount}`, 105, 290, { align: 'center' });
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 20, 290);
-      }
-      
-      // Download do PDF
-      const fileName = `faturamento_servicos_${new Date().toISOString().split('T')[0]}.pdf`;
-      doc.save(fileName);
-      
+
+      const colWidths = [44, 20, 26, 26, 18, 22, 26, 22, 22, 24];
+      const columnStyles: Record<number, any> = {};
+      colWidths.forEach((w, i) => {
+        columnStyles[i] = { cellWidth: w, halign: i === 0 ? 'left' : 'right' };
+      });
+
+      autoTable(doc, {
+        head: [headers],
+        body: rows,
+        foot: footRow ? [footRow] : undefined,
+        startY: yPosition + 4,
+        margin: { left: 8, right: 8 },
+        styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak' },
+        headStyles: { fillColor: headerGray, textColor: 255, fontStyle: 'bold', halign: 'center' },
+        footStyles: { fillColor: totalGray, textColor: 255, fontStyle: 'bold', halign: 'right' },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        columnStyles,
+        didDrawPage: (d) => {
+          const total = doc.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(110, 110, 110);
+          doc.text(`Página ${d.pageNumber} de ${total}`, pageW - 8, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+          doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 8, doc.internal.pageSize.getHeight() - 5);
+        },
+      });
+
+      doc.save(`frota_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao gerar PDF. Verifique se a biblioteca jsPDF está instalada.",
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Erro ao gerar PDF.', variant: 'destructive' });
     }
   };
 
@@ -565,6 +503,34 @@ const BillingServicesReport: React.FC = () => {
     }
   });
 
+  const buildCurrentExport = () => {
+    const headers = ['Empresa', 'Mês Ref.', 'Simples C/Image', 'Simples S/Image', 'Seção', 'Nuvem', 'Total Bilhet.', 'CITGIS', 'Buszoom', 'Telemetria'];
+    const rows = sortedFilteredData.map(item => {
+      const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
+      return [
+        item.nome_empresa,
+        formatMesReferencia(item.mes_referencia),
+        formatNumber(item.simples_com_imagem || 0),
+        formatNumber(item.simples_sem_imagem || 0),
+        formatNumber(item.secao || 0),
+        formatNumber(nuvemTotal),
+        formatNumber(nuvemTotal),
+        formatNumber(item.citgis || 0),
+        formatNumber(item.buszoom || 0),
+        formatNumber(item.telemetria || 0),
+      ];
+    });
+    return {
+      title: 'Relatório de Frota',
+      fileName: `frota_${new Date().toISOString().slice(0, 10)}`,
+      headers,
+      rows,
+    };
+  };
+
+  const exportCurrentCSV = () => utilExportCSV(buildCurrentExport());
+  const printCurrent = () => utilPrintReport(buildCurrentExport());
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -577,15 +543,23 @@ const BillingServicesReport: React.FC = () => {
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <h1 className="text-2xl font-bold text-gray-900">Relatório de Faturamento por Serviço</h1>
-        <div className="flex gap-2">
-          <Button onClick={() => openExportDialog('xlsx')} className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-gray-900">Relatório de Frota</h1>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => openExportDialog('xlsx')} variant="outline" size="sm" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
-            Gerar Excel
+            XLSX
           </Button>
-          <Button onClick={() => openExportDialog('pdf')} className="flex items-center gap-2" variant="outline">
+          <Button onClick={() => openExportDialog('pdf')} variant="outline" size="sm" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Gerar PDF
+            PDF
+          </Button>
+          <Button onClick={exportCurrentCSV} variant="outline" size="sm" className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            CSV
+          </Button>
+          <Button onClick={printCurrent} variant="outline" size="sm" className="flex items-center gap-2">
+            <Printer className="h-4 w-4" />
+            Imprimir
           </Button>
         </div>
       </div>

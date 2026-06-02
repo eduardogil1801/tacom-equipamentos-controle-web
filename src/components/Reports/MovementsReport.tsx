@@ -1,22 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { formatDateForDisplay } from '@/utils/dateUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import ReportExportBar from './ReportExportBar';
 
 interface Movement {
   id: string;
   tipo_movimento: string;
   data_movimento: string;
+  data_criacao?: string;
   observacoes?: string;
   detalhes_manutencao?: string;
   usuario_responsavel?: string;
+  empresa_origem_nome?: string;
+  empresa_destino_nome?: string;
   equipamentos: {
     numero_serie: string;
     tipo: string;
@@ -162,35 +164,66 @@ const MovementsReport: React.FC = () => {
     setFilteredMovements(filtered);
   };
 
-  const generatePDF = () => {
-    alert("Geração de PDF não disponível no momento");
-    return;
-  };
+  // Mapa cronológico de origem/destino por equipamento
+  const origemDestinoMap = useMemo(() => {
+    const map = new Map<string, { origem: string; destino: string }>();
+    const byEquip = new Map<string, Movement[]>();
+    movements.forEach(m => {
+      const key = m.equipamentos?.numero_serie || m.id;
+      if (!byEquip.has(key)) byEquip.set(key, []);
+      byEquip.get(key)!.push(m);
+    });
+    byEquip.forEach(list => {
+      const sorted = [...list].sort(
+        (a, b) =>
+          new Date(a.data_criacao || a.data_movimento).getTime() -
+          new Date(b.data_criacao || b.data_movimento).getTime()
+      );
+      sorted.forEach((m, idx) => {
+        const empresaAtual = m.equipamentos?.empresas?.name || '-';
+        const destino = m.empresa_destino_nome || empresaAtual;
+        let origem = m.empresa_origem_nome || '';
+        if (!origem) {
+          if (idx > 0) {
+            const prev = sorted[idx - 1];
+            origem = prev.empresa_destino_nome || prev.equipamentos?.empresas?.name || '-';
+          } else {
+            const obs = m.observacoes || '';
+            const match = obs.match(/Movimentado de (.+?) para (.+)/i);
+            origem = match ? match[1] : empresaAtual;
+          }
+        }
+        map.set(m.id, { origem, destino });
+      });
+    });
+    return map;
+  }, [movements]);
+
+  const getOrigemDestino = (m: Movement) =>
+    origemDestinoMap.get(m.id) || { origem: '-', destino: '-' };
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
-  // Extrair empresa origem e destino das observações
-  const parseMovementDetails = (movement: Movement): { origem: string; destino: string } => {
-    const observacoes = movement.observacoes || '';
-    
-    // Padrão: "Movimentado de EMPRESA_ORIGEM para EMPRESA_DESTINO"
-    const match = observacoes.match(/Movimentado?\s+de\s+(.+?)\s+para\s+(.+?)(?:\s*$|\.)/i);
-    
-    if (match) {
-      return {
-        origem: match[1].trim(),
-        destino: match[2].trim()
-      };
-    }
-    
-    // Se não encontrou o padrão, usa a empresa atual como destino
-    return {
-      origem: '-',
-      destino: movement.equipamentos?.empresas?.name || '-'
-    };
-  };
+  const buildExport = () => ({
+    title: 'Relatório de Movimentações',
+    fileName: `movimentacoes_${new Date().toISOString().slice(0, 10)}`,
+    headers: ['Data', 'Tipo', 'Nº Série', 'Equipamento', 'Origem', 'Destino', 'Responsável', 'Observações'],
+    rows: filteredMovements.map(m => {
+      const { origem, destino } = getOrigemDestino(m);
+      return [
+        formatDateForDisplay(m.data_movimento),
+        m.tipo_movimento,
+        m.equipamentos?.numero_serie || '-',
+        m.equipamentos?.tipo || '-',
+        origem,
+        destino,
+        m.usuario_responsavel || '-',
+        m.observacoes || '-',
+      ];
+    }),
+  });
 
   if (loading) {
     return (
@@ -202,12 +235,9 @@ const MovementsReport: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900">Relatório de Movimentações</h1>
-        <Button onClick={generatePDF} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          Gerar PDF
-        </Button>
+        <ReportExportBar getData={buildExport} />
       </div>
 
       <Card>
@@ -319,7 +349,7 @@ const MovementsReport: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredMovements.map(movement => {
-                    const { origem, destino } = parseMovementDetails(movement);
+                    const { origem, destino } = getOrigemDestino(movement);
                     
                     return (
                       <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
