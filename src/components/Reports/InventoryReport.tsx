@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Search, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import ReportExportBar from './ReportExportBar';
 
 interface Equipment {
   id: string;
@@ -131,10 +132,21 @@ const InventoryReport = () => {
     });
   };
 
-  const exportToPDF = () => {
-    alert("Exportação para PDF não disponível no momento");
-    return;
-  };
+  const buildExport = () => ({
+    title: 'Relatório de Inventário',
+    fileName: `inventario_${new Date().toISOString().slice(0, 10)}`,
+    headers: ['Tipo', 'Modelo', 'Nº Série', 'Empresa', 'Status', 'Estado', 'Data Entrada', 'Data Saída'],
+    rows: filteredEquipments.map(eq => [
+      eq.tipo || '-',
+      eq.modelo || '-',
+      eq.numero_serie || '-',
+      eq.empresas?.name || '-',
+      eq.status || '-',
+      eq.estado || 'Não informado',
+      eq.data_entrada ? new Date(eq.data_entrada).toLocaleDateString('pt-BR') : '-',
+      eq.data_saida ? new Date(eq.data_saida).toLocaleDateString('pt-BR') : '-',
+    ]),
+  });
 
   if (loading) {
     return (
@@ -221,15 +233,12 @@ const InventoryReport = () => {
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap items-center">
             <Button variant="outline" onClick={clearFilters}>
               <Filter className="h-4 w-4 mr-2" />
               Limpar Filtros
             </Button>
-            <Button onClick={exportToPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar PDF
-            </Button>
+            <ReportExportBar getData={buildExport} />
           </div>
 
           {/* Resumo */}
@@ -304,7 +313,7 @@ const InventoryReport = () => {
                          'Defeito'}
                       </span>
                     </TableCell>
-                    <TableCell>{equipment.estado || '-'}</TableCell>
+                    <TableCell>{equipment.estado || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
                     <TableCell>
                       {equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : '-'}
                     </TableCell>
