@@ -100,14 +100,8 @@ const InventoryReport = () => {
       filtered = filtered.filter(eq => eq.status === filters.status);
     }
 
-    if (filters.estado) {
-      filtered = filtered.filter(eq => eq.estado === filters.estado);
-    }
-
     if (filters.tipo) {
-      filtered = filtered.filter(eq => 
-        eq.tipo.toLowerCase().includes(filters.tipo.toLowerCase())
-      );
+      filtered = filtered.filter(eq => eq.tipo === filters.tipo);
     }
 
     if (filters.numero_serie) {
