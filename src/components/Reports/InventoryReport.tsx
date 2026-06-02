@@ -34,10 +34,10 @@ const InventoryReport = () => {
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tipos, setTipos] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     operadora: '',
     status: '',
-    estado: '',
     tipo: '',
     numero_serie: ''
   });
@@ -73,6 +73,10 @@ const InventoryReport = () => {
 
       setEquipments((equipmentData || []) as Equipment[]);
       setCompanies(companyData || []);
+      const uniqueTipos = Array.from(
+        new Set(((equipmentData || []) as Equipment[]).map(e => e.tipo).filter(Boolean))
+      ).sort();
+      setTipos(uniqueTipos);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast({
@@ -96,14 +100,8 @@ const InventoryReport = () => {
       filtered = filtered.filter(eq => eq.status === filters.status);
     }
 
-    if (filters.estado) {
-      filtered = filtered.filter(eq => eq.estado === filters.estado);
-    }
-
     if (filters.tipo) {
-      filtered = filtered.filter(eq => 
-        eq.tipo.toLowerCase().includes(filters.tipo.toLowerCase())
-      );
+      filtered = filtered.filter(eq => eq.tipo === filters.tipo);
     }
 
     if (filters.numero_serie) {
@@ -126,7 +124,6 @@ const InventoryReport = () => {
     setFilters({
       operadora: '',
       status: '',
-      estado: '',
       tipo: '',
       numero_serie: ''
     });
@@ -169,69 +166,76 @@ const InventoryReport = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <Select 
-              value={filters.operadora || 'all'} 
-              onValueChange={(value) => handleFilterChange('operadora', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Operadora" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.name}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Operadora</label>
+              <Select
+                value={filters.operadora || 'all'}
+                onValueChange={(value) => handleFilterChange('operadora', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as operadoras" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.name}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select 
-              value={filters.status || 'all'} 
-              onValueChange={(value) => handleFilterChange('status', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="disponivel">Disponível</SelectItem>
-                <SelectItem value="em_uso">Em Uso</SelectItem>
-                <SelectItem value="manutencao">Manutenção</SelectItem>
-                <SelectItem value="defeito">Defeito</SelectItem>
-                <SelectItem value="danificado">Danificado</SelectItem>
-                <SelectItem value="indisponivel">Indisponível</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select
+                value={filters.status || 'all'}
+                onValueChange={(value) => handleFilterChange('status', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="disponivel">Disponível</SelectItem>
+                  <SelectItem value="em_uso">Em Uso</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="defeito">Defeito</SelectItem>
+                  <SelectItem value="danificado">Danificado</SelectItem>
+                  <SelectItem value="indisponivel">Indisponível</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Select 
-              value={filters.estado || 'all'} 
-              onValueChange={(value) => handleFilterChange('estado', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="novo">Novo</SelectItem>
-                <SelectItem value="usado">Usado</SelectItem>
-                <SelectItem value="recondicionado">Recondicionado</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de Equipamento</label>
+              <Select
+                value={filters.tipo || 'all'}
+                onValueChange={(value) => handleFilterChange('tipo', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {tipos.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Input
-              placeholder="Tipo do equipamento"
-              value={filters.tipo}
-              onChange={(e) => handleFilterChange('tipo', e.target.value)}
-            />
-
-            <Input
-              placeholder="Número de série"
-              value={filters.numero_serie}
-              onChange={(e) => handleFilterChange('numero_serie', e.target.value)}
-            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Número de Série</label>
+              <Input
+                placeholder="Buscar por nº de série"
+                value={filters.numero_serie}
+                onChange={(e) => handleFilterChange('numero_serie', e.target.value)}
+              />
+            </div>
           </div>
+
 
           <div className="flex gap-2 flex-wrap items-center">
             <Button variant="outline" onClick={clearFilters}>
