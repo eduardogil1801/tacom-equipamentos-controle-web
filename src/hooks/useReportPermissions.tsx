@@ -32,7 +32,8 @@ export const useReportPermissions = () => {
         'maintenance-report',
         'monthly-report',
         'movements-report',
-        'equipment-history-detail-report'
+        'equipment-history-detail-report',
+        'documentation-report'
       ]);
       setLoading(false);
       return;
