@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Printer } from 'lucide-react';
+import { exportCSV as utilExportCSV, printReport as utilPrintReport } from '@/utils/reportExports';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -515,14 +516,22 @@ const BillingServicesReport: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <h1 className="text-2xl font-bold text-gray-900">Relatório de Frota</h1>
-        <div className="flex gap-2">
-          <Button onClick={() => openExportDialog('xlsx')} className="flex items-center gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => openExportDialog('xlsx')} variant="outline" size="sm" className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
-            Gerar Excel
+            XLSX
           </Button>
-          <Button onClick={() => openExportDialog('pdf')} className="flex items-center gap-2" variant="outline">
+          <Button onClick={() => openExportDialog('pdf')} variant="outline" size="sm" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Gerar PDF
+            PDF
+          </Button>
+          <Button onClick={exportCurrentCSV} variant="outline" size="sm" className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            CSV
+          </Button>
+          <Button onClick={printCurrent} variant="outline" size="sm" className="flex items-center gap-2">
+            <Printer className="h-4 w-4" />
+            Imprimir
           </Button>
         </div>
       </div>
