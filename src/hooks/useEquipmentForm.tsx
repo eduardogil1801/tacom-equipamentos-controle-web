@@ -123,7 +123,7 @@ export const useEquipmentForm = (
     setSelectedCompany(company || null);
     
     // Verificar se a empresa é TACOM
-    const isTacom = company?.name?.toUpperCase().includes('TACOM') || false;
+    const isTacom = isTacomCompanyName(company?.name);
     
     setFormData(prev => ({
       ...prev,
