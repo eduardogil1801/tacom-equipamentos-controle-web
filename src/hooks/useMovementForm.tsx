@@ -251,10 +251,10 @@ export const useMovementForm = () => {
           empresa_destino_nome: destCompany?.name || null,
         };
 
-        if (hasNewFields && movementData.defeito_reclamado_id) {
+        if (movementData.defeito_reclamado_id) {
           movementInsertData.defeito_reclamado_id = movementData.defeito_reclamado_id;
         }
-        if (hasNewFields && movementData.defeito_encontrado_id) {
+        if (movementData.defeito_encontrado_id) {
           movementInsertData.defeito_encontrado_id = movementData.defeito_encontrado_id;
         }
         if (movementData.tipo_manutencao_id) {
