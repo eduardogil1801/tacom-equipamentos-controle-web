@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { FileDown, Package, ChevronDown } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
+import { Package, ChevronDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList, Cell } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import ReportExportBar from './ReportExportBar';
 
 interface EquipmentData {
   tipo: string;
@@ -25,14 +26,15 @@ const statusLabels: { [key: string]: string } = {
   'devolvido': 'Devolvido'
 };
 
+// Cores padrão do sistema por status (consistentes com dashboard)
 const statusColors: { [key: string]: string } = {
-  'disponivel': '#16A34A',
-  'em_uso': '#DC2626',
-  'manutencao': '#CA8A04',
-  'aguardando_manutencao': '#F59E0B',
-  'danificado': '#EF4444',
-  'indisponivel': '#9333EA',
-  'devolvido': '#6B7280'
+  'disponivel': '#16A34A',          // verde
+  'em_uso': '#2563EB',              // azul
+  'manutencao': '#F59E0B',          // âmbar
+  'aguardando_manutencao': '#F97316', // laranja
+  'danificado': '#DC2626',          // vermelho
+  'indisponivel': '#9333EA',        // roxo
+  'devolvido': '#6B7280'            // cinza
 };
 
 const EquipmentDistributionReport: React.FC = () => {
@@ -140,13 +142,17 @@ const EquipmentDistributionReport: React.FC = () => {
   // Dados para gráfico de barras horizontais por status
   const statusChartData = useMemo(() => {
     const grouped = filteredData.reduce((acc: { [key: string]: number }, item) => {
-      const statusLabel = statusLabels[item.status] || item.status;
-      acc[statusLabel] = (acc[statusLabel] || 0) + item.count;
+      acc[item.status] = (acc[item.status] || 0) + item.count;
       return acc;
     }, {});
 
     return Object.entries(grouped)
-      .map(([name, value]) => ({ name, value }))
+      .map(([status, value]) => ({
+        status,
+        name: statusLabels[status] || status,
+        value,
+        color: statusColors[status] || '#3B82F6',
+      }))
       .sort((a, b) => b.value - a.value);
   }, [filteredData]);
 
@@ -193,13 +199,25 @@ const EquipmentDistributionReport: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Distribuição de Equipamentos por Status</h1>
-        <Button onClick={exportToCSV} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Exportar CSV
-        </Button>
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <h1 className="text-2xl font-bold text-foreground">Distribuição de Equipamentos por Status</h1>
+        <ReportExportBar
+          getData={() => ({
+            title: 'Distribuição de Equipamentos por Status',
+            fileName: `distribuicao_equipamentos_${new Date().toISOString().slice(0, 10)}`,
+            headers: ['Tipo/Modelo', 'Status', 'Quantidade'],
+            rows: filteredData
+              .slice()
+              .sort((a, b) => b.count - a.count)
+              .map(item => [
+                item.tipo,
+                statusLabels[item.status] || item.status,
+                item.count,
+              ]),
+          })}
+        />
       </div>
+
 
       {/* Filtros com Multi-Select */}
       <Card>
@@ -351,11 +369,13 @@ const EquipmentDistributionReport: React.FC = () => {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip />
-                <Bar 
-                  dataKey="value" 
-                  fill="#3B82F6" 
+                <Bar
+                  dataKey="value"
                   radius={[0, 4, 4, 0]}
                 >
+                  {statusChartData.map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color} />
+                  ))}
                   <LabelList dataKey="value" position="right" fill="#374151" fontSize={12} />
                 </Bar>
               </BarChart>
