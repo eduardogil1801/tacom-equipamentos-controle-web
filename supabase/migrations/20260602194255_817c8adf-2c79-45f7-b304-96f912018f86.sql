@@ -1,0 +1,1 @@
+UPDATE public.equipamentos SET estado = 'Rio Grande do Sul' WHERE estado IS NULL OR trim(estado) = '';
