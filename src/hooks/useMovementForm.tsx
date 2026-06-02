@@ -71,6 +71,7 @@ export const useMovementForm = () => {
     tipo_manutencao_id: '',
     defeito_reclamado_id: '',
     defeito_encontrado_id: '',
+    outro_defeito_id: '',
     tipo_equipamento: '',
     modelo_equipamento: '',
     status_equipamento: ''
