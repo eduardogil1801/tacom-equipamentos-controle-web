@@ -381,20 +381,53 @@ const BillingServicesReport: React.FC = () => {
     try {
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
+      const tacomLogo = (await import('@/assets/tacom-logo.png')).default;
+
+      // Carregar logo como dataURL (evita CORS)
+      const logo = await new Promise<{ dataUrl: string; w: number; h: number } | null>((resolve) => {
+        fetch(tacomLogo)
+          .then(r => r.blob())
+          .then(b => {
+            const fr = new FileReader();
+            fr.onload = () => {
+              const dataUrl = fr.result as string;
+              const img = new Image();
+              img.onload = () => resolve({ dataUrl, w: img.width, h: img.height });
+              img.onerror = () => resolve(null);
+              img.src = dataUrl;
+            };
+            fr.onerror = () => resolve(null);
+            fr.readAsDataURL(b);
+          })
+          .catch(() => resolve(null));
+      });
 
       const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
       const pageW = doc.internal.pageSize.getWidth();
 
+      // Vermelho e cinza padrão TACOM
+      const systemRed: [number, number, number] = [232, 62, 62];
       const headerGray: [number, number, number] = [110, 110, 110];
-      const totalGray: [number, number, number] = [80, 80, 80];
+      const totalRed: [number, number, number] = [180, 35, 35];
 
-      doc.setFillColor(headerGray[0], headerGray[1], headerGray[2]);
-      doc.rect(0, 0, pageW, 18, 'F');
+      // Barra superior vermelha
+      doc.setFillColor(systemRed[0], systemRed[1], systemRed[2]);
+      doc.rect(0, 0, pageW, 22, 'F');
+
+      // Logo
+      if (logo) {
+        const logoH = 14;
+        const logoW = (logo.w / logo.h) * logoH;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(6, 4, logoW + 6, logoH + 4, 2, 2, 'F');
+        doc.addImage(logo.dataUrl, 'PNG', 9, 6, logoW, logoH);
+      }
+
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(15);
-      doc.text('RELATÓRIO DE FROTA', pageW / 2, 12, { align: 'center' });
+      doc.text('RELATÓRIO DE FROTA', pageW / 2, 14, { align: 'center' });
 
-      let yPosition = 24;
+      let yPosition = 28;
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(9);
 
@@ -406,6 +439,7 @@ const BillingServicesReport: React.FC = () => {
         doc.text(`Mês Referência: ${exportFilters.mesReferencia}`, 10, yPosition);
         yPosition += 4;
       }
+
 
       const headers = [
         'Empresa', 'Mês Ref.', 'Simples C/Image', 'Simples S/Image',
@@ -470,8 +504,8 @@ const BillingServicesReport: React.FC = () => {
         margin: { left: 8, right: 8 },
         styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak' },
         headStyles: { fillColor: headerGray, textColor: 255, fontStyle: 'bold', halign: 'center' },
-        footStyles: { fillColor: totalGray, textColor: 255, fontStyle: 'bold', halign: 'right' },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
+        footStyles: { fillColor: totalRed, textColor: 255, fontStyle: 'bold', halign: 'right' },
+        alternateRowStyles: { fillColor: [248, 235, 235] },
         columnStyles,
         didDrawPage: (d) => {
           const total = doc.getNumberOfPages();
