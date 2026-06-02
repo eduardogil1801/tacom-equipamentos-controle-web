@@ -34,10 +34,10 @@ const InventoryReport = () => {
   const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tipos, setTipos] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     operadora: '',
     status: '',
-    estado: '',
     tipo: '',
     numero_serie: ''
   });
