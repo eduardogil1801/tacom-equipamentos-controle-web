@@ -369,10 +369,10 @@ const BillingServicesReport: React.FC = () => {
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Faturamento por Serviço');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Frota');
 
     // Download do arquivo
-    const fileName = `faturamento_servicos_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `frota_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -514,7 +514,7 @@ const BillingServicesReport: React.FC = () => {
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <h1 className="text-2xl font-bold text-gray-900">Relatório de Faturamento por Serviço</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Relatório de Frota</h1>
         <div className="flex gap-2">
           <Button onClick={() => openExportDialog('xlsx')} className="flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
