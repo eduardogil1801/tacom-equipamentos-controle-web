@@ -91,7 +91,7 @@ export const exportPDF = async (opts: ExportOptions) => {
   const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
 
-  let logo: HTMLImageElement | null = null;
+  let logo: { dataUrl: string; width: number; height: number } | null = null;
   try {
     logo = await loadLogo();
   } catch {
@@ -108,7 +108,7 @@ export const exportPDF = async (opts: ExportOptions) => {
     const logoW = (logo.width / logo.height) * logoH;
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(6, 4, logoW + 6, logoH + 4, 2, 2, 'F');
-    doc.addImage(logo, 'PNG', 9, 6, logoW, logoH);
+    doc.addImage(logo.dataUrl, 'PNG', 9, 6, logoW, logoH);
   }
 
   doc.setTextColor(255, 255, 255);
