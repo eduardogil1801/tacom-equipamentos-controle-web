@@ -73,6 +73,10 @@ const InventoryReport = () => {
 
       setEquipments((equipmentData || []) as Equipment[]);
       setCompanies(companyData || []);
+      const uniqueTipos = Array.from(
+        new Set(((equipmentData || []) as Equipment[]).map(e => e.tipo).filter(Boolean))
+      ).sort();
+      setTipos(uniqueTipos);
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast({
