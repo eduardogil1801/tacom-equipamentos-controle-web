@@ -194,8 +194,10 @@ export const useMovementForm = () => {
 
   const isDestinationTacom = () => {
     if (!movementData.empresa_destino) return false;
-    const company = companies.find(c => c.id === movementData.empresa_destino);
-    return company?.name.toUpperCase().includes('TACOM') || false;
+    const company = companies.find(
+      c => c.id === movementData.empresa_destino || c.name === movementData.empresa_destino
+    );
+    return isTacomCompanyName(company?.name);
   };
 
   const handleInputChange = (field: keyof MovementData, value: string) => {
