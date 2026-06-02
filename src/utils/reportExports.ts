@@ -68,7 +68,7 @@ export const exportXLSX = ({ title, fileName, headers, rows, totalRow }: ExportO
   XLSX.writeFile(wb, `${fileName}.xlsx`);
 };
 
-export const exportPDF = (opts: ExportOptions) => {
+export const exportPDF = async (opts: ExportOptions) => {
   const {
     title,
     fileName,
@@ -76,20 +76,37 @@ export const exportPDF = (opts: ExportOptions) => {
     rows,
     columnWidths,
     orientation = 'l',
-    headerColor = [110, 110, 110],
-    totalColor = [80, 80, 80],
+    headerColor = SYSTEM_RED,
+    totalColor = SYSTEM_RED_DARK,
     totalRow,
   } = opts;
 
   const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
 
-  // Header
+  let logo: HTMLImageElement | null = null;
+  try {
+    logo = await loadLogo();
+  } catch {
+    logo = null;
+  }
+
+  // Header bar
   doc.setFillColor(headerColor[0], headerColor[1], headerColor[2]);
-  doc.rect(0, 0, pageW, 18, 'F');
+  doc.rect(0, 0, pageW, 22, 'F');
+
+  // Logo (left) on white pill
+  if (logo) {
+    const logoH = 14;
+    const logoW = (logo.width / logo.height) * logoH;
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(6, 4, logoW + 6, logoH + 4, 2, 2, 'F');
+    doc.addImage(logo, 'PNG', 9, 6, logoW, logoH);
+  }
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.text(title.toUpperCase(), pageW / 2, 12, { align: 'center' });
+  doc.setFontSize(15);
+  doc.text(title.toUpperCase(), pageW / 2, 14, { align: 'center' });
 
   const columnStyles: Record<number, any> = {};
   if (columnWidths) {
@@ -102,7 +119,7 @@ export const exportPDF = (opts: ExportOptions) => {
     head: [headers],
     body: rows.map(r => r.map(c => String(c ?? ''))),
     foot: totalRow ? [totalRow.map(c => String(c ?? ''))] : undefined,
-    startY: 24,
+    startY: 28,
     margin: { left: 8, right: 8 },
     styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak' },
     headStyles: {
@@ -116,7 +133,7 @@ export const exportPDF = (opts: ExportOptions) => {
       textColor: 255,
       fontStyle: 'bold',
     },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
+    alternateRowStyles: { fillColor: [250, 240, 240] },
     columnStyles,
     didDrawPage: (data) => {
       const pageNo = doc.getNumberOfPages();
