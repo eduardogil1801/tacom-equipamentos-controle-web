@@ -734,8 +734,13 @@ const reportsDoc: Section[] = [
       'Coluna Defeito Reclamado: o que o cliente reportou.',
       'Coluna Defeito Encontrado: o que a equipe tecnica realmente identificou.',
       'Coluna Empresa: cliente envolvido.',
+      'Filtro Periodo (data inicial / data final): restringe as manutencoes ao intervalo desejado.',
+      'Filtro Empresa: limita o relatorio a uma empresa especifica.',
+      'Filtro Categoria de Defeito: DR, DE ou Outros — isola um tipo de problema para analise focada.',
+      'Filtro Tipo de Manutencao: filtra pelo tipo tecnico (troca de fonte, firmware, preventiva, etc).',
+      'Filtro Tipo de Equipamento: limita a um tipo (ex: so CCIT 5.0) para identificar familias problematicas.',
+      'Filtro Numero de Serie: investiga o historico de manutencoes de UM equipamento especifico.',
       'Dica: muitas ocorrencias DE indicam falha no processo de checagem antes da entrega; muitas DR indicam problema de qualidade do equipamento ou uso indevido.',
-    ],
   },
 
   {
