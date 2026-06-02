@@ -474,9 +474,9 @@ const MovementsReport: React.FC = () => {
                             {destino}
                           </span>
                         </td>
-                        <td className="p-3">{renderMaint(movement.tipos_manutencao)}</td>
-                        <td className="p-3">{renderMaint(movement.defeito_reclamado)}</td>
-                        <td className="p-3">{renderMaint(movement.defeito_encontrado)}</td>
+                        <td className="p-3">{renderMaint(getTipoManutencao(movement))}</td>
+                        <td className="p-3">{renderMaint(getDefeitoReclamado(movement))}</td>
+                        <td className="p-3">{renderMaint(getDefeitoEncontrado(movement))}</td>
                         <td className="p-3 text-sm whitespace-nowrap">{movement.usuario_responsavel || '-'}</td>
                         <td className="p-3 text-sm">
                           {movement.observacoes ? (
