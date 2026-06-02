@@ -195,7 +195,7 @@ const drawMovementFlow = (doc: jsPDF, x: number, y: number, w: number): number =
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7.5);
   doc.setTextColor(...SYSTEM_GRAY);
-  doc.text('Fluxo de movimentação: empresa de origem → equipamento → empresa de destino', x, y + boxH + 4);
+  doc.text('Fluxo de movimentacao: empresa de origem -> equipamento -> empresa de destino', x, y + boxH + 4);
   return boxH + 8;
 };
 
