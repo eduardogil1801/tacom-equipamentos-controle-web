@@ -335,8 +335,11 @@ export const useMovementForm = () => {
       toast({ title: "Atenção", description: "Selecione o tipo de movimentação", variant: "destructive" });
       return;
     }
-    if (movementData.tipo_movimento === 'manutencao' && !movementData.defeito_reclamado_id) {
-      toast({ title: "Atenção", description: "Selecione o defeito reclamado", variant: "destructive" });
+    const requiresDefect = ['manutencao', 'envio_manutencao', 'retorno_manutencao', 'movimentacao_interna'].includes(
+      movementData.tipo_movimento
+    );
+    if (requiresDefect && !movementData.defeito_reclamado_id && !movementData.defeito_encontrado_id && !movementData.outro_defeito_id) {
+      toast({ title: "Atenção", description: "Selecione ao menos um defeito ou outro tipo de manutenção", variant: "destructive" });
       return;
     }
     if (!movementData.empresa_destino) {
