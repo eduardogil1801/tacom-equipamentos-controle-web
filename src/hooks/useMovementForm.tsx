@@ -292,6 +292,15 @@ export const useMovementForm = () => {
         }
       }
 
+      // Se destino é NÃO-TACOM (cliente), tipo de movimento "manutencao" não faz sentido.
+      // Pede confirmação antes de prosseguir (status será forçado para "em_uso").
+      if (!destIsTacom && movementData.tipo_movimento === 'manutencao') {
+        const confirmar = window.confirm(
+          `O tipo de movimentação está como "Manutenção", mas o destino é uma empresa cliente (${destCompanyGlobal?.name}).\n\nEmpresas cliente só aceitam status "Em Uso". Deseja alterar o status para "Em Uso" e continuar?`
+        );
+        if (!confirmar) return;
+      }
+
       const currentUserName = user?.name && user?.surname ? 
         `${user.name} ${user.surname}` : 
         user?.username || 'Usuário não identificado';
