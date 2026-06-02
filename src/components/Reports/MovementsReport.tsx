@@ -79,11 +79,7 @@ const MovementsReport: React.FC = () => {
     applyFilters();
   }, [movements, filters]);
 
-  useEffect(() => {
-    // Extrair números de série únicos
-    const serialNumbers = [...new Set(movements.map(m => m.equipamentos?.numero_serie).filter(Boolean))].sort();
-    setAvailableSerialNumbers(serialNumbers);
-  }, [movements]);
+  // (números de série são pesquisados via campo de texto livre)
 
   const loadData = async () => {
     try {
