@@ -31,6 +31,7 @@ import MaintenanceReport from './MaintenanceReport';
 import MonthlyReport from './MonthlyReport';
 import InventoryStockReport from './InventoryStockReport';
 import EquipmentHistoryDetailReport from './EquipmentHistoryDetailReport';
+import DocumentationReport from './DocumentationReport';
 
 interface ReportItem {
   key: string;
