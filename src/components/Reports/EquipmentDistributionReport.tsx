@@ -142,13 +142,17 @@ const EquipmentDistributionReport: React.FC = () => {
   // Dados para gráfico de barras horizontais por status
   const statusChartData = useMemo(() => {
     const grouped = filteredData.reduce((acc: { [key: string]: number }, item) => {
-      const statusLabel = statusLabels[item.status] || item.status;
-      acc[statusLabel] = (acc[statusLabel] || 0) + item.count;
+      acc[item.status] = (acc[item.status] || 0) + item.count;
       return acc;
     }, {});
 
     return Object.entries(grouped)
-      .map(([name, value]) => ({ name, value }))
+      .map(([status, value]) => ({
+        status,
+        name: statusLabels[status] || status,
+        value,
+        color: statusColors[status] || '#3B82F6',
+      }))
       .sort((a, b) => b.value - a.value);
   }, [filteredData]);
 
