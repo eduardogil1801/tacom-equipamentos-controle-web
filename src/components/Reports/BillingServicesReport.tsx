@@ -503,6 +503,34 @@ const BillingServicesReport: React.FC = () => {
     }
   });
 
+  const buildCurrentExport = () => {
+    const headers = ['Empresa', 'Mês Ref.', 'Simples C/Image', 'Simples S/Image', 'Seção', 'Nuvem', 'Total Bilhet.', 'CITGIS', 'Buszoom', 'Telemetria'];
+    const rows = sortedFilteredData.map(item => {
+      const nuvemTotal = (item.simples_com_imagem || 0) + (item.simples_sem_imagem || 0) + (item.secao || 0);
+      return [
+        item.nome_empresa,
+        formatMesReferencia(item.mes_referencia),
+        formatNumber(item.simples_com_imagem || 0),
+        formatNumber(item.simples_sem_imagem || 0),
+        formatNumber(item.secao || 0),
+        formatNumber(nuvemTotal),
+        formatNumber(nuvemTotal),
+        formatNumber(item.citgis || 0),
+        formatNumber(item.buszoom || 0),
+        formatNumber(item.telemetria || 0),
+      ];
+    });
+    return {
+      title: 'Relatório de Frota',
+      fileName: `frota_${new Date().toISOString().slice(0, 10)}`,
+      headers,
+      rows,
+    };
+  };
+
+  const exportCurrentCSV = () => utilExportCSV(buildCurrentExport());
+  const printCurrent = () => utilPrintReport(buildCurrentExport());
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
