@@ -349,7 +349,7 @@ const MovementsReport: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredMovements.map(movement => {
-                    const { origem, destino } = parseMovementDetails(movement);
+                    const { origem, destino } = getOrigemDestino(movement);
                     
                     return (
                       <tr key={movement.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
