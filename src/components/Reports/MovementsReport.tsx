@@ -48,19 +48,26 @@ interface Company {
   name: string;
 }
 
+interface EquipmentType {
+  id: string;
+  nome: string;
+}
+
 const MovementsReport: React.FC = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [filteredMovements, setFilteredMovements] = useState<Movement[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [availableSerialNumbers, setAvailableSerialNumbers] = useState<string[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [filters, setFilters] = useState({
     tipoMovimento: '',
     dataInicio: '',
     dataFim: '',
     numeroSerie: '',
+    pesquisaNumero: '',
+    tipoEquipamento: '',
     usuarioResponsavel: ''
   });
 
@@ -72,11 +79,7 @@ const MovementsReport: React.FC = () => {
     applyFilters();
   }, [movements, filters]);
 
-  useEffect(() => {
-    // Extrair números de série únicos
-    const serialNumbers = [...new Set(movements.map(m => m.equipamentos?.numero_serie).filter(Boolean))].sort();
-    setAvailableSerialNumbers(serialNumbers);
-  }, [movements]);
+  // (números de série são pesquisados via campo de texto livre)
 
   const loadData = async () => {
     try {
@@ -130,6 +133,16 @@ const MovementsReport: React.FC = () => {
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
+      // Carregar tipos de equipamento
+      const { data: typesData, error: typesError } = await supabase
+        .from('tipos_equipamento')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (typesError) throw typesError;
+      setEquipmentTypes(typesData || []);
+
     } catch (error) {
       console.error('Erro ao carregar movimentações:', error);
       toast({
@@ -161,9 +174,16 @@ const MovementsReport: React.FC = () => {
       );
     }
 
-    if (filters.numeroSerie) {
+    if (filters.pesquisaNumero) {
+      const termo = filters.pesquisaNumero.toLowerCase();
       filtered = filtered.filter(item => 
-        item.equipamentos?.numero_serie === filters.numeroSerie
+        item.equipamentos?.numero_serie?.toLowerCase().includes(termo)
+      );
+    }
+
+    if (filters.tipoEquipamento) {
+      filtered = filtered.filter(item => 
+        item.equipamentos?.tipo === filters.tipoEquipamento
       );
     }
 
@@ -308,18 +328,29 @@ const MovementsReport: React.FC = () => {
             </div>
             
             <div>
-              <Label htmlFor="numeroSerie">Número de Série</Label>
+              <Label htmlFor="pesquisaNumero">Pesquisar Nº de Série</Label>
+              <Input
+                id="pesquisaNumero"
+                type="text"
+                placeholder="Digite para pesquisar..."
+                value={filters.pesquisaNumero}
+                onChange={(e) => handleFilterChange('pesquisaNumero', e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="tipoEquipamento">Tipo de Equipamento</Label>
               <Select 
-                value={filters.numeroSerie || 'all'} 
-                onValueChange={(value) => handleFilterChange('numeroSerie', value === 'all' ? '' : value)}
+                value={filters.tipoEquipamento || 'all'} 
+                onValueChange={(value) => handleFilterChange('tipoEquipamento', value === 'all' ? '' : value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os números de série" />
+                  <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os números de série</SelectItem>
-                  {availableSerialNumbers.map(serial => (
-                    <SelectItem key={serial} value={serial}>{serial}</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {equipmentTypes.map(type => (
+                    <SelectItem key={type.id} value={type.nome}>{type.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
