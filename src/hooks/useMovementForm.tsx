@@ -261,6 +261,8 @@ export const useMovementForm = () => {
         }
         if (movementData.tipo_manutencao_id) {
           movementInsertData.tipo_manutencao_id = movementData.tipo_manutencao_id;
+        } else if (movementData.outro_defeito_id) {
+          movementInsertData.tipo_manutencao_id = movementData.outro_defeito_id;
         }
 
         const { error: movementError } = await supabase
