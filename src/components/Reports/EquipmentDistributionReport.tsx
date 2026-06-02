@@ -26,15 +26,15 @@ const statusLabels: { [key: string]: string } = {
   'devolvido': 'Devolvido'
 };
 
-// Cores padrão do sistema por status (consistentes com dashboard)
+// Cores baseadas no StatusBadge (Controle de Equipamentos)
 const statusColors: { [key: string]: string } = {
   'disponivel': '#16A34A',          // verde
   'em_uso': '#2563EB',              // azul
-  'manutencao': '#F59E0B',          // âmbar
-  'aguardando_manutencao': '#F97316', // laranja
+  'manutencao': '#F97316',          // laranja
+  'aguardando_manutencao': '#EAB308', // amarelo
   'danificado': '#DC2626',          // vermelho
-  'indisponivel': '#9333EA',        // roxo
-  'devolvido': '#6B7280'            // cinza
+  'indisponivel': '#000000',        // preto
+  'devolvido': '#000000'            // preto
 };
 
 const EquipmentDistributionReport: React.FC = () => {
