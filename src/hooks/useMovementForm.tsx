@@ -265,12 +265,27 @@ export const useMovementForm = () => {
       for (const equipment of selectedEquipments) {
         console.log(`\n=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
 
+        // Resolver empresa destino antes do insert para gravar origem/destino na movimentação
+        let destCompany: Company | undefined;
+        if (movementData.empresa_destino) {
+          destCompany = companies.find(
+            c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino
+          );
+        }
+
+        // Empresa origem = empresa atual do equipamento
+        const origemCompany = equipment.id_empresa
+          ? companies.find(c => c.id === equipment.id_empresa)
+          : undefined;
+
         const movementInsertData: any = {
           id_equipamento: equipment.id,
           tipo_movimento: movementData.tipo_movimento,
           data_movimento: movementData.data_movimento,
           usuario_responsavel: currentUserName,
-          observacoes: movementData.observacoes
+          observacoes: movementData.observacoes,
+          empresa_origem_nome: origemCompany?.name || null,
+          empresa_destino_nome: destCompany?.name || null,
         };
 
         if (hasNewFields && movementData.defeito_reclamado_id) {
@@ -301,14 +316,10 @@ export const useMovementForm = () => {
         const updateData: any = {};
 
         // Atualizar empresa destino para qualquer tipo de movimentação
-        let destCompany: Company | undefined;
-        if (movementData.empresa_destino) {
-          // Buscar o ID da empresa destino pelo nome ou usar diretamente se for ID
-          destCompany = companies.find(c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino);
-          if (destCompany) {
-            updateData.id_empresa = destCompany.id;
-          }
+        if (destCompany) {
+          updateData.id_empresa = destCompany.id;
         }
+
 
         if (movementData.tipo_equipamento) {
           updateData.tipo = movementData.tipo_equipamento;
