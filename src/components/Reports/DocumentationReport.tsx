@@ -370,11 +370,18 @@ const generateDocPDF = async ({ title, subtitle, fileName, sections }: DocPDFOpt
   drawHeader();
   let y = 32;
 
+  const resetTextStyle = () => {
+    doc.setTextColor(...TEXT_DARK);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+  };
+
   const ensureSpace = (needed: number) => {
     if (y + needed > pageH - 14) {
       doc.addPage();
       drawHeader();
       y = 32;
+      resetTextStyle();
     }
   };
 
