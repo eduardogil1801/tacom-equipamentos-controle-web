@@ -42,6 +42,7 @@ interface MovementData {
   tipo_manutencao_id: string;
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
+  outro_defeito_id?: string;
   tipo_equipamento: string;
   modelo_equipamento: string;
   status_equipamento: string;
