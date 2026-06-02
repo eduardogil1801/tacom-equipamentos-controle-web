@@ -9,19 +9,26 @@ export type Row = (string | number)[];
 const SYSTEM_RED: [number, number, number] = [232, 62, 62];
 const SYSTEM_RED_DARK: [number, number, number] = [180, 35, 35];
 
-let cachedLogo: HTMLImageElement | null = null;
-const loadLogo = (): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    if (cachedLogo) return resolve(cachedLogo);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      cachedLogo = img;
-      resolve(img);
-    };
-    img.onerror = reject;
-    img.src = tacomLogo;
+let cachedLogo: { dataUrl: string; width: number; height: number } | null = null;
+const loadLogo = async () => {
+  if (cachedLogo) return cachedLogo;
+  const res = await fetch(tacomLogo);
+  const blob = await res.blob();
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
   });
+  const dims: { width: number; height: number } = await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.width, height: img.height });
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+  cachedLogo = { dataUrl, ...dims };
+  return cachedLogo;
+};
 
 export interface ExportOptions {
   title: string;
@@ -84,7 +91,7 @@ export const exportPDF = async (opts: ExportOptions) => {
   const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
 
-  let logo: HTMLImageElement | null = null;
+  let logo: { dataUrl: string; width: number; height: number } | null = null;
   try {
     logo = await loadLogo();
   } catch {
@@ -101,7 +108,7 @@ export const exportPDF = async (opts: ExportOptions) => {
     const logoW = (logo.width / logo.height) * logoH;
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(6, 4, logoW + 6, logoH + 4, 2, 2, 'F');
-    doc.addImage(logo, 'PNG', 9, 6, logoW, logoH);
+    doc.addImage(logo.dataUrl, 'PNG', 9, 6, logoW, logoH);
   }
 
   doc.setTextColor(255, 255, 255);
