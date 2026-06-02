@@ -42,6 +42,7 @@ interface MovementData {
   tipo_manutencao_id: string;
   defeito_reclamado_id?: string;
   defeito_encontrado_id?: string;
+  outro_defeito_id?: string;
   tipo_equipamento: string;
   modelo_equipamento: string;
   status_equipamento: string;
@@ -70,6 +71,7 @@ export const useMovementForm = () => {
     tipo_manutencao_id: '',
     defeito_reclamado_id: '',
     defeito_encontrado_id: '',
+    outro_defeito_id: '',
     tipo_equipamento: '',
     modelo_equipamento: '',
     status_equipamento: ''
@@ -259,6 +261,8 @@ export const useMovementForm = () => {
         }
         if (movementData.tipo_manutencao_id) {
           movementInsertData.tipo_manutencao_id = movementData.tipo_manutencao_id;
+        } else if (movementData.outro_defeito_id) {
+          movementInsertData.tipo_manutencao_id = movementData.outro_defeito_id;
         }
 
         const { error: movementError } = await supabase
@@ -304,6 +308,7 @@ export const useMovementForm = () => {
         tipo_manutencao_id: '',
         defeito_reclamado_id: '',
         defeito_encontrado_id: '',
+        outro_defeito_id: '',
         tipo_equipamento: '',
         modelo_equipamento: '',
         status_equipamento: ''
