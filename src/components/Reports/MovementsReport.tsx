@@ -97,6 +97,14 @@ const MovementsReport: React.FC = () => {
           tipos_manutencao!movimentacoes_tipo_manutencao_id_fkey (
             codigo,
             descricao
+          ),
+          defeito_reclamado:tipos_manutencao!movimentacoes_defeito_reclamado_id_fkey (
+            codigo,
+            descricao
+          ),
+          defeito_encontrado:tipos_manutencao!movimentacoes_defeito_encontrado_id_fkey (
+            codigo,
+            descricao
           )
         `)
         .order('data_movimento', { ascending: false });
