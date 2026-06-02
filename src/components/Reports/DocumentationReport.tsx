@@ -195,7 +195,7 @@ const drawMovementFlow = (doc: jsPDF, x: number, y: number, w: number): number =
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7.5);
   doc.setTextColor(...SYSTEM_GRAY);
-  doc.text('Fluxo de movimentação: empresa de origem → equipamento → empresa de destino', x, y + boxH + 4);
+  doc.text('Fluxo de movimentacao: empresa de origem -> equipamento -> empresa de destino', x, y + boxH + 4);
   return boxH + 8;
 };
 
@@ -268,7 +268,7 @@ const drawFilterPanel = (doc: jsPDF, x: number, y: number, w: number): number =>
     doc.setTextColor(...SYSTEM_GRAY);
     doc.text(l, bx + 2, y + 14);
     doc.setTextColor(...SYSTEM_GRAY);
-    doc.text('▾', bx + colW - 3, y + 14);
+    doc.text('v', bx + colW - 3, y + 14);
   });
   return h + 4;
 };
@@ -484,236 +484,369 @@ const generateDocPDF = async ({ title, subtitle, fileName, sections }: DocPDFOpt
 // ============ Conteúdo: Documentação dos Relatórios ============
 const reportsDoc: Section[] = [
   {
-    title: 'Padrão dos PDFs',
+    title: 'Como usar este documento',
     paragraphs: [
-      'Todos os PDFs gerados pelo sistema seguem o mesmo padrão visual: barra superior vermelha com o logo TACOM, título centralizado, cabeçalho de tabela em cinza, linhas alternadas em rosa-claro e rodapé com paginação.',
+      'Este guia foi escrito para quem nunca usou o sistema TACOM. Cada secao explica um relatorio: o que ele mostra, para que ele serve, quem deve usar e como interpretar as informacoes.',
+      'Voce nao precisa ser tecnico. Leia uma secao por vez, no seu ritmo. Sempre que aparecer um diagrama ou tabela de exemplo, observe as cores e os rotulos: o sistema usa o mesmo padrao em todas as telas.',
+    ],
+    bullets: [
+      'O que e: explicacao simples do relatorio.',
+      'Para que serve: qual decisao ou tarefa ele apoia no dia a dia.',
+      'Como usar: passo a passo basico (filtrar, visualizar, exportar).',
+      'Dica: pequenas observacoes que evitam erros comuns.',
+    ],
+  },
+  {
+    title: 'Padrao Visual dos PDFs',
+    paragraphs: [
+      'Todos os PDFs gerados pelo sistema seguem a mesma identidade visual da TACOM. Isso facilita o reconhecimento e da uma aparencia profissional para os relatorios.',
+      'O que voce vai ver em todo PDF: barra superior vermelha com o logo TACOM, titulo centralizado, cabecalho de tabela em cinza escuro, linhas alternadas em rosa-claro para facilitar a leitura e rodape com numeracao de paginas (Pagina X de Y).',
+      'As cores nao sao decoracao: o vermelho identifica a marca TACOM e o cinza garante legibilidade. Sempre que um dado for um total importante, ele aparece em vermelho para chamar atencao.',
     ],
     illustration: 'header-mockup',
   },
   {
-    title: 'Exportação e Impressão',
+    title: 'Exportacao e Impressao',
     paragraphs: [
-      'Cada relatório possui uma barra de exportação completa com botões para Imprimir, gerar PDF, CSV e XLSX.',
+      'Em cima de cada relatorio existe uma barra de botoes para voce levar os dados para fora do sistema. Use o formato certo para cada situacao:',
+    ],
+    bullets: [
+      'Imprimir (cinza): abre a janela de impressao do navegador. Use para imprimir em papel ou salvar como PDF rapido.',
+      'PDF (vermelho): gera o relatorio oficial com logo, cores e formatacao TACOM. Use para enviar a clientes, gestores ou arquivar.',
+      'CSV (azul): arquivo de texto compativel com qualquer programa. Use para importar em outros sistemas.',
+      'XLSX (verde): planilha do Excel pronta para analise, formulas e graficos.',
     ],
     illustration: 'export-bar',
   },
   {
-    title: 'Empresas',
+    title: 'Filtros: a base de qualquer relatorio',
     paragraphs: [
-      'Relatório consolidado de todas as empresas cadastradas, incluindo dados de identificação, contato e equipamentos vinculados.',
-      'Ideia: oferecer uma visão gerencial das empresas parceiras e da quantidade de equipamentos em posse de cada uma.',
-    ],
-    bullets: [
-      'Filtros por nome de empresa e código de operadora.',
-      'Totais por empresa e por categoria de equipamento.',
+      'Antes de exportar, sempre aplique filtros. Filtrar deixa o relatorio menor, mais rapido de abrir e muito mais facil de entender.',
+      'Os filtros mais comuns sao: Empresa, Status do equipamento, Tipo/Modelo e Periodo (intervalo de datas). Voce pode combinar varios ao mesmo tempo.',
+      'Dica: se voce nao escolher nada, o sistema mostra TUDO. Em bases grandes, isso pode demorar e gerar PDFs com centenas de paginas. Comece sempre filtrando por empresa ou periodo.',
     ],
     illustration: 'filter-panel',
   },
   {
-    title: 'Status dos Equipamentos',
+    title: '1. Relatorio de Empresas',
     paragraphs: [
-      'Apresenta a situação atual de cada equipamento. As cores são padronizadas em todo o sistema.',
-      'Ideia: monitorar a operação e identificar gargalos de disponibilidade.',
-    ],
-    illustration: 'status-legend',
-  },
-  {
-    title: 'Distribuição de Equipamentos',
-    paragraphs: [
-      'Mostra a distribuição dos equipamentos por status e por tipo/modelo em gráficos de barras horizontais e empilhadas.',
-      'Ideia: visualizar de forma analítica como a frota está alocada e detectar concentrações ou faltas.',
+      'O que e: uma lista completa de todas as empresas cadastradas no sistema, mostrando dados de identificacao, contato e a quantidade de equipamentos que cada uma possui no momento.',
+      'Para que serve: oferecer uma visao gerencial dos parceiros. Util para comerciais, gestores e equipe administrativa entenderem quem sao os clientes e o tamanho de cada operacao.',
+      'Como usar: filtre por nome da empresa ou por codigo de operadora para encontrar rapidamente um cliente especifico. Use a exportacao em XLSX se precisar fazer analises comparativas.',
     ],
     bullets: [
-      'Filtros multi-seleção de tipos e status com busca em tempo real.',
-      'Cores dos gráficos seguem a mesma legenda do Controle de Equipamentos.',
+      'Mostra: nome, codigo, contato e total de equipamentos por empresa.',
+      'Quando usar: reunioes comerciais, conferencia de cadastros, relatorios para a diretoria.',
+      'Dica: revise periodicamente para identificar empresas sem equipamentos ou com cadastros desatualizados.',
+    ],
+  },
+  {
+    title: '2. Status dos Equipamentos',
+    paragraphs: [
+      'O que e: mostra a situacao atual de cada equipamento da frota. Cada status tem uma cor padrao que aparece em todas as telas e relatorios do sistema.',
+      'Para que serve: monitorar a operacao em tempo real e identificar problemas. Se ha muitos equipamentos em "Manutencao" ou "Aguardando", e sinal de que algo precisa de atencao.',
+      'Como interpretar as cores: cada cor representa uma fase do ciclo de vida do equipamento. Memorize essa legenda; ela e usada em TODOS os relatorios.',
+    ],
+    illustration: 'status-legend',
+    bullets: [
+      'Disponivel (verde): pronto para uso ou em uso normal.',
+      'Em Manutencao (laranja): com algum defeito sendo tratado.',
+      'Aguardando (amarelo): parado esperando alguma acao.',
+      'Inativo (cinza): fora de operacao.',
+      'Dica: filtre por status e empresa para identificar gargalos especificos.',
+    ],
+  },
+  {
+    title: '3. Distribuicao de Equipamentos',
+    paragraphs: [
+      'O que e: graficos de barras que mostram como a frota esta distribuida por tipo, modelo, status e empresa.',
+      'Para que serve: enxergar de forma visual onde estao concentrados os equipamentos, detectar faltas, planejar redistribuicoes e identificar quais modelos sao mais comuns.',
+      'Como usar: comece sem filtros para ver a foto geral; depois use os multi-selects (com busca em tempo real) para focar em tipos ou status especificos. As cores das barras seguem a mesma legenda do relatorio de Status.',
+    ],
+    bullets: [
+      'Grafico horizontal: facilita comparar quantidades entre categorias.',
+      'Grafico empilhado: mostra a composicao interna de cada barra.',
+      'Dica: exporte em PDF para incluir em apresentacoes; exporte em XLSX para fazer suas proprias analises.',
     ],
     illustration: 'status-legend',
   },
   {
-    title: 'Movimentações',
+    title: '4. Movimentacoes (Historico Operacional)',
     paragraphs: [
-      'Histórico completo de entradas, saídas e movimentações entre empresas.',
-      'Ideia: rastrear o ciclo de vida operacional de cada equipamento.',
+      'O que e: o historico completo de todas as movimentacoes registradas no sistema. Cada linha representa um equipamento saindo de um lugar e indo para outro.',
+      'Para que serve: rastrear o ciclo de vida operacional de cada equipamento. Saber onde ele esteve, quando, por que e quem registrou.',
+      'Como ler o fluxo: toda movimentacao tem tres partes principais: Origem (de onde saiu), Equipamento (qual item) e Destino (para onde foi). O sistema atualiza automaticamente o status e a empresa atual apos cada registro.',
     ],
     illustration: 'movement-flow',
+    bullets: [
+      'Tipos de movimento: Entrada (chegou em uma empresa), Saida (deixou uma empresa) ou Movimentacao (transferencia entre empresas).',
+      'Filtros: por equipamento, empresa, periodo e tipo. Os filtros sao em cascata (um afeta o outro).',
+      'Dica: para auditoria, sempre filtre por periodo e exporte em PDF; o arquivo fica oficial e datado.',
+    ],
   },
   {
-    title: 'Inventário',
+    title: '5. Inventario',
     paragraphs: [
-      'Lista detalhada dos equipamentos com tipo, modelo, status, estado (UF) e empresa atual.',
-      'Ideia: servir como referência rápida de patrimônio e localização.',
+      'O que e: a lista detalhada de TODOS os equipamentos cadastrados, com tipo, modelo, status, estado (UF) e empresa atual responsavel.',
+      'Para que serve: funcionar como referencia rapida de patrimonio e localizacao. E o "raio-X" da frota.',
+      'Como usar: filtre por operadora, status ou tipo para reduzir a lista. Clique em um equipamento para abrir seu historico completo (drill-down).',
     ],
     bullets: [
-      'Filtros por operadora, status e tipo de equipamento.',
-      'Drill-down direto no equipamento para ver o histórico.',
+      'Util para conferencia fisica (inventario presencial).',
+      'Util para responder rapidamente "onde esta o equipamento X?".',
+      'Dica: exporte em XLSX antes de uma auditoria; voce pode marcar itens conferidos diretamente na planilha.',
     ],
   },
   {
-    title: 'Histórico de Equipamentos / Detalhado',
+    title: '6. Historico Detalhado de um Equipamento',
     paragraphs: [
-      'Permite consultar todo o histórico de um equipamento específico, incluindo movimentações, manutenções e defeitos.',
-      'Ideia: dar suporte à auditoria e à investigação de problemas recorrentes em um item.',
+      'O que e: a "ficha completa" de um equipamento especifico. Reune em um so lugar todas as movimentacoes, manutencoes e defeitos daquele item.',
+      'Para que serve: investigar problemas recorrentes, dar suporte a auditorias e responder duvidas pontuais sobre um equipamento.',
+      'Como usar: pesquise pelo codigo do equipamento e o sistema monta a linha do tempo completa, da primeira entrada ate o ultimo registro.',
     ],
     illustration: 'defect-categories',
+    bullets: [
+      'Mostra a sequencia cronologica de eventos.',
+      'Destaque para manutencoes (DR, DE, Outros).',
+      'Dica: se um equipamento aparece muito com defeitos DR, e candidato a substituicao.',
+    ],
   },
   {
-    title: 'Frota (Faturamento por Serviço)',
+    title: '7. Frota (Faturamento por Servico)',
     paragraphs: [
-      'Consolida a frota por empresa e mês de referência, somando os serviços contratados (Simples C/Image, Simples S/Image, Seção, Nuvem, CITGIS, Buszoom, Telemetria).',
-      'Ideia: subsidiar o faturamento mensal e oferecer uma visão completa da composição da frota.',
-    ],
-    bullets: [
-      'Linha de TOTAL GERAL exibida apenas quando todas as empresas estão selecionadas.',
-      'PDF com logo TACOM, cabeçalho cinza e total em vermelho.',
+      'O que e: o relatorio mais usado pelo financeiro. Consolida a frota por empresa e por mes de referencia, somando todos os servicos contratados.',
+      'Para que serve: subsidiar o faturamento mensal. Mostra quantos equipamentos de cada categoria de servico cada empresa tem, no mes selecionado.',
+      'Como usar: selecione o mes de referencia e (opcional) a empresa. Se voce escolher "Todas as empresas", aparece a linha TOTAL GERAL ao final, somando tudo. Se filtrar por uma empresa especifica, a linha de total nao aparece (evita confusao com totais incompletos).',
     ],
     illustration: 'sample-table',
+    bullets: [
+      'Servicos contemplados: Simples C/Image, Simples S/Image, Secao, Nuvem, CITGIS, Buszoom, Telemetria.',
+      'Calculos automaticos: Nuvem = Simples C/Image + Simples S/Image + Secao. Total = Nuvem + Telemetria + CITGIS + Buszoom.',
+      'PDF oficial: cabecalho cinza, total em vermelho, logo TACOM no topo.',
+      'Dica: gere o PDF no dia 1 de cada mes para fechar o faturamento do mes anterior.',
+    ],
   },
   {
-    title: 'Manutenções',
+    title: '8. Manutencoes',
     paragraphs: [
-      'Acompanha as manutenções realizadas, categorizadas em DR, DE e Outros.',
-      'Ideia: permitir análise de qualidade e priorização de ações corretivas.',
+      'O que e: acompanha todas as manutencoes realizadas, separadas por tipo de defeito.',
+      'Para que serve: analise de qualidade. Permite identificar quais equipamentos, modelos ou empresas concentram mais problemas e priorizar acoes corretivas.',
+      'Como usar: filtre por periodo e categoria de defeito. Use o agrupamento por modelo para descobrir series com mais ocorrencias.',
     ],
     illustration: 'defect-categories',
-  },
-  {
-    title: 'Relatório Mensal',
-    paragraphs: [
-      'Consolidação mensal de movimentações, manutenções e status, ideal para apresentações gerenciais.',
+    bullets: [
+      'DR (Defeito de Recolhimento): problema identificado quando o equipamento volta.',
+      'DE (Defeito de Entrega): problema identificado na entrega ao cliente.',
+      'Outro: demais manutencoes (preventivas, ajustes, etc).',
+      'Dica: muitas ocorrencias DE indicam falha no processo de checagem antes da entrega.',
     ],
   },
   {
-    title: 'Estoque Detalhado',
+    title: '9. Relatorio Mensal',
     paragraphs: [
-      'Análise dos níveis de estoque, com destaque para itens em níveis críticos.',
-      'Ideia: apoiar o planejamento de compras e reposição.',
+      'O que e: uma consolidacao mensal de tudo: movimentacoes do mes, manutencoes realizadas e status atual da frota.',
+      'Para que serve: apresentacoes gerenciais e fechamento de mes. Ideal para reunioes de diretoria e prestacao de contas a clientes.',
+      'Como usar: selecione o mes desejado e exporte em PDF. O arquivo ja vem com a identidade visual TACOM e pode ser enviado direto.',
+    ],
+    bullets: [
+      'Visao executiva, com numeros agregados.',
+      'Dica: combine com o relatorio de Frota para uma apresentacao completa.',
+    ],
+  },
+  {
+    title: '10. Estoque Detalhado',
+    paragraphs: [
+      'O que e: analise dos niveis de estoque, destacando itens em quantidade critica.',
+      'Para que serve: apoiar o planejamento de compras e reposicao. Evita ruptura (faltar equipamento) e excesso (capital parado).',
+      'Como usar: revise semanalmente; itens em vermelho ou laranja exigem acao imediata.',
+    ],
+    bullets: [
+      'Identifica itens abaixo do estoque minimo.',
+      'Dica: integre a leitura deste relatorio na rotina semanal de compras.',
     ],
   },
 ];
 
-// ============ Conteúdo: Manual Completo ============
+// ============ Conteudo: Manual Completo ============
 const manualSections: Section[] = [
   {
-    title: 'Introdução ao Sistema TACOM',
+    title: 'Bem-vindo ao Sistema TACOM',
     paragraphs: [
-      'O sistema TACOM centraliza o controle de equipamentos, movimentações, manutenções e relatórios das empresas atendidas.',
-      'Este manual descreve cada módulo, tela e campo para facilitar o uso diário.',
+      'Este manual foi escrito para qualquer pessoa, mesmo sem experiencia previa. Explicamos cada tela, cada campo e o que voce deve fazer em cada situacao.',
+      'O sistema TACOM serve para controlar equipamentos: onde estao, com qual empresa, qual o status, quais defeitos tiveram e quanto cada cliente deve pagar no mes. Tudo em um lugar so.',
+      'Leia este manual do inicio ao fim na primeira vez. Depois, use como consulta sempre que tiver duvida.',
     ],
     illustration: 'header-mockup',
   },
   {
-    title: 'Acesso e Autenticação',
+    title: '1. Como acessar o sistema',
     paragraphs: [
-      'O acesso é feito por usuário e senha. As senhas são armazenadas de forma criptografada (bcrypt).',
-      'Existem dois perfis principais: administrador (acesso total) e operacional (acesso conforme permissões configuradas).',
+      'O acesso e feito com usuario e senha pessoais. Suas credenciais sao criadas pelo administrador.',
+      'A senha e armazenada de forma criptografada (tecnologia bcrypt). Nem mesmo o administrador consegue ver sua senha; em caso de esquecimento, ele apenas redefine.',
     ],
     bullets: [
-      'Login: informe usuário e senha cadastrados.',
-      'Logout: disponível no menu lateral.',
-      'Esqueci minha senha: solicitar ao administrador a redefinição.',
+      'Login: digite o usuario, depois a senha, e clique em Entrar.',
+      'Logout: clique no seu nome (canto superior) e escolha Sair. Sempre saia em computadores compartilhados.',
+      'Esqueci a senha: peca ao administrador para redefinir.',
+      'Dica: nao compartilhe sua senha. Cada acao no sistema fica registrada com o nome do usuario.',
     ],
     imageSrc: loginScreen,
-    imageCaption: 'Figura: tela de Login do sistema TACOM',
+    imageCaption: 'Figura 1: tela de Login do sistema TACOM',
   },
   {
-    title: 'Dashboard',
+    title: '2. Perfis de acesso',
     paragraphs: [
-      'Tela inicial com indicadores resumidos: quantidade por status, distribuição por empresa e gráfico de manutenções por categoria de defeito.',
-      'Os filtros do dashboard suportam busca em tempo real em todos os multi-selects.',
-    ],
-    illustration: 'filter-panel',
-  },
-  {
-    title: 'Controle de Equipamentos',
-    paragraphs: [
-      'Lista todos os equipamentos cadastrados. Cada linha mostra código, tipo, modelo, status (colorido), empresa atual e ações.',
+      'O sistema tem dois perfis principais. As permissoes definem o que cada usuario pode ver e fazer.',
     ],
     bullets: [
-      'Código: identificador único do equipamento.',
-      'Tipo / Modelo: classificação do equipamento.',
-      'Estado: UF onde o equipamento está localizado.',
-      'Empresa: empresa atualmente responsável.',
-      'Coluna de Manutenção: exibida apenas para itens em manutenção ou aguardando.',
+      'Administrador: acesso total. Gerencia usuarios, permissoes, cadastros base e configuracoes.',
+      'Operacional: acesso aos modulos do dia a dia, conforme permissoes configuradas pelo administrador.',
+      'Permissoes de relatorios sao individuais: o administrador pode liberar relatorio por relatorio para cada usuario.',
+    ],
+  },
+  {
+    title: '3. Dashboard (tela inicial)',
+    paragraphs: [
+      'Apos o login voce cai no Dashboard. E uma tela de resumo com os indicadores mais importantes: quantidade de equipamentos por status, distribuicao por empresa e grafico de manutencoes por categoria de defeito.',
+      'Os filtros do topo do Dashboard tem busca em tempo real: comece a digitar e as opcoes vao sendo filtradas. Use para olhar so uma empresa, periodo ou tipo de equipamento.',
+    ],
+    illustration: 'filter-panel',
+    bullets: [
+      'Cartoes coloridos: quantidades resumidas (Disponivel, Manutencao, etc).',
+      'Graficos: distribuicao visual da frota.',
+      'Dica: comece o dia olhando o Dashboard. Em 30 segundos voce ja entende a situacao da operacao.',
+    ],
+  },
+  {
+    title: '4. Controle de Equipamentos',
+    paragraphs: [
+      'Lista de TODOS os equipamentos do sistema. Cada linha e um equipamento. As cores indicam o status.',
+      'Use a busca para encontrar pelo codigo. Use os filtros para reduzir a lista por empresa, tipo ou status.',
+    ],
+    bullets: [
+      'Codigo: identificador unico (nao se repete).',
+      'Tipo / Modelo: classificacao do equipamento.',
+      'Estado (UF): onde ele esta fisicamente.',
+      'Empresa: quem esta com ele agora.',
+      'Status (colorido): situacao atual.',
+      'Coluna Manutencao: aparece apenas para itens em manutencao ou aguardando (poupa espaco na tela).',
+      'Dica: clique em um equipamento para abrir o historico completo dele.',
     ],
     illustration: 'status-legend',
   },
   {
-    title: 'Cadastro de Equipamentos',
-    paragraphs: ['Formulário para inclusão e edição de equipamentos.'],
+    title: '5. Cadastro de Equipamentos',
+    paragraphs: [
+      'Tela para incluir um equipamento novo ou editar um existente. Preencha os campos com atencao; o codigo nao pode ser repetido.',
+    ],
     bullets: [
-      'Código (obrigatório, único).',
-      'Tipo e Modelo.',
-      'Estado (UF) — padrão Rio Grande do Sul.',
-      'Empresa vinculada.',
-      'Status inicial (geralmente Disponível).',
+      'Codigo (obrigatorio): identificador unico. Sugestao: padronize um formato para sua operacao.',
+      'Tipo e Modelo: escolha nas listas. Se faltar opcao, peca ao administrador.',
+      'Estado (UF): o padrao e Rio Grande do Sul; altere se necessario.',
+      'Empresa vinculada: quem fica responsavel pelo equipamento.',
+      'Status inicial: normalmente "Disponivel".',
+      'Dica: salve e confira em seguida no Controle de Equipamentos.',
     ],
   },
   {
-    title: 'Movimentações',
+    title: '6. Movimentacoes',
     paragraphs: [
-      'Tela para registrar entrada, saída ou transferência de equipamentos entre empresas.',
-      'O sistema atualiza automaticamente o status e a empresa vinculada após cada movimentação.',
-    ],
-    bullets: [
-      'Tipo de movimento: entrada, saída ou movimentação.',
-      'Empresa de origem e destino.',
-      'Defeito relacionado (quando aplicável): DR, DE ou Outro.',
-      'Data do movimento: posicionada antes dos campos de defeito.',
-      'Observações livres.',
+      'Aqui voce registra quando um equipamento entra em uma empresa, sai de uma empresa ou e transferido entre empresas.',
+      'Importante: o sistema atualiza automaticamente o status e a empresa do equipamento apos cada movimentacao. Voce nao precisa mexer manualmente nessas informacoes.',
     ],
     illustration: 'movement-flow',
+    bullets: [
+      'Tipo de movimento: Entrada, Saida ou Movimentacao (transferencia).',
+      'Empresa de Origem: de onde o equipamento esta saindo.',
+      'Empresa de Destino: para onde ele vai.',
+      'Data do movimento: posicionada antes dos campos de defeito; preencha com a data real do evento.',
+      'Defeito (quando aplicavel): DR, DE ou Outro.',
+      'Observacoes: campo livre para detalhes.',
+      'Dica: registre o mais proximo possivel da data real para manter o historico fiel.',
+    ],
   },
   {
-    title: 'Defeitos: DR, DE e Outros',
+    title: '7. Defeitos: DR, DE e Outros',
     paragraphs: [
-      'Toda manutenção é categorizada para permitir análise de qualidade.',
+      'Toda manutencao precisa ser categorizada. A categorizacao alimenta os relatorios de qualidade.',
     ],
     illustration: 'defect-categories',
+    bullets: [
+      'DR (Defeito de Recolhimento): identificado quando o equipamento retorna. Indica problema durante o uso.',
+      'DE (Defeito de Entrega): identificado na entrega ao cliente. Indica falha no processo de checagem.',
+      'Outro: preventivas, ajustes, atualizacoes e demais casos.',
+      'Dica: na duvida, use Outro e descreva nas observacoes. E sempre melhor registrar do que deixar em branco.',
+    ],
   },
   {
-    title: 'Histórico de Movimentações',
+    title: '8. Historico de Movimentacoes',
     paragraphs: [
-      'Lista todas as movimentações com filtros em cascata por equipamento, empresa e período.',
-      'A coluna Defeito mostra DR/DE/Outro conforme registrado. As colunas Origem e Destino são preenchidas conforme o tipo do movimento.',
+      'Lista TODAS as movimentacoes registradas no sistema. Use os filtros em cascata para encontrar exatamente o que precisa.',
+      'As colunas Origem e Destino sao preenchidas conforme o tipo de movimento. A coluna Defeito mostra DR, DE ou Outro quando houver.',
     ],
     illustration: 'filter-panel',
+    bullets: [
+      'Filtros em cascata: equipamento, empresa, periodo.',
+      'Cada linha mostra: data, tipo, equipamento, origem, destino, defeito e usuario que registrou.',
+      'Dica: para auditoria, sempre exporte em PDF apos aplicar filtros; o arquivo tem data, hora e logo TACOM.',
+    ],
   },
   {
-    title: 'Frota',
-    paragraphs: ['Cadastro mensal da frota por empresa, com totais calculados automaticamente.'],
-    bullets: [
-      'Simples C/Image (vem antes de Simples S/Image no formulário).',
-      'Simples S/Image, Seção, Telemetria, CITGIS, Buszoom.',
+    title: '9. Frota (Faturamento)',
+    paragraphs: [
+      'Cadastro mensal da frota por empresa. Os totais (Nuvem e Total Geral) sao calculados automaticamente ao salvar.',
     ],
     illustration: 'frota-card',
+    bullets: [
+      'Simples C/Image (com imagem): aparece ANTES de Simples S/Image no formulario.',
+      'Simples S/Image (sem imagem).',
+      'Secao, Telemetria, CITGIS, Buszoom.',
+      'Nuvem = Simples C/Image + Simples S/Image + Secao.',
+      'Total = Nuvem + Telemetria + CITGIS + Buszoom.',
+      'Dica: confira sempre o mes de referencia antes de salvar.',
+    ],
   },
   {
-    title: 'Relatórios',
+    title: '10. Relatorios',
     paragraphs: [
-      'Todos os relatórios suportam exportação em CSV, XLSX e PDF, além de impressão.',
-      'Os PDFs seguem o padrão TACOM: barra vermelha no topo, logo em destaque e rodapé com paginação.',
+      'Modulo dedicado para gerar todos os relatorios do sistema. Cada relatorio tem seus filtros proprios e botoes de exportacao.',
+      'Os PDFs seguem o padrao TACOM: barra vermelha no topo, logo em destaque e rodape com paginacao.',
     ],
     illustration: 'export-bar',
-  },
-  {
-    title: 'Permissões e Administração',
-    paragraphs: [
-      'Apenas administradores acessam as configurações de usuários, permissões e cadastros base.',
-      'As permissões de relatórios são individuais e configuradas no módulo de gestão de usuários.',
+    bullets: [
+      'Imprimir: janela de impressao do navegador.',
+      'PDF: arquivo oficial com identidade visual TACOM.',
+      'CSV: arquivo simples para outros sistemas.',
+      'XLSX: planilha Excel pronta para analise.',
+      'Dica: leia o documento "Documentacao dos Relatorios" para entender o que cada um faz.',
     ],
   },
   {
-    title: 'Boas Práticas',
+    title: '11. Permissoes e Administracao',
     paragraphs: [
-      'Mantenha sempre o status dos equipamentos atualizado para garantir relatórios fiéis à realidade.',
-      'Registre movimentações o mais próximo possível do evento real, informando defeito quando aplicável.',
-      'Utilize os filtros antes de exportar para reduzir o volume de dados e facilitar a leitura.',
+      'Modulo restrito a administradores. Aqui sao gerenciados usuarios, perfis, permissoes de relatorios e cadastros base (tipos de equipamento, empresas, etc).',
+      'Por seguranca, nunca compartilhe um usuario administrador entre varias pessoas.',
     ],
   },
   {
-    title: 'Suporte',
+    title: '12. Boas praticas no dia a dia',
     paragraphs: [
-      'Em caso de dúvidas, problemas ou solicitações de melhorias, acione a equipe TACOM responsável pelo sistema.',
+      'Pequenas atitudes garantem relatorios confiaveis.',
+    ],
+    bullets: [
+      'Mantenha o status dos equipamentos sempre atualizado.',
+      'Registre movimentacoes o mais proximo possivel da data real.',
+      'Sempre informe o defeito (DR, DE ou Outro) quando aplicavel.',
+      'Aplique filtros antes de exportar grandes relatorios.',
+      'Nunca compartilhe senhas; faca logout em computadores publicos.',
+      'Em caso de duvida, prefira registrar com observacao do que nao registrar.',
+    ],
+  },
+  {
+    title: '13. Suporte',
+    paragraphs: [
+      'Em caso de duvidas, problemas ou sugestoes de melhoria, acione a equipe TACOM responsavel pelo sistema.',
+      'Sempre que possivel, informe: o que voce estava fazendo, qual o erro ou comportamento inesperado e, se possivel, um print da tela.',
     ],
   },
 ];
