@@ -48,19 +48,26 @@ interface Company {
   name: string;
 }
 
+interface EquipmentType {
+  id: string;
+  nome: string;
+}
+
 const MovementsReport: React.FC = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [filteredMovements, setFilteredMovements] = useState<Movement[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [availableSerialNumbers, setAvailableSerialNumbers] = useState<string[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [filters, setFilters] = useState({
     tipoMovimento: '',
     dataInicio: '',
     dataFim: '',
     numeroSerie: '',
+    pesquisaNumero: '',
+    tipoEquipamento: '',
     usuarioResponsavel: ''
   });
 
