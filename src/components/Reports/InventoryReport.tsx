@@ -124,7 +124,6 @@ const InventoryReport = () => {
     setFilters({
       operadora: '',
       status: '',
-      estado: '',
       tipo: '',
       numero_serie: ''
     });
