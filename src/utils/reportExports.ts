@@ -1,8 +1,27 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import tacomLogo from '@/assets/tacom-logo.png';
 
 export type Row = (string | number)[];
+
+// Red do sistema (HSL 0 84% 60%)
+const SYSTEM_RED: [number, number, number] = [232, 62, 62];
+const SYSTEM_RED_DARK: [number, number, number] = [180, 35, 35];
+
+let cachedLogo: HTMLImageElement | null = null;
+const loadLogo = (): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    if (cachedLogo) return resolve(cachedLogo);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      cachedLogo = img;
+      resolve(img);
+    };
+    img.onerror = reject;
+    img.src = tacomLogo;
+  });
 
 export interface ExportOptions {
   title: string;
