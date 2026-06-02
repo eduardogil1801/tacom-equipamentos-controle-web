@@ -366,7 +366,7 @@ export const useMovementForm = () => {
         // Lógica de status:
         // - Se destino NÃO é TACOM, força "em_uso" (status de manutenção só vale dentro da TACOM)
         // - Caso contrário, usa o status selecionado pelo usuário
-        const isDestTacom = destCompany ? destCompany.name.toUpperCase().includes('TACOM') : false;
+        const isDestTacom = isTacomCompanyName(destCompany?.name);
         if (destCompany && !isDestTacom) {
           updateData.status = 'em_uso';
           if (movementData.status_equipamento && movementData.status_equipamento !== 'em_uso') {
