@@ -14,7 +14,8 @@ import {
   Wrench,
   Users,
   Truck,
-  Calendar
+  Calendar,
+  BookOpen
 } from 'lucide-react';
 import { useReportPermissions } from '@/hooks/useReportPermissions';
 
