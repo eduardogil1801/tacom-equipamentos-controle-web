@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getCurrentLocalDate } from '@/utils/dateUtils';
+import { isTacomCompanyName } from '@/utils/tacomCompany';
 
 interface Equipment {
   id: string;
