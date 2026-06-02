@@ -268,7 +268,7 @@ const drawFilterPanel = (doc: jsPDF, x: number, y: number, w: number): number =>
     doc.setTextColor(...SYSTEM_GRAY);
     doc.text(l, bx + 2, y + 14);
     doc.setTextColor(...SYSTEM_GRAY);
-    doc.text('▾', bx + colW - 3, y + 14);
+    doc.text('v', bx + colW - 3, y + 14);
   });
   return h + 4;
 };
