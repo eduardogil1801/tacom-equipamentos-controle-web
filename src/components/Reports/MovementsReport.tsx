@@ -174,9 +174,16 @@ const MovementsReport: React.FC = () => {
       );
     }
 
-    if (filters.numeroSerie) {
+    if (filters.pesquisaNumero) {
+      const termo = filters.pesquisaNumero.toLowerCase();
       filtered = filtered.filter(item => 
-        item.equipamentos?.numero_serie === filters.numeroSerie
+        item.equipamentos?.numero_serie?.toLowerCase().includes(termo)
+      );
+    }
+
+    if (filters.tipoEquipamento) {
+      filtered = filtered.filter(item => 
+        item.equipamentos?.tipo === filters.tipoEquipamento
       );
     }
 
