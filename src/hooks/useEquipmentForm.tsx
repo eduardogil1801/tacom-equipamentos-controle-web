@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getCurrentLocalDate } from '@/utils/dateUtils';
+import { isTacomCompanyName } from '@/utils/tacomCompany';
 
 interface Equipment {
   id: string;
@@ -122,7 +123,7 @@ export const useEquipmentForm = (
     setSelectedCompany(company || null);
     
     // Verificar se a empresa é TACOM
-    const isTacom = company?.name?.toUpperCase().includes('TACOM') || false;
+    const isTacom = isTacomCompanyName(company?.name);
     
     setFormData(prev => ({
       ...prev,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useHybridAuth';
+import { isTacomCompanyName } from '@/utils/tacomCompany';
 
 interface Equipment {
   id: string;
@@ -193,8 +194,10 @@ export const useMovementForm = () => {
 
   const isDestinationTacom = () => {
     if (!movementData.empresa_destino) return false;
-    const company = companies.find(c => c.id === movementData.empresa_destino);
-    return company?.name.toUpperCase().includes('TACOM') || false;
+    const company = companies.find(
+      c => c.id === movementData.empresa_destino || c.name === movementData.empresa_destino
+    );
+    return isTacomCompanyName(company?.name);
   };
 
   const handleInputChange = (field: keyof MovementData, value: string) => {
@@ -256,6 +259,37 @@ export const useMovementForm = () => {
           variant: "destructive",
         });
         return;
+      }
+
+      // Resolver empresa destino única para todos os equipamentos
+      const destCompanyGlobal = companies.find(
+        c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino
+      );
+      const destIsTacom = isTacomCompanyName(destCompanyGlobal?.name);
+
+      // Identificar equipamentos cuja empresa atual (origem) é igual ao destino
+      const sameOriginDest = selectedEquipments.filter(eq => {
+        const origem = companies.find(c => c.id === eq.id_empresa);
+        return origem?.name && destCompanyGlobal?.name && origem.name === destCompanyGlobal.name;
+      });
+
+      if (sameOriginDest.length > 0) {
+        if (!destIsTacom) {
+          // Empresa cliente: bloqueia
+          toast({
+            title: "Movimentação não permitida",
+            description: `Empresa cliente "${destCompanyGlobal?.name}" já possui o(s) equipamento(s) ${sameOriginDest.map(e => e.numero_serie).join(', ')} em uso. Não é possível movimentar para a mesma empresa cliente.`,
+            variant: "destructive",
+          });
+          return;
+        } else {
+          // Empresa TACOM: pede confirmação
+          const codes = sameOriginDest.map(e => e.numero_serie).join(', ');
+          const confirmar = window.confirm(
+            `O(s) equipamento(s) ${codes} já está(ão) em ${destCompanyGlobal?.name}.\n\nDeseja registrar esta movimentação mesmo assim (ex.: mudança de status)?`
+          );
+          if (!confirmar) return;
+        }
       }
 
       const currentUserName = user?.name && user?.surname ? 
@@ -332,7 +366,7 @@ export const useMovementForm = () => {
         // Lógica de status:
         // - Se destino NÃO é TACOM, força "em_uso" (status de manutenção só vale dentro da TACOM)
         // - Caso contrário, usa o status selecionado pelo usuário
-        const isDestTacom = destCompany ? destCompany.name.toUpperCase().includes('TACOM') : false;
+        const isDestTacom = isTacomCompanyName(destCompany?.name);
         if (destCompany && !isDestTacom) {
           updateData.status = 'em_uso';
           if (movementData.status_equipamento && movementData.status_equipamento !== 'em_uso') {

@@ -3,6 +3,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { isTacomCompanyName } from '@/utils/tacomCompany';
 
 interface Company {
   id: string;
@@ -40,9 +41,9 @@ const EquipmentFormFields: React.FC<EquipmentFormFieldsProps> = ({
   onInputChange,
   onCompanyChange
 }) => {
-  // Verificar se a empresa selecionada é TACOM
+  // Verificar se a empresa selecionada é TACOM (nome começa com "TACOM")
   const selectedCompany = companies.find(c => c.id === formData.id_empresa);
-  const isTacom = selectedCompany?.name?.toUpperCase().includes('TACOM') || false;
+  const isTacom = isTacomCompanyName(selectedCompany?.name);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
