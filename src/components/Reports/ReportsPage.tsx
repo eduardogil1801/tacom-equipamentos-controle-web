@@ -118,6 +118,13 @@ const allReports: ReportItem[] = [
     description: 'Análise aprofundada do histórico de equipamentos específicos',
     icon: <FileText className="h-6 w-6" />,
     component: EquipmentHistoryDetailReport
+  },
+  {
+    key: 'documentation-report',
+    title: 'Documentação & Manual',
+    description: 'Baixe em PDF a documentação dos relatórios e o manual completo do sistema',
+    icon: <BookOpen className="h-6 w-6" />,
+    component: DocumentationReport
   }
 ];
 
