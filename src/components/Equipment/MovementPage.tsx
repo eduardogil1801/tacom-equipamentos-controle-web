@@ -2,11 +2,20 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovementForm } from '@/hooks/useMovementForm';
 import MovementFormFields from './MovementFormFields';
-import MovementEquipmentSelector from './MovementEquipmentSelector';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface MovementPageProps {
   onBack?: () => void;
@@ -25,7 +34,10 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
     isDestinationTacom,
     handleInputChange,
     handleSubmit,
-    updateOriginCompany
+    updateOriginCompany,
+    confirmation,
+    confirmPending,
+    cancelPending,
   } = useMovementForm();
 
   const handleEquipmentSelect = (equipments: any[]) => {
@@ -39,7 +51,6 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔄 Botão de movimentação clicado!');
     await handleSubmit();
   };
 
@@ -75,11 +86,7 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
               <Button type="button" variant="outline" onClick={() => onBack ? onBack() : navigate(-1)}>
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                disabled={loading}
-                onClick={() => console.log('⚡ BOTÃO CLICADO DIRETAMENTE!')}
-              >
+              <Button type="submit" disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? 'Registrando...' : 'Registrar Movimentação'}
               </Button>
@@ -87,6 +94,31 @@ const MovementPage: React.FC<MovementPageProps> = ({ onBack }) => {
           </form>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!confirmation} onOpenChange={(open) => { if (!open) cancelPending(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              {confirmation?.title ?? 'Confirmar'}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 pt-2">
+                {confirmation?.messages.map((msg, i) => (
+                  <p key={i} className="text-sm text-foreground">{msg}</p>
+                ))}
+                <p className="text-sm text-muted-foreground pt-2">
+                  Deseja continuar?
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPending}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

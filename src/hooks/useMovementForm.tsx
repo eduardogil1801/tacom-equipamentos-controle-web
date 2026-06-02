@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useHybridAuth';
@@ -57,6 +57,9 @@ export const useMovementForm = () => {
   const [equipmentTypes, setEquipmentTypes] = useState<EquipmentType[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasNewFields, setHasNewFields] = useState(false);
+  const [confirmation, setConfirmation] = useState<{ title: string; messages: string[] } | null>(null);
+  const pendingExecuteRef = useRef<(() => Promise<void>) | null>(null);
+  
   
   const [movementData, setMovementData] = useState<MovementData>({
     tipo_movimento: '',
@@ -218,88 +221,13 @@ export const useMovementForm = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const executeMovement = async () => {
     try {
       setLoading(true);
 
-      // Validações
-      if (selectedEquipments.length === 0) {
-        toast({
-          title: "Atenção",
-          description: "Selecione pelo menos um equipamento",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!movementData.tipo_movimento) {
-        toast({
-          title: "Atenção",
-          description: "Selecione o tipo de movimentação",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (movementData.tipo_movimento === 'manutencao') {
-        if (!movementData.defeito_reclamado_id) {
-          toast({
-            title: "Atenção",
-            description: "Selecione o defeito reclamado",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      if (!movementData.empresa_destino) {
-        toast({
-          title: "Atenção",
-          description: "Selecione a empresa destino",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Resolver empresa destino única para todos os equipamentos
       const destCompanyGlobal = companies.find(
         c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino
       );
-      const destIsTacom = isTacomCompanyName(destCompanyGlobal?.name);
-
-      // Identificar equipamentos cuja empresa atual (origem) é igual ao destino
-      const sameOriginDest = selectedEquipments.filter(eq => {
-        const origem = companies.find(c => c.id === eq.id_empresa);
-        return origem?.name && destCompanyGlobal?.name && origem.name === destCompanyGlobal.name;
-      });
-
-      if (sameOriginDest.length > 0) {
-        if (!destIsTacom) {
-          // Empresa cliente: bloqueia
-          toast({
-            title: "Movimentação não permitida",
-            description: `Empresa cliente "${destCompanyGlobal?.name}" já possui o(s) equipamento(s) ${sameOriginDest.map(e => e.numero_serie).join(', ')} em uso. Não é possível movimentar para a mesma empresa cliente.`,
-            variant: "destructive",
-          });
-          return;
-        } else {
-          // Empresa TACOM: pede confirmação
-          const codes = sameOriginDest.map(e => e.numero_serie).join(', ');
-          const confirmar = window.confirm(
-            `O(s) equipamento(s) ${codes} já está(ão) em ${destCompanyGlobal?.name}.\n\nDeseja registrar esta movimentação mesmo assim (ex.: mudança de status)?`
-          );
-          if (!confirmar) return;
-        }
-      }
-
-      // Se destino é NÃO-TACOM (cliente), tipo de movimento "manutencao" não faz sentido.
-      // Pede confirmação antes de prosseguir (status será forçado para "em_uso").
-      if (!destIsTacom && movementData.tipo_movimento === 'manutencao') {
-        const confirmar = window.confirm(
-          `O tipo de movimentação está como "Manutenção", mas o destino é uma empresa cliente (${destCompanyGlobal?.name}).\n\nEmpresas cliente só aceitam status "Em Uso". Deseja alterar o status para "Em Uso" e continuar?`
-        );
-        if (!confirmar) return;
-      }
 
       const currentUserName = user?.name && user?.surname ? 
         `${user.name} ${user.surname}` : 
@@ -308,15 +236,7 @@ export const useMovementForm = () => {
       for (const equipment of selectedEquipments) {
         console.log(`\n=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
 
-        // Resolver empresa destino antes do insert para gravar origem/destino na movimentação
-        let destCompany: Company | undefined;
-        if (movementData.empresa_destino) {
-          destCompany = companies.find(
-            c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino
-          );
-        }
-
-        // Empresa origem = empresa atual do equipamento
+        const destCompany = destCompanyGlobal;
         const origemCompany = equipment.id_empresa
           ? companies.find(c => c.id === equipment.id_empresa)
           : undefined;
@@ -334,72 +254,38 @@ export const useMovementForm = () => {
         if (hasNewFields && movementData.defeito_reclamado_id) {
           movementInsertData.defeito_reclamado_id = movementData.defeito_reclamado_id;
         }
-        
         if (hasNewFields && movementData.defeito_encontrado_id) {
           movementInsertData.defeito_encontrado_id = movementData.defeito_encontrado_id;
         }
-
         if (movementData.tipo_manutencao_id) {
           movementInsertData.tipo_manutencao_id = movementData.tipo_manutencao_id;
         }
-
-        console.log('Dados da movimentação para inserir:', movementInsertData);
 
         const { error: movementError } = await supabase
           .from('movimentacoes')
           .insert([movementInsertData]);
 
-        if (movementError) {
-          console.error('Erro ao inserir movimentação:', movementError);
-          throw movementError;
-        }
-
-        console.log('✅ Movimentação inserida com sucesso');
+        if (movementError) throw movementError;
+        console.log('✅ Movimentação inserida');
 
         const updateData: any = {};
+        if (destCompany) updateData.id_empresa = destCompany.id;
+        if (movementData.tipo_equipamento) updateData.tipo = movementData.tipo_equipamento;
+        if (movementData.modelo_equipamento) updateData.modelo = movementData.modelo_equipamento;
 
-        // Atualizar empresa destino para qualquer tipo de movimentação
-        if (destCompany) {
-          updateData.id_empresa = destCompany.id;
-        }
-
-
-        if (movementData.tipo_equipamento) {
-          updateData.tipo = movementData.tipo_equipamento;
-        }
-
-        if (movementData.modelo_equipamento) {
-          updateData.modelo = movementData.modelo_equipamento;
-        }
-
-        // Lógica de status:
-        // - Se destino NÃO é TACOM, força "em_uso" (status de manutenção só vale dentro da TACOM)
-        // - Caso contrário, usa o status selecionado pelo usuário
         const isDestTacom = isTacomCompanyName(destCompany?.name);
         if (destCompany && !isDestTacom) {
           updateData.status = 'em_uso';
-          if (movementData.status_equipamento && movementData.status_equipamento !== 'em_uso') {
-            console.log('⚠️ Status ajustado para "em_uso": empresa destino não é TACOM');
-          }
         } else if (movementData.status_equipamento) {
           updateData.status = movementData.status_equipamento;
         }
 
-
         if (Object.keys(updateData).length > 0) {
-          console.log('Atualizando equipamento com dados:', updateData);
-
           const { error: updateError } = await supabase
             .from('equipamentos')
             .update(updateData)
             .eq('id', equipment.id);
-
-          if (updateError) {
-            console.error('Erro ao atualizar equipamento:', updateError);
-            throw updateError;
-          }
-
-          console.log('✅ Equipamento atualizado com sucesso');
+          if (updateError) throw updateError;
         }
       }
 
@@ -422,7 +308,6 @@ export const useMovementForm = () => {
         modelo_equipamento: '',
         status_equipamento: ''
       });
-
     } catch (error: any) {
       console.error('Erro ao registrar movimentação:', error);
       toast({
@@ -433,6 +318,92 @@ export const useMovementForm = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async () => {
+    // Validações bloqueantes
+    if (selectedEquipments.length === 0) {
+      toast({ title: "Atenção", description: "Selecione pelo menos um equipamento", variant: "destructive" });
+      return;
+    }
+    if (!movementData.tipo_movimento) {
+      toast({ title: "Atenção", description: "Selecione o tipo de movimentação", variant: "destructive" });
+      return;
+    }
+    if (movementData.tipo_movimento === 'manutencao' && !movementData.defeito_reclamado_id) {
+      toast({ title: "Atenção", description: "Selecione o defeito reclamado", variant: "destructive" });
+      return;
+    }
+    if (!movementData.empresa_destino) {
+      toast({ title: "Atenção", description: "Selecione a empresa destino", variant: "destructive" });
+      return;
+    }
+
+    const destCompanyGlobal = companies.find(
+      c => c.name === movementData.empresa_destino || c.id === movementData.empresa_destino
+    );
+    const destIsTacom = isTacomCompanyName(destCompanyGlobal?.name);
+
+    // Origem = destino?
+    const sameOriginDest = selectedEquipments.filter(eq => {
+      const origem = companies.find(c => c.id === eq.id_empresa);
+      return origem?.name && destCompanyGlobal?.name && origem.name === destCompanyGlobal.name;
+    });
+
+    if (sameOriginDest.length > 0 && !destIsTacom) {
+      toast({
+        title: "Movimentação não permitida",
+        description: `Empresa cliente "${destCompanyGlobal?.name}" já possui o(s) equipamento(s) ${sameOriginDest.map(e => e.numero_serie).join(', ')} em uso. Não é possível movimentar para a mesma empresa cliente.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Coleta avisos para confirmação
+    const warnings: string[] = [];
+
+    if (sameOriginDest.length > 0 && destIsTacom) {
+      const codes = sameOriginDest.map(e => e.numero_serie).join(', ');
+      warnings.push(
+        `O(s) equipamento(s) ${codes} já está(ão) em ${destCompanyGlobal?.name}. Deseja registrar mesmo assim (ex.: mudança de status)?`
+      );
+    }
+
+    if (!destIsTacom && movementData.tipo_movimento === 'manutencao') {
+      warnings.push(
+        `O tipo de movimentação está como "Manutenção", mas o destino é uma empresa cliente (${destCompanyGlobal?.name}). O status será ajustado para "Em Uso".`
+      );
+    }
+
+    if (
+      !destIsTacom &&
+      movementData.status_equipamento &&
+      movementData.status_equipamento !== 'em_uso'
+    ) {
+      warnings.push(
+        `O destino "${destCompanyGlobal?.name}" é empresa cliente — o status será forçado para "Em Uso".`
+      );
+    }
+
+    if (warnings.length > 0) {
+      pendingExecuteRef.current = executeMovement;
+      setConfirmation({ title: "Confirmar movimentação", messages: warnings });
+      return;
+    }
+
+    await executeMovement();
+  };
+
+  const confirmPending = async () => {
+    const fn = pendingExecuteRef.current;
+    pendingExecuteRef.current = null;
+    setConfirmation(null);
+    if (fn) await fn();
+  };
+
+  const cancelPending = () => {
+    pendingExecuteRef.current = null;
+    setConfirmation(null);
   };
 
   return {
@@ -451,6 +422,9 @@ export const useMovementForm = () => {
     setHasNewFields,
     isDestinationTacom,
     handleInputChange,
-    updateOriginCompany
+    updateOriginCompany,
+    confirmation,
+    confirmPending,
+    cancelPending,
   };
 };
