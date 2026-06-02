@@ -741,6 +741,7 @@ const reportsDoc: Section[] = [
       'Filtro Tipo de Equipamento: limita a um tipo (ex: so CCIT 5.0) para identificar familias problematicas.',
       'Filtro Numero de Serie: investiga o historico de manutencoes de UM equipamento especifico.',
       'Dica: muitas ocorrencias DE indicam falha no processo de checagem antes da entrega; muitas DR indicam problema de qualidade do equipamento ou uso indevido.',
+    ],
   },
 
   {
