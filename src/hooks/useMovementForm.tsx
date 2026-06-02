@@ -422,6 +422,9 @@ export const useMovementForm = () => {
     setHasNewFields,
     isDestinationTacom,
     handleInputChange,
-    updateOriginCompany
+    updateOriginCompany,
+    confirmation,
+    confirmPending,
+    cancelPending,
   };
 };
