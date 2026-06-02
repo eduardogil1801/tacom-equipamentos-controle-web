@@ -12,6 +12,7 @@ import ReportExportBar from './ReportExportBar';
 interface MaintRef {
   codigo: string;
   descricao: string;
+  categoria_defeito?: string | null;
 }
 
 interface Movement {
@@ -99,15 +100,18 @@ const MovementsReport: React.FC = () => {
           ),
           tipos_manutencao!movimentacoes_tipo_manutencao_id_fkey (
             codigo,
-            descricao
+            descricao,
+            categoria_defeito
           ),
           defeito_reclamado:tipos_manutencao!movimentacoes_defeito_reclamado_id_fkey (
             codigo,
-            descricao
+            descricao,
+            categoria_defeito
           ),
           defeito_encontrado:tipos_manutencao!movimentacoes_defeito_encontrado_id_fkey (
             codigo,
-            descricao
+            descricao,
+            categoria_defeito
           )
         `)
         .order('data_movimento', { ascending: false });
@@ -238,6 +242,27 @@ const MovementsReport: React.FC = () => {
     setFilters(prev => ({ ...prev, [field]: value }));
   };
 
+  const isDefeitoReclamado = (m?: MaintRef) =>
+    !!m && (m.categoria_defeito === 'defeito_reclamado' || m.codigo?.trim().toUpperCase().startsWith('DR'));
+
+  const isDefeitoEncontrado = (m?: MaintRef) =>
+    !!m && (
+      m.categoria_defeito === 'defeito_encontrado' ||
+      m.codigo?.trim().toUpperCase().startsWith('DE') ||
+      m.codigo?.trim().toUpperCase().startsWith('ER')
+    );
+
+  const getTipoManutencao = (m: Movement) =>
+    isDefeitoReclamado(m.tipos_manutencao) || isDefeitoEncontrado(m.tipos_manutencao)
+      ? undefined
+      : m.tipos_manutencao;
+
+  const getDefeitoReclamado = (m: Movement) =>
+    m.defeito_reclamado || (isDefeitoReclamado(m.tipos_manutencao) ? m.tipos_manutencao : undefined);
+
+  const getDefeitoEncontrado = (m: Movement) =>
+    m.defeito_encontrado || (isDefeitoEncontrado(m.tipos_manutencao) ? m.tipos_manutencao : undefined);
+
   const fmtMaint = (m?: MaintRef) => m ? `${m.codigo} - ${m.descricao}` : '-';
 
   const buildExport = () => ({
@@ -255,9 +280,9 @@ const MovementsReport: React.FC = () => {
         m.equipamentos?.tipo || '-',
         origem,
         destino,
-        fmtMaint(m.tipos_manutencao),
-        fmtMaint(m.defeito_reclamado),
-        fmtMaint(m.defeito_encontrado),
+        fmtMaint(getTipoManutencao(m)),
+        fmtMaint(getDefeitoReclamado(m)),
+        fmtMaint(getDefeitoEncontrado(m)),
         m.usuario_responsavel || '-',
         m.observacoes || '-',
       ];
@@ -449,9 +474,9 @@ const MovementsReport: React.FC = () => {
                             {destino}
                           </span>
                         </td>
-                        <td className="p-3">{renderMaint(movement.tipos_manutencao)}</td>
-                        <td className="p-3">{renderMaint(movement.defeito_reclamado)}</td>
-                        <td className="p-3">{renderMaint(movement.defeito_encontrado)}</td>
+                        <td className="p-3">{renderMaint(getTipoManutencao(movement))}</td>
+                        <td className="p-3">{renderMaint(getDefeitoReclamado(movement))}</td>
+                        <td className="p-3">{renderMaint(getDefeitoEncontrado(movement))}</td>
                         <td className="p-3 text-sm whitespace-nowrap">{movement.usuario_responsavel || '-'}</td>
                         <td className="p-3 text-sm">
                           {movement.observacoes ? (

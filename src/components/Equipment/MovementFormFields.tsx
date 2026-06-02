@@ -100,9 +100,9 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
     movementData.tipo_movimento === 'devolucao' ||
     movementData.tipo_movimento === 'retorno_manutencao';
 
-  // Verificar se DR é obrigatório (somente se Outro Defeito não está selecionado)
-  const isDRRequired = shouldShowDefeitosFields && 
-    movementData.tipo_movimento === 'manutencao' && 
+  // Verificar se algum defeito é obrigatório (somente se Outro Defeito não está selecionado)
+  const isDefectRequired = shouldShowDefeitosFields &&
+    !movementData.defeito_encontrado_id &&
     !movementData.outro_defeito_id;
 
   const getDestinationCompanies = () => {
@@ -269,7 +269,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               {/* Outros Defeitos - Novo campo no topo direito */}
               <div>
                 <Label htmlFor="outro_defeito_id" className="text-purple-600 font-semibold">
-                  Outros Defeitos {!movementData.defeito_reclamado_id && movementData.tipo_movimento === 'manutencao' ? '*' : ''}
+                  Outros Defeitos {!movementData.defeito_reclamado_id && !movementData.defeito_encontrado_id && isDefectRequired ? '*' : ''}
                 </Label>
                 <Popover open={openOutro} onOpenChange={setOpenOutro}>
                   <PopoverTrigger asChild>
@@ -341,7 +341,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
               {/* DR - Defeito Reclamado com Autocomplete */}
               <div>
                 <Label htmlFor="defeito_reclamado_id" className="text-red-600 font-semibold">
-                  DR - Defeito Reclamado {isDRRequired ? '*' : ''}
+                  DR - Defeito Reclamado {isDefectRequired ? '*' : ''}
                 </Label>
                 <Popover open={openDR} onOpenChange={setOpenDR}>
                   <PopoverTrigger asChild>
