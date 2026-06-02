@@ -133,6 +133,16 @@ const MovementsReport: React.FC = () => {
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
+      // Carregar tipos de equipamento
+      const { data: typesData, error: typesError } = await supabase
+        .from('tipos_equipamento')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      if (typesError) throw typesError;
+      setEquipmentTypes(typesData || []);
+
     } catch (error) {
       console.error('Erro ao carregar movimentações:', error);
       toast({
