@@ -24,11 +24,12 @@ export async function fetchAllRows<T = any>(
 }
 
 /**
- * Estado (UF) efetivo de um equipamento: usa o estado da empresa e,
- * na falta dele, o estado gravado no próprio equipamento.
+ * Estado (UF) efetivo de um equipamento: usa o estado específico gravado no
+ * equipamento e, somente quando ele não existe, o estado da empresa.
+ * Assim, equipamentos de filiais diferentes não herdam um estado incorreto.
  */
 export const getEquipmentEstado = (equipment: any): string =>
-  equipment?.empresas?.estado || equipment?.estado || '';
+  equipment?.estado || equipment?.empresas?.estado || '';
 
 /** Normaliza texto para comparação (sem acentos, sem espaços extras, minúsculo). */
 export const normalizeText = (value?: string | null): string =>

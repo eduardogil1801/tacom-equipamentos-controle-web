@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Download, FileSpreadsheet, FileText, File } from 'lucide-react';
+import { getEquipmentEstado } from '@/utils/fetchAllRows';
 // import * as XLSX from 'xlsx'; // Removed for compatibility
 // import jsPDF from 'jspdf'; // Removed for compatibility
 // import 'jspdf-autotable'; // Removed for compatibility
@@ -50,7 +51,7 @@ const EquipmentExport: React.FC<EquipmentExportProps> = ({ data }) => {
       'Tipo': equipment.tipo,
       'Modelo': equipment.modelo || '-',
       'Empresa': equipment.empresas?.name || 'N/A',
-      'Estado': equipment.empresas?.estado || equipment.estado || '-',
+      'Estado': getEquipmentEstado(equipment) || '-',
       'Status': formatStatusForExport(equipment.status),
       'Data de Entrada': formatDateForExport(equipment.data_entrada)
     }));

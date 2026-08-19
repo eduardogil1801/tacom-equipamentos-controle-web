@@ -151,7 +151,7 @@ const EquipmentList: React.FC = () => {
       filtered = filtered.filter(eq => eq.modelo === filters.selectedModel);
     }
 
-    // Estado: usa o estado da empresa, com fallback no estado do equipamento
+    // Estado: usa exatamente a mesma resolução aplicada na coluna da tabela
     if (filters.selectedState && filters.selectedState !== 'all') {
       filtered = filtered.filter(eq => matchesEstado(eq, filters.selectedState));
     }
@@ -265,8 +265,8 @@ const EquipmentList: React.FC = () => {
         aValue = a.empresas?.name || '';
         bValue = b.empresas?.name || '';
       } else if (sortField === 'estado_empresa') {
-        aValue = a.empresas?.estado || a.estado || '';
-        bValue = b.empresas?.estado || b.estado || '';
+        aValue = getEquipmentEstado(a);
+        bValue = getEquipmentEstado(b);
       } else {
         aValue = a[sortField as keyof Equipment] || '';
         bValue = b[sortField as keyof Equipment] || '';
