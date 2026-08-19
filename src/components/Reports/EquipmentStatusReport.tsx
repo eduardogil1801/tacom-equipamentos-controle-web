@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileDown, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -19,6 +20,7 @@ interface Equipment {
   status: string;
   empresas?: {
     name: string;
+    estado?: string | null;
   };
   daysInStock: number;
   statusCategory: 'available' | 'out' | 'long_term' | 'recent' | 'maintenance' | 'unavailable';
@@ -30,9 +32,12 @@ const EquipmentStatusReport: React.FC = () => {
   const [filters, setFilters] = useState({
     status: '',
     equipmentType: '',
-    companyId: ''
+    companyId: '',
+    estado: ''
   });
   const [companies, setCompanies] = useState<Array<{id: string, name: string}>>([]);
+  const [estados, setEstados] = useState<string[]>([]);
+
 
   useEffect(() => {
     loadData();
