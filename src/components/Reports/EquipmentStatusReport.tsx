@@ -173,7 +173,7 @@ const EquipmentStatusReport: React.FC = () => {
         equipment.daysInStock,
         new Date(equipment.data_entrada).toLocaleDateString('pt-BR'),
         equipment.data_saida ? new Date(equipment.data_saida).toLocaleDateString('pt-BR') : '',
-        equipment.estado || ''
+        getEquipmentEstado(equipment) || ''
       ].join(','))
     ].join('\n');
 
