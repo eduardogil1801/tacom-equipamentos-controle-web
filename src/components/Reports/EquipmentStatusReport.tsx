@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileDown, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+import { fetchAllRows, getEquipmentEstado, matchesEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -143,7 +143,7 @@ const EquipmentStatusReport: React.FC = () => {
 
       // Filtrar por estado (UF)
       if (filters.estado && filters.estado !== 'all') {
-        filteredEquipments = filteredEquipments.filter(eq => getEquipmentEstado(eq) === filters.estado);
+        filteredEquipments = filteredEquipments.filter(eq => matchesEstado(eq, filters.estado));
       }
 
       setEquipments(filteredEquipments);

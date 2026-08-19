@@ -9,7 +9,7 @@ import { Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
-import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+import { fetchAllRows, getEquipmentEstado, matchesEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -126,7 +126,7 @@ const InventoryReport = () => {
     }
 
     if (filters.estado) {
-      filtered = filtered.filter(eq => getEquipmentEstado(eq) === filters.estado);
+      filtered = filtered.filter(eq => matchesEstado(eq, filters.estado));
     }
 
     if (filters.numero_serie) {

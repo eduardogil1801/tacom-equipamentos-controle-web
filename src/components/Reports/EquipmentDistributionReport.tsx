@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+import { fetchAllRows, getEquipmentEstado, normalizeText } from '@/utils/fetchAllRows';
 
 interface EquipmentData {
   tipo: string;
@@ -123,7 +123,7 @@ const EquipmentDistributionReport: React.FC = () => {
     }
 
     if (selectedState !== 'all') {
-      filtered = filtered.filter(item => item.estado === selectedState);
+      filtered = filtered.filter(item => normalizeText(item.estado) === normalizeText(selectedState));
     }
     
     return filtered;
