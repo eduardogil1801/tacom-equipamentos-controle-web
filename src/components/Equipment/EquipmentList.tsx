@@ -73,21 +73,24 @@ const EquipmentList: React.FC = () => {
       console.log('Companies loaded in equipment list:', companiesData);
       setCompanies(companiesData || []);
 
-      // Load equipments with company data
-      const { data: equipmentsData, error: equipmentsError } = await supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (
-            name,
-            estado
-          )
-        `)
-        .order('at_criado', { ascending: false });
+      // Load equipments with company data (paginado — Supabase limita 1000 linhas por consulta)
+      const equipmentsData = await fetchAllRows<Equipment>((from, to) =>
+        supabase
+          .from('equipamentos')
+          .select(`
+            *,
+            empresas (
+              name,
+              estado
+            )
+          `)
+          .order('at_criado', { ascending: false })
+          .range(from, to) as any
+      );
 
-      if (equipmentsError) throw equipmentsError;
-      setEquipments(equipmentsData || []);
-      setFilteredEquipments(equipmentsData || []);
+      setEquipments(equipmentsData);
+      setFilteredEquipments(equipmentsData);
+
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
