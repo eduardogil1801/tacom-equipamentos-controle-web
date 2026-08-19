@@ -137,11 +137,17 @@ const EquipmentStatusReport: React.FC = () => {
       });
 
       // Filtrar por status se especificado
-      const filteredEquipments = (filters.status && filters.status !== 'all')
+      let filteredEquipments = (filters.status && filters.status !== 'all')
         ? processedEquipments.filter(eq => eq.statusCategory === filters.status)
         : processedEquipments;
 
+      // Filtrar por estado (UF)
+      if (filters.estado && filters.estado !== 'all') {
+        filteredEquipments = filteredEquipments.filter(eq => getEquipmentEstado(eq) === filters.estado);
+      }
+
       setEquipments(filteredEquipments);
+
     } catch (error) {
       console.error('Erro ao carregar status dos equipamentos:', error);
       toast({
