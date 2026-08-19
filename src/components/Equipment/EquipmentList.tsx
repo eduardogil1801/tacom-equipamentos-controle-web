@@ -13,7 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import EquipmentForm from './EquipmentForm';
 import EquipmentFilters from './EquipmentFilters';
 import BulkImportDialog from './BulkImportDialog';
-import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+import { fetchAllRows, getEquipmentEstado, matchesEstado } from '@/utils/fetchAllRows';
 
 
 interface Equipment {
@@ -145,7 +145,7 @@ const EquipmentList: React.FC = () => {
 
     // State filter (usa o estado da empresa, com fallback no estado do equipamento)
     if (filters.selectedState && filters.selectedState !== 'all') {
-      filtered = filtered.filter(eq => getEquipmentEstado(eq) === filters.selectedState);
+      filtered = filtered.filter(eq => matchesEstado(eq, filters.selectedState));
     }
 
 

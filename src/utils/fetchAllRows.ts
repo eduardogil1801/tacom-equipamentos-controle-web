@@ -29,3 +29,15 @@ export async function fetchAllRows<T = any>(
  */
 export const getEquipmentEstado = (equipment: any): string =>
   equipment?.empresas?.estado || equipment?.estado || '';
+
+/** Normaliza texto para comparação (sem acentos, sem espaços extras, minúsculo). */
+export const normalizeText = (value?: string | null): string =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+/** Compara o estado efetivo do equipamento com o estado selecionado no filtro. */
+export const matchesEstado = (equipment: any, estado: string): boolean =>
+  normalizeText(getEquipmentEstado(equipment)) === normalizeText(estado);

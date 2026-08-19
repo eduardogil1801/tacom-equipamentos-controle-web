@@ -45,6 +45,19 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
     loadFilterOptions();
   }, []);
 
+  // Aplica os filtros automaticamente sempre que algum campo mudar
+  useEffect(() => {
+    onFiltersChange({
+      searchTerm,
+      selectedCompany,
+      selectedStatus,
+      selectedType,
+      selectedModel,
+      selectedState,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, selectedCompany, selectedStatus, selectedType, selectedModel, selectedState]);
+
   const loadFilterOptions = async () => {
     try {
       // Load companies (com estado)
