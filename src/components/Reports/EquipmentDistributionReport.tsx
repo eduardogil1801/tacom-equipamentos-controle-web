@@ -246,8 +246,25 @@ const EquipmentDistributionReport: React.FC = () => {
           <CardTitle>Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Filtro de Estado */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Estado (UF)</label>
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os estados</SelectItem>
+                  {availableStates.map(estado => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Filtro de Tipos */}
+
             <div>
               <label className="text-sm font-medium mb-2 block">Tipos de Equipamento</label>
               <Popover>
