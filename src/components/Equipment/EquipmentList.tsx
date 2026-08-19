@@ -143,10 +143,11 @@ const EquipmentList: React.FC = () => {
       filtered = filtered.filter(eq => eq.modelo === filters.selectedModel);
     }
 
-    // State filter
+    // State filter (usa o estado da empresa, com fallback no estado do equipamento)
     if (filters.selectedState && filters.selectedState !== 'all') {
-      filtered = filtered.filter(eq => eq.estado === filters.selectedState);
+      filtered = filtered.filter(eq => getEquipmentEstado(eq) === filters.selectedState);
     }
+
 
     setFilteredEquipments(filtered);
   };
