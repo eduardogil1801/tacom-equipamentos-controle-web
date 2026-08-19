@@ -264,7 +264,7 @@ const InventoryStockReport = () => {
                     <td className="border border-gray-300 p-2">{equipment.modelo || '-'}</td>
                     <td className="border border-gray-300 p-2">{equipment.empresas?.name}</td>
                     <td className="border border-gray-300 p-2">
-                      {equipment.estado || <span className="text-muted-foreground italic">Não informado</span>}
+                      {getEquipmentEstado(equipment) || <span className="text-muted-foreground italic">Não informado</span>}
                     </td>
                     <td className="border border-gray-300 p-2">
                       <span className={`px-2 py-1 rounded text-xs ${
