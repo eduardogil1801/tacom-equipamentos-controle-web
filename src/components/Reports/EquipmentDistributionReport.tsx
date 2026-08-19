@@ -224,15 +224,17 @@ const EquipmentDistributionReport: React.FC = () => {
           getData={() => ({
             title: 'Distribuição de Equipamentos por Status',
             fileName: `distribuicao_equipamentos_${new Date().toISOString().slice(0, 10)}`,
-            headers: ['Tipo/Modelo', 'Status', 'Quantidade'],
+            headers: ['Tipo/Modelo', 'Status', 'Estado (UF)', 'Quantidade'],
             rows: filteredData
               .slice()
               .sort((a, b) => b.count - a.count)
               .map(item => [
                 item.tipo,
                 statusLabels[item.status] || item.status,
+                item.estado,
                 item.count,
               ]),
+
           })}
         />
       </div>
