@@ -328,17 +328,23 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
-      // Inserir equipamentos
-      const { error: insertError } = await supabase
-        .from('equipamentos')
-        .insert(equipamentosNovos);
-
-      if (insertError) throw insertError;
+      // Inserir equipamentos em blocos
+      const chunkSize = 500;
+      let inseridos = 0;
+      for (let i = 0; i < equipamentosNovos.length; i += chunkSize) {
+        const chunk = equipamentosNovos.slice(i, i + chunkSize);
+        const { error: insertError } = await supabase
+          .from('equipamentos')
+          .insert(chunk);
+        if (insertError) throw insertError;
+        inseridos += chunk.length;
+      }
 
       toast({
         title: "Importação Concluída!",
-        description: `${equipamentosNovos.length} equipamentos importados com sucesso.${errosInsercao.length > 0 ? ` ${errosInsercao.length} erros encontrados.` : ''}`,
+        description: `${inseridos} equipamentos importados.${empresasNaoEncontradas.size > 0 ? ` Empresas não encontradas: ${Array.from(empresasNaoEncontradas).join(', ')}.` : ''}${errosInsercao.length > 0 ? ` ${errosInsercao.length} erros encontrados.` : ''}`,
       });
+
 
       if (errosInsercao.length > 0) {
         console.warn('Erros durante importação:', errosInsercao);
