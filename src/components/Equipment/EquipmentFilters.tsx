@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { fetchAllRows } from '@/utils/fetchAllRows';
 
 
 interface EquipmentFiltersProps {
+  filters: FilterValues;
   onFiltersChange: (filters: FilterValues) => void;
   onClearFilters: () => void;
 }
@@ -29,13 +30,7 @@ interface Company {
   name: string;
 }
 
-const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, onClearFilters }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [selectedState, setSelectedState] = useState('');
+const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ filters, onFiltersChange, onClearFilters }) => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [equipmentTypes, setEquipmentTypes] = useState<string[]>([]);
   const [equipmentModels, setEquipmentModels] = useState<string[]>([]);
@@ -44,19 +39,6 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
   useEffect(() => {
     loadFilterOptions();
   }, []);
-
-  // Aplica os filtros automaticamente sempre que algum campo mudar
-  useEffect(() => {
-    onFiltersChange({
-      searchTerm,
-      selectedCompany,
-      selectedStatus,
-      selectedType,
-      selectedModel,
-      selectedState,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, selectedCompany, selectedStatus, selectedType, selectedModel, selectedState]);
 
   const loadFilterOptions = async () => {
     try {
@@ -99,25 +81,11 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
   };
 
 
-  const handleApplyFilters = () => {
-    const filters: FilterValues = {
-      searchTerm,
-      selectedCompany,
-      selectedStatus,
-      selectedType,
-      selectedModel,
-      selectedState
-    };
-    onFiltersChange(filters);
+  const updateFilter = (field: keyof FilterValues, value: string) => {
+    onFiltersChange({ ...filters, [field]: value });
   };
 
   const handleClearFilters = () => {
-    setSearchTerm('');
-    setSelectedCompany('');
-    setSelectedStatus('');
-    setSelectedType('');
-    setSelectedModel('');
-    setSelectedState('');
     onClearFilters();
   };
 
@@ -136,14 +104,14 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
             <Input
               id="search"
               placeholder="Número de série..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={filters.searchTerm}
+              onChange={(e) => updateFilter('searchTerm', e.target.value)}
             />
           </div>
 
           <div>
             <Label htmlFor="company">Empresa</Label>
-            <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+            <Select value={filters.selectedCompany} onValueChange={(value) => updateFilter('selectedCompany', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas as empresas" />
               </SelectTrigger>
@@ -160,7 +128,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
 
           <div>
             <Label htmlFor="status">Status</Label>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <Select value={filters.selectedStatus} onValueChange={(value) => updateFilter('selectedStatus', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
@@ -178,7 +146,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
 
           <div>
             <Label htmlFor="type">Tipo</Label>
-            <Select value={selectedType} onValueChange={setSelectedType}>
+            <Select value={filters.selectedType} onValueChange={(value) => updateFilter('selectedType', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos os tipos" />
               </SelectTrigger>
@@ -195,7 +163,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
 
           <div>
             <Label htmlFor="model">Modelo</Label>
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <Select value={filters.selectedModel} onValueChange={(value) => updateFilter('selectedModel', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos os modelos" />
               </SelectTrigger>
@@ -212,7 +180,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
 
           <div>
             <Label htmlFor="state">Estado</Label>
-            <Select value={selectedState} onValueChange={setSelectedState}>
+            <Select value={filters.selectedState} onValueChange={(value) => updateFilter('selectedState', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Todos os estados" />
               </SelectTrigger>
@@ -229,7 +197,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button onClick={handleApplyFilters} className="flex items-center gap-2">
+          <Button onClick={() => onFiltersChange({ ...filters })} className="flex items-center gap-2">
             <Search className="h-4 w-4" />
             Aplicar Filtros
           </Button>

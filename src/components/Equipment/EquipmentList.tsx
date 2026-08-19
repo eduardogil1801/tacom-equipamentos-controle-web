@@ -334,6 +334,7 @@ const EquipmentList: React.FC = () => {
       </div>
 
       <EquipmentFilters 
+        filters={filters}
         onFiltersChange={handleFiltersChange}
         onClearFilters={handleClearFilters}
       />
