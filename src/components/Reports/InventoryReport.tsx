@@ -166,7 +166,7 @@ const InventoryReport = () => {
       eq.numero_serie || '-',
       eq.empresas?.name || '-',
       eq.status || '-',
-      eq.estado || 'Não informado',
+      getEquipmentEstado(eq) || 'Não informado',
       eq.data_entrada ? new Date(eq.data_entrada).toLocaleDateString('pt-BR') : '-',
       eq.data_saida ? new Date(eq.data_saida).toLocaleDateString('pt-BR') : '-',
     ]),
