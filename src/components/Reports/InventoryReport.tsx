@@ -363,7 +363,7 @@ const InventoryReport = () => {
                          'Defeito'}
                       </span>
                     </TableCell>
-                    <TableCell>{equipment.estado || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
+                    <TableCell>{getEquipmentEstado(equipment) || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
                     <TableCell>
                       {equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : '-'}
                     </TableCell>
