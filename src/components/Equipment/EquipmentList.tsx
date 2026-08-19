@@ -13,6 +13,8 @@ import { toast } from '@/hooks/use-toast';
 import EquipmentForm from './EquipmentForm';
 import EquipmentFilters from './EquipmentFilters';
 import BulkImportDialog from './BulkImportDialog';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+
 
 interface Equipment {
   id: string;
