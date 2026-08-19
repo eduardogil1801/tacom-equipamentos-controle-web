@@ -373,13 +373,19 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       setFile(null);
       setPreviewData([]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('=== ERRO GERAL NA IMPORTAÇÃO ===', error);
+      const message =
+        error?.message ||
+        error?.error_description ||
+        (typeof error === 'string' ? error : JSON.stringify(error)) ||
+        'Erro desconhecido';
       toast({
         title: "Erro na Importação",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: message,
         variant: "destructive",
       });
+
     } finally {
       setIsProcessing(false);
     }
