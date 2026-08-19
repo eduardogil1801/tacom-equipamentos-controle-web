@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -19,8 +20,10 @@ interface Equipment {
   status?: string;
   empresas: {
     name: string;
+    estado?: string | null;
   };
 }
+
 
 const formatStatus = (s?: string) =>
   s ? s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-';
