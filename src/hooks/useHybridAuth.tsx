@@ -203,25 +203,38 @@ export const HybridAuthProvider = ({ children }: { children: React.ReactNode }) 
   const loginOnline = async (email: string, password: string): Promise<User | null> => {
     try {
       console.log('🌐 Tentando login online...');
-      
-      const { data: users, error } = await supabase
-        .from('usuarios')
-        .select(`
-          *,
-          user_profiles!inner(user_type)
-        `)
-        .or(`email.eq.${email},username.eq.${email}`)
-        .eq('senha', password)
-        .eq('ativo', true)
-        .single();
 
-      if (error) {
-        console.log('❌ Erro no login online:', error.message);
+      // Credenciais são validadas no servidor (edge function) — nunca no cliente
+      const { data: result, error: fnError } = await supabase.functions.invoke('auth-login', {
+        body: { identifier: email, password },
+      });
+
+      if (fnError || !result?.email) {
+        console.log('❌ Falha no login online');
         return null;
       }
 
-      if (!users) {
-        console.log('❌ Usuário não encontrado online');
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: result.email,
+        password,
+      });
+
+      if (signInError) {
+        console.log('❌ Falha ao criar sessão:', signInError.message);
+        return null;
+      }
+
+      const { data: users, error } = await supabase
+        .from('usuarios')
+        .select(`
+          id, nome, sobrenome, email, username, must_change_password, is_temp_password,
+          user_profiles!inner(user_type)
+        `)
+        .eq('email', result.email)
+        .single();
+
+      if (error || !users) {
+        console.log('❌ Perfil não encontrado:', error?.message);
         return null;
       }
 
@@ -233,7 +246,7 @@ export const HybridAuthProvider = ({ children }: { children: React.ReactNode }) 
         surname: users.sobrenome,
         username: users.username,
         role: 'user',
-        userType: users.user_profiles.user_type,
+        userType: (users as any).user_profiles.user_type,
         mustChangePassword: users.must_change_password || false,
         isTempPassword: users.is_temp_password || false
       };
@@ -318,6 +331,7 @@ export const HybridAuthProvider = ({ children }: { children: React.ReactNode }) 
     console.log(`👋 Logout do usuário: ${user?.name} ${user?.surname}`);
     setUser(null);
     localStorage.removeItem('currentUser');
+    supabase.auth.signOut();
   };
 
   const signUp = async (userData: any) => {
@@ -343,28 +357,23 @@ export const HybridAuthProvider = ({ children }: { children: React.ReactNode }) 
     if (isOnlineMode && user) {
       try {
         console.log('🌐 Alterando senha online...');
-        
-        const { error } = await supabase
-          .from('usuarios')
-          .update({
-            senha: newPassword,
-            must_change_password: false,
-            is_temp_password: false
-          })
-          .eq('id', user.id);
-        
-        if (error) {
-          console.error('❌ Erro ao alterar senha online:', error);
+
+        const { data, error } = await supabase.functions.invoke('auth-account', {
+          body: { action: 'change_password', newPassword },
+        });
+
+        if (error || data?.error) {
+          console.error('❌ Erro ao alterar senha online:', error || data?.error);
           return { error: { message: 'Erro ao alterar senha no servidor' } };
         }
-        
+
         console.log('✅ Senha alterada online com sucesso');
       } catch (error) {
         console.error('❌ Exceção ao alterar senha online:', error);
         return { error: { message: 'Erro de conexão ao alterar senha' } };
       }
     }
-    
+
     // Atualizar usuário local (tanto online quanto offline)
     if (user) {
       const updatedUser = {
