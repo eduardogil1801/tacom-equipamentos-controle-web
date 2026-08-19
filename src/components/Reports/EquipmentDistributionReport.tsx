@@ -8,13 +8,17 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
 
 interface EquipmentData {
   tipo: string;
   modelo?: string;
   status: string;
+  estado: string;
   count: number;
 }
+
 
 const statusLabels: { [key: string]: string } = {
   'disponivel': 'Disponível',
