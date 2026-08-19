@@ -49,7 +49,7 @@ const UserManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('usuarios')
         .select(`
-          *,
+          id, nome, sobrenome, email, username, ativo, data_criacao, must_change_password, is_temp_password,
           user_profiles!inner(user_type)
         `)
         .order('nome');
@@ -110,36 +110,23 @@ const UserManagement: React.FC = () => {
           description: "Usuário atualizado com sucesso!",
         });
       } else {
-        // Criar novo usuário
-        const { data: newUser, error: userError } = await supabase
-          .from('usuarios')
-          .insert({
+        // Criar novo usuário (criação feita no servidor, com senha protegida)
+        const { data: result, error: fnError } = await supabase.functions.invoke('auth-account', {
+          body: {
+            action: 'create_user',
             nome: formData.nome,
             sobrenome: formData.sobrenome,
             email: formData.email,
             username: formData.username,
-            senha: '12345678', // Senha temporária
-            must_change_password: true,
-            is_temp_password: true
-          })
-          .select()
-          .single();
+            user_type: formData.user_type,
+          },
+        });
 
-        if (userError) throw userError;
-
-        // Criar perfil do usuário
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: newUser.id,
-            user_type: formData.user_type
-          });
-
-        if (profileError) throw profileError;
+        if (fnError || result?.error) throw new Error(fnError?.message || result?.error);
 
         toast({
           title: "Sucesso",
-          description: "Usuário criado com sucesso! Senha temporária: 12345678",
+          description: `Usuário criado com sucesso! Senha temporária: ${result?.tempPassword ?? '12345678'}`,
         });
       }
 
@@ -177,20 +164,15 @@ const UserManagement: React.FC = () => {
 
   const handleResetPassword = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('usuarios')
-        .update({
-          senha: '12345678',
-          must_change_password: true,
-          is_temp_password: true
-        })
-        .eq('id', userId);
+      const { data, error } = await supabase.functions.invoke('auth-account', {
+        body: { action: 'reset_password', userId },
+      });
 
-      if (error) throw error;
+      if (error || data?.error) throw new Error(error?.message || data?.error);
 
       toast({
         title: "Sucesso",
-        description: "Senha resetada para: 12345678",
+        description: `Senha resetada para: ${data?.tempPassword ?? '12345678'}`,
       });
       loadUsers();
     } catch (error) {

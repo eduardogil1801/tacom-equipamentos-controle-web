@@ -640,6 +640,7 @@ export type Database = {
       usuarios: {
         Row: {
           ativo: boolean | null
+          auth_user_id: string | null
           data_atualizacao: string | null
           data_criacao: string | null
           email: string
@@ -653,6 +654,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          auth_user_id?: string | null
           data_atualizacao?: string | null
           data_criacao?: string | null
           email: string
@@ -666,6 +668,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          auth_user_id?: string | null
           data_atualizacao?: string | null
           data_criacao?: string | null
           email?: string
@@ -684,12 +687,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_usuario_id: { Args: never; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
       get_user_full_name: { Args: { user_id: string }; Returns: string }
       get_user_full_name_improved: {
         Args: { user_id?: string }
         Returns: string
       }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       user_type: "administrador" | "operacional"
