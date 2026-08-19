@@ -326,7 +326,22 @@ const EquipmentStatusReport: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="estado">Estado (UF)</Label>
+              <Select value={filters.estado || 'all'} onValueChange={(value) => setFilters({...filters, estado: value === 'all' ? '' : value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os estados</SelectItem>
+                  {estados.map(estado => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
         </CardContent>
       </Card>
 
