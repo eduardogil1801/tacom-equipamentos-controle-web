@@ -245,6 +245,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
+      // Normalizador: remove acentos, espaços extras e caixa
+      const normalize = (s: string) =>
+        s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
       // Buscar empresas para mapear nomes para IDs
       const { data: empresas, error: empresasError } = await supabase
         .from('empresas')
@@ -252,16 +256,18 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       if (empresasError) throw empresasError;
 
-      const empresaMap = new Map(empresas?.map(e => [e.name.toLowerCase(), e.id]) || []);
+      const empresaMap = new Map(empresas?.map(e => [normalize(e.name), e.id]) || []);
 
       // Preparar dados para inserção
       const equipamentosParaInserir = [];
       const errosInsercao: string[] = [];
+      const empresasNaoEncontradas = new Set<string>();
 
       for (const eq of valid) {
-        const empresaId = empresaMap.get(eq.empresa.toLowerCase());
+        const empresaId = empresaMap.get(normalize(eq.empresa));
         
         if (!empresaId) {
+          empresasNaoEncontradas.add(eq.empresa);
           errosInsercao.push(`Empresa "${eq.empresa}" não encontrada no sistema`);
           continue;
         }
@@ -280,21 +286,28 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       if (equipamentosParaInserir.length === 0) {
         toast({
           title: "Erro",
-          description: "Nenhum equipamento pôde ser preparado para inserção. Verifique os nomes das empresas.",
+          description: empresasNaoEncontradas.size > 0
+            ? `Empresas não encontradas: ${Array.from(empresasNaoEncontradas).join(', ')}`
+            : "Nenhum equipamento pôde ser preparado para inserção.",
           variant: "destructive",
         });
         console.error('Erros de inserção:', errosInsercao);
         return;
       }
 
-      // Verificar duplicatas no banco
-      const { data: existingEquipments, error: checkError } = await supabase
-        .from('equipamentos')
-        .select('numero_serie, tipo');
+      // Verificar duplicatas no banco (paginado — o Supabase limita a 1000 linhas por consulta)
+      const existingSet = new Set<string>();
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data: page, error: checkError } = await supabase
+          .from('equipamentos')
+          .select('numero_serie, tipo')
+          .range(from, from + pageSize - 1);
 
-      if (checkError) throw checkError;
-
-      const existingSet = new Set(existingEquipments?.map(e => `${e.tipo}-${e.numero_serie}`) || []);
+        if (checkError) throw checkError;
+        page?.forEach(e => existingSet.add(`${e.tipo}-${e.numero_serie}`));
+        if (!page || page.length < pageSize) break;
+      }
       
       const equipamentosNovos = equipamentosParaInserir.filter(eq => {
         const key = `${eq.tipo}-${eq.numero_serie}`;
@@ -304,6 +317,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         }
         return true;
       });
+
 
       if (equipamentosNovos.length === 0) {
         toast({
