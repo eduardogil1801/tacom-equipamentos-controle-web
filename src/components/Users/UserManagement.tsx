@@ -49,7 +49,7 @@ const UserManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('usuarios')
         .select(`
-          *,
+          id, nome, sobrenome, email, username, ativo, data_criacao, must_change_password, is_temp_password,
           user_profiles!inner(user_type)
         `)
         .order('nome');
