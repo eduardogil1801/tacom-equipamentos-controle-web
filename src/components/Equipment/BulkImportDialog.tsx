@@ -328,15 +328,32 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return;
       }
 
+      // Remover duplicatas dentro do próprio arquivo (tipo + número de série)
+      const seen = new Set<string>();
+      const equipamentosUnicos = equipamentosNovos.filter(eq => {
+        const key = `${eq.tipo}-${eq.numero_serie}`;
+        if (seen.has(key)) {
+          errosInsercao.push(`Duplicado no arquivo: ${eq.tipo} - ${eq.numero_serie}`);
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+
       // Inserir equipamentos em blocos
-      const chunkSize = 500;
+      const chunkSize = 200;
       let inseridos = 0;
-      for (let i = 0; i < equipamentosNovos.length; i += chunkSize) {
-        const chunk = equipamentosNovos.slice(i, i + chunkSize);
+      for (let i = 0; i < equipamentosUnicos.length; i += chunkSize) {
+        const chunk = equipamentosUnicos.slice(i, i + chunkSize);
         const { error: insertError } = await supabase
           .from('equipamentos')
           .insert(chunk);
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Erro ao inserir bloco', i, insertError);
+          throw new Error(
+            `${insertError.message}${insertError.details ? ` — ${insertError.details}` : ''}${insertError.hint ? ` (${insertError.hint})` : ''}`
+          );
+        }
         inseridos += chunk.length;
       }
 
@@ -344,6 +361,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         title: "Importação Concluída!",
         description: `${inseridos} equipamentos importados.${empresasNaoEncontradas.size > 0 ? ` Empresas não encontradas: ${Array.from(empresasNaoEncontradas).join(', ')}.` : ''}${errosInsercao.length > 0 ? ` ${errosInsercao.length} erros encontrados.` : ''}`,
       });
+
 
 
       if (errosInsercao.length > 0) {
@@ -355,13 +373,19 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       setFile(null);
       setPreviewData([]);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('=== ERRO GERAL NA IMPORTAÇÃO ===', error);
+      const message =
+        error?.message ||
+        error?.error_description ||
+        (typeof error === 'string' ? error : JSON.stringify(error)) ||
+        'Erro desconhecido';
       toast({
         title: "Erro na Importação",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: message,
         variant: "destructive",
       });
+
     } finally {
       setIsProcessing(false);
     }
