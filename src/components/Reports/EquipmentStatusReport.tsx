@@ -50,32 +50,52 @@ const EquipmentStatusReport: React.FC = () => {
       // Carregar empresas
       const { data: companiesData } = await supabase
         .from('empresas')
-        .select('id, name')
+        .select('id, name, estado')
         .order('name');
       
       setCompanies(companiesData || []);
 
-      // Carregar equipamentos
-      let query = supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (
-            name
+      const { data: estadosData } = await supabase
+        .from('estados')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      setEstados(
+        Array.from(
+          new Set(
+            [
+              ...(estadosData?.map(e => e.nome) || []),
+              ...(companiesData?.map(c => c.estado) || []),
+            ].filter(Boolean) as string[]
           )
-        `)
-        .order('data_entrada', { ascending: false });
+        ).sort()
+      );
 
-      // Aplicar filtros
-      if (filters.equipmentType) {
-        query = query.eq('tipo', filters.equipmentType);
-      }
-      if (filters.companyId && filters.companyId !== 'all') {
-        query = query.eq('id_empresa', filters.companyId);
-      }
+      // Carregar equipamentos (paginado — limite de 1000 linhas do Supabase)
+      const equipmentsData = await fetchAllRows<any>((from, to) => {
+        let query = supabase
+          .from('equipamentos')
+          .select(`
+            *,
+            empresas (
+              name,
+              estado
+            )
+          `)
+          .order('data_entrada', { ascending: false })
+          .range(from, to);
 
-      const { data: equipmentsData, error } = await query;
-      if (error) throw error;
+        if (filters.equipmentType) {
+          query = query.eq('tipo', filters.equipmentType);
+        }
+        if (filters.companyId && filters.companyId !== 'all') {
+          query = query.eq('id_empresa', filters.companyId);
+        }
+
+        return query as any;
+      });
+
 
       // Processar dados para incluir status e dias em estoque
       const processedEquipments = (equipmentsData || []).map(equipment => {
