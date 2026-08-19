@@ -401,7 +401,7 @@ const EquipmentList: React.FC = () => {
                   <TableCell>{equipment.tipo}</TableCell>
                   <TableCell>{equipment.modelo || '-'}</TableCell>
                   <TableCell>{equipment.empresas?.name || 'N/A'}</TableCell>
-                  <TableCell>{equipment.empresas?.estado || equipment.estado || '-'}</TableCell>
+                  <TableCell>{getEquipmentEstado(equipment) || '-'}</TableCell>
                   <TableCell>{getStatusBadge(equipment)}</TableCell>
                   <TableCell>
                     {equipment.data_entrada ? new Date(equipment.data_entrada + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
