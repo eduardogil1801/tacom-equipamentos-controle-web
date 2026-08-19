@@ -7,7 +7,7 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
-import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+import { fetchAllRows, getEquipmentEstado, matchesEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -105,7 +105,7 @@ const InventoryStockReport = () => {
     let filtered = [...equipments];
     if (selectedCompany !== 'all') filtered = filtered.filter(eq => eq.empresas?.name === selectedCompany);
     if (selectedStatus !== 'all') filtered = filtered.filter(eq => eq.status === selectedStatus);
-    if (selectedState !== 'all') filtered = filtered.filter(eq => getEquipmentEstado(eq) === selectedState);
+    if (selectedState !== 'all') filtered = filtered.filter(eq => matchesEstado(eq, selectedState));
 
     if (searchTerm.trim()) {
       const t = searchTerm.toLowerCase().trim();
