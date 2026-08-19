@@ -18,6 +18,8 @@ interface Company {
   estado?: string;
 }
 
+const DEFAULT_ESTADOS = ['Minas Gerais', 'Rio Grande do Sul', 'Santa Catarina'];
+
 const CompanyList: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -47,13 +49,14 @@ const CompanyList: React.FC = () => {
         .order('nome');
 
       if (error) throw error;
-      setEstados(data?.map(estado => estado.nome) || []);
+      const estadosAtivos = data?.map(estado => estado.nome) || [];
+      setEstados(estadosAtivos.length > 0 ? estadosAtivos : DEFAULT_ESTADOS);
     } catch (error) {
       console.error('Error loading estados:', error);
+      setEstados(DEFAULT_ESTADOS);
       toast({
-        title: "Erro",
-        description: "Erro ao carregar estados",
-        variant: "destructive",
+        title: "Estados carregados localmente",
+        description: "A lista principal não respondeu, mas o cadastro continua disponível.",
       });
     }
   };
@@ -131,9 +134,10 @@ const CompanyList: React.FC = () => {
       setEditingCompany(null);
     } catch (error) {
       console.error('Error saving company:', error);
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
       toast({
         title: "Erro",
-        description: "Erro ao salvar empresa",
+        description: `Erro ao salvar empresa: ${message}`,
         variant: "destructive",
       });
     }
@@ -254,7 +258,7 @@ const CompanyList: React.FC = () => {
                 <div className="space-y-2">
                   <Label htmlFor="estado">Estado *</Label>
                   <Select value={formData.estado} onValueChange={(value) => setFormData({...formData, estado: value})}>
-                    <SelectTrigger>
+                    <SelectTrigger id="estado" aria-label="Estado">
                       <SelectValue placeholder="Selecione um estado" />
                     </SelectTrigger>
                     <SelectContent>
