@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Filter, X } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAllRows } from '@/utils/fetchAllRows';
 
@@ -197,10 +197,6 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ filters, onFiltersC
         </div>
 
         <div className="flex gap-2 pt-4">
-          <Button onClick={() => onFiltersChange({ ...filters })} className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Aplicar Filtros
-          </Button>
           <Button variant="outline" onClick={handleClearFilters} className="flex items-center gap-2">
             <X className="h-4 w-4" />
             Limpar Filtros

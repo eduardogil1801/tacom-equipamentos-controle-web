@@ -202,8 +202,6 @@ const EquipmentList: React.FC = () => {
   const getStatusBadge = (equipment: Equipment) => {
     const status = equipment.status || 'disponivel';
     
-    console.log('Status do equipamento:', equipment.numero_serie, 'Status:', status);
-    
     switch (status) {
       case 'disponivel':
         return <Badge className="bg-green-500 text-white hover:bg-green-600">Disponível</Badge>;
@@ -290,6 +288,17 @@ const EquipmentList: React.FC = () => {
     });
   }, [filteredEquipments, sortField, sortDirection]);
 
+  const tableFilterKey = [
+    filters.searchTerm,
+    filters.selectedCompany,
+    filters.selectedStatus,
+    filters.selectedType,
+    filters.selectedModel,
+    filters.selectedState,
+    sortField || '',
+    sortDirection,
+  ].join('|');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -339,7 +348,7 @@ const EquipmentList: React.FC = () => {
         onClearFilters={handleClearFilters}
       />
 
-      <Card>
+      <Card key={tableFilterKey}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Equipamentos Cadastrados ({sortedEquipments.length})</CardTitle>
@@ -395,9 +404,9 @@ const EquipmentList: React.FC = () => {
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody key={tableFilterKey}>
               {sortedEquipments.map((equipment) => (
-                <TableRow key={equipment.id}>
+                <TableRow key={`${tableFilterKey}:${equipment.id}`}>
                   <TableCell className="font-medium">{equipment.numero_serie}</TableCell>
                   <TableCell>{equipment.tipo}</TableCell>
                   <TableCell>{equipment.modelo || '-'}</TableCell>
