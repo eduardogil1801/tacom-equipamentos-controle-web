@@ -254,6 +254,25 @@ const InventoryReport = () => {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Estado (UF)</label>
+              <Select
+                value={filters.estado || 'all'}
+                onValueChange={(value) => handleFilterChange('estado', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {estados.map((e) => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Número de Série</label>
               <Input
                 placeholder="Buscar por nº de série"
