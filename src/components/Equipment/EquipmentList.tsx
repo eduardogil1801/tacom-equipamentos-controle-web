@@ -46,9 +46,18 @@ interface FilterValues {
   selectedState: string;
 }
 
+const EMPTY_FILTERS: FilterValues = {
+  searchTerm: '',
+  selectedCompany: '',
+  selectedStatus: '',
+  selectedType: '',
+  selectedModel: '',
+  selectedState: '',
+};
+
 const EquipmentList: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
-  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
