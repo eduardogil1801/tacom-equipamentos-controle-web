@@ -9,6 +9,7 @@ import { Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -21,6 +22,7 @@ interface Equipment {
   estado: string;
   empresas?: {
     name: string;
+    estado?: string | null;
   } | null;
 }
 
@@ -35,12 +37,15 @@ const InventoryReport = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [tipos, setTipos] = useState<string[]>([]);
+  const [estados, setEstados] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     operadora: '',
     status: '',
     tipo: '',
+    estado: '',
     numero_serie: ''
   });
+
 
   useEffect(() => {
     fetchData();
