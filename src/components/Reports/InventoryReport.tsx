@@ -57,31 +57,47 @@ const InventoryReport = () => {
 
   const fetchData = async () => {
     try {
-      // Buscar equipamentos com join das empresas
-      const { data: equipmentData, error: equipmentError } = await supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas(name)
-        `)
-        .order('data_entrada', { ascending: false });
-
-      if (equipmentError) throw equipmentError;
+      // Buscar equipamentos com join das empresas (paginado — limite de 1000 linhas do Supabase)
+      const equipmentData = await fetchAllRows<Equipment>((from, to) =>
+        supabase
+          .from('equipamentos')
+          .select(`
+            *,
+            empresas(name, estado)
+          `)
+          .order('data_entrada', { ascending: false })
+          .range(from, to) as any
+      );
 
       // Buscar empresas
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
-        .select('id, name')
+        .select('id, name, estado')
         .order('name');
 
       if (companyError) throw companyError;
 
-      setEquipments((equipmentData || []) as Equipment[]);
+      // Estados cadastrados
+      const { data: estadosData } = await supabase
+        .from('estados')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      setEquipments(equipmentData);
       setCompanies(companyData || []);
-      const uniqueTipos = Array.from(
-        new Set(((equipmentData || []) as Equipment[]).map(e => e.tipo).filter(Boolean))
-      ).sort();
-      setTipos(uniqueTipos);
+      setTipos(Array.from(new Set(equipmentData.map(e => e.tipo).filter(Boolean))).sort());
+      setEstados(
+        Array.from(
+          new Set(
+            [
+              ...(estadosData?.map(e => e.nome) || []),
+              ...(companyData?.map(c => c.estado) || []),
+              ...equipmentData.map(e => getEquipmentEstado(e)),
+            ].filter(Boolean) as string[]
+          )
+        ).sort()
+      );
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast({
@@ -109,6 +125,10 @@ const InventoryReport = () => {
       filtered = filtered.filter(eq => eq.tipo === filters.tipo);
     }
 
+    if (filters.estado) {
+      filtered = filtered.filter(eq => getEquipmentEstado(eq) === filters.estado);
+    }
+
     if (filters.numero_serie) {
       filtered = filtered.filter(eq => 
         eq.numero_serie.toLowerCase().includes(filters.numero_serie.toLowerCase())
@@ -130,9 +150,11 @@ const InventoryReport = () => {
       operadora: '',
       status: '',
       tipo: '',
+      estado: '',
       numero_serie: ''
     });
   };
+
 
   const buildExport = () => ({
     title: 'Relatório de Inventário',
