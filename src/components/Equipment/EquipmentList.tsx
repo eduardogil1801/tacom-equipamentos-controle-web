@@ -290,6 +290,17 @@ const EquipmentList: React.FC = () => {
     });
   }, [filteredEquipments, sortField, sortDirection]);
 
+  const tableFilterKey = [
+    filters.searchTerm,
+    filters.selectedCompany,
+    filters.selectedStatus,
+    filters.selectedType,
+    filters.selectedModel,
+    filters.selectedState,
+    sortField || '',
+    sortDirection,
+  ].join('|');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -347,7 +358,7 @@ const EquipmentList: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <Table key={tableFilterKey}>
             <TableHeader>
               <TableRow>
                 <TableHead 
