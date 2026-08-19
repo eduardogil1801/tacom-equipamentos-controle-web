@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -19,8 +20,10 @@ interface Equipment {
   status?: string;
   empresas: {
     name: string;
+    estado?: string | null;
   };
 }
+
 
 const formatStatus = (s?: string) =>
   s ? s.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : '-';
@@ -45,7 +48,7 @@ const InventoryStockReport = () => {
     'danificado'
   ];
 
-  const states = ['Rio Grande do Sul', 'Santa Catarina'];
+  const [states, setStates] = useState<string[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -58,18 +61,34 @@ const InventoryStockReport = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const { data: equipmentData, error: equipmentError } = await supabase
-        .from('equipamentos')
-        .select(`*, empresas (name)`);
-      if (equipmentError) throw equipmentError;
+      const equipmentData = await fetchAllRows<Equipment>((from, to) =>
+        supabase.from('equipamentos').select(`*, empresas (name, estado)`).range(from, to) as any
+      );
 
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
-        .select('id, name');
+        .select('id, name, estado');
       if (companyError) throw companyError;
 
-      setEquipments(equipmentData || []);
+      const { data: estadosData } = await supabase
+        .from('estados')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      setEquipments(equipmentData);
       setCompanies(companyData || []);
+      setStates(
+        Array.from(
+          new Set(
+            [
+              ...(estadosData?.map(e => e.nome) || []),
+              ...(companyData?.map(c => c.estado) || []),
+              ...equipmentData.map(e => getEquipmentEstado(e)),
+            ].filter(Boolean) as string[]
+          )
+        ).sort()
+      );
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -86,7 +105,8 @@ const InventoryStockReport = () => {
     let filtered = [...equipments];
     if (selectedCompany !== 'all') filtered = filtered.filter(eq => eq.empresas?.name === selectedCompany);
     if (selectedStatus !== 'all') filtered = filtered.filter(eq => eq.status === selectedStatus);
-    if (selectedState !== 'all') filtered = filtered.filter(eq => eq.estado === selectedState);
+    if (selectedState !== 'all') filtered = filtered.filter(eq => getEquipmentEstado(eq) === selectedState);
+
     if (searchTerm.trim()) {
       const t = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(
@@ -122,7 +142,7 @@ const InventoryStockReport = () => {
       eq.tipo || '-',
       eq.modelo || '-',
       eq.empresas?.name || '-',
-      eq.estado || 'Não informado',
+      getEquipmentEstado(eq) || 'Não informado',
       formatStatus(eq.status),
       eq.data_entrada ? new Date(eq.data_entrada).toLocaleDateString('pt-BR') : '-',
       eq.data_saida ? new Date(eq.data_saida).toLocaleDateString('pt-BR') : '-',
@@ -244,7 +264,7 @@ const InventoryStockReport = () => {
                     <td className="border border-gray-300 p-2">{equipment.modelo || '-'}</td>
                     <td className="border border-gray-300 p-2">{equipment.empresas?.name}</td>
                     <td className="border border-gray-300 p-2">
-                      {equipment.estado || <span className="text-muted-foreground italic">Não informado</span>}
+                      {getEquipmentEstado(equipment) || <span className="text-muted-foreground italic">Não informado</span>}
                     </td>
                     <td className="border border-gray-300 p-2">
                       <span className={`px-2 py-1 rounded text-xs ${

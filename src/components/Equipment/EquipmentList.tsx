@@ -13,6 +13,8 @@ import { toast } from '@/hooks/use-toast';
 import EquipmentForm from './EquipmentForm';
 import EquipmentFilters from './EquipmentFilters';
 import BulkImportDialog from './BulkImportDialog';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
+
 
 interface Equipment {
   id: string;
@@ -73,21 +75,24 @@ const EquipmentList: React.FC = () => {
       console.log('Companies loaded in equipment list:', companiesData);
       setCompanies(companiesData || []);
 
-      // Load equipments with company data
-      const { data: equipmentsData, error: equipmentsError } = await supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas (
-            name,
-            estado
-          )
-        `)
-        .order('at_criado', { ascending: false });
+      // Load equipments with company data (paginado — Supabase limita 1000 linhas por consulta)
+      const equipmentsData = await fetchAllRows<Equipment>((from, to) =>
+        supabase
+          .from('equipamentos')
+          .select(`
+            *,
+            empresas (
+              name,
+              estado
+            )
+          `)
+          .order('at_criado', { ascending: false })
+          .range(from, to) as any
+      );
 
-      if (equipmentsError) throw equipmentsError;
-      setEquipments(equipmentsData || []);
-      setFilteredEquipments(equipmentsData || []);
+      setEquipments(equipmentsData);
+      setFilteredEquipments(equipmentsData);
+
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -138,10 +143,11 @@ const EquipmentList: React.FC = () => {
       filtered = filtered.filter(eq => eq.modelo === filters.selectedModel);
     }
 
-    // State filter
+    // State filter (usa o estado da empresa, com fallback no estado do equipamento)
     if (filters.selectedState && filters.selectedState !== 'all') {
-      filtered = filtered.filter(eq => eq.estado === filters.selectedState);
+      filtered = filtered.filter(eq => getEquipmentEstado(eq) === filters.selectedState);
     }
+
 
     setFilteredEquipments(filtered);
   };

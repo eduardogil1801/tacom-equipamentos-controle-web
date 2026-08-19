@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, Filter, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/utils/fetchAllRows';
+
 
 interface EquipmentFiltersProps {
   onFiltersChange: (filters: FilterValues) => void;
@@ -45,27 +47,35 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
 
   const loadFilterOptions = async () => {
     try {
-      // Load companies
+      // Load companies (com estado)
       const { data: companiesData, error: companiesError } = await supabase
         .from('empresas')
-        .select('id, name')
+        .select('id, name, estado')
         .order('name');
 
       if (companiesError) throw companiesError;
-      console.log('Companies loaded in filters:', companiesData);
       setCompanies(companiesData || []);
 
-      // Load equipment data for filter options
-      const { data: equipmentsData, error: equipmentsError } = await supabase
-        .from('equipamentos')
-        .select('tipo, modelo, estado');
+      // Load equipment data for filter options (paginado)
+      const equipmentsData = await fetchAllRows<{ tipo: string; modelo: string | null; estado: string | null }>(
+        (from, to) =>
+          supabase.from('equipamentos').select('tipo, modelo, estado').range(from, to) as any
+      );
 
-      if (equipmentsError) throw equipmentsError;
+      // Estados cadastrados no sistema
+      const { data: estadosData } = await supabase
+        .from('estados')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
 
-      // Extract unique values for filters
-      const types = [...new Set(equipmentsData?.map(eq => eq.tipo).filter(Boolean) || [])];
-      const models = [...new Set(equipmentsData?.map(eq => eq.modelo).filter(Boolean) || [])];
-      const states = [...new Set(equipmentsData?.map(eq => eq.estado).filter(Boolean) || [])];
+      const types = [...new Set(equipmentsData.map(eq => eq.tipo).filter(Boolean))] as string[];
+      const models = [...new Set(equipmentsData.map(eq => eq.modelo).filter(Boolean))] as string[];
+      const states = [...new Set([
+        ...(estadosData?.map(e => e.nome) || []),
+        ...(companiesData?.map(c => c.estado) || []),
+        ...equipmentsData.map(eq => eq.estado),
+      ].filter(Boolean))] as string[];
 
       setEquipmentTypes(types.sort());
       setEquipmentModels(models.sort());
@@ -74,6 +84,7 @@ const EquipmentFilters: React.FC<EquipmentFiltersProps> = ({ onFiltersChange, on
       console.error('Error loading filter options:', error);
     }
   };
+
 
   const handleApplyFilters = () => {
     const filters: FilterValues = {

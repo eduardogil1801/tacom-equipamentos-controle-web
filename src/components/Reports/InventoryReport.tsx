@@ -9,6 +9,7 @@ import { Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import ReportExportBar from './ReportExportBar';
+import { fetchAllRows, getEquipmentEstado } from '@/utils/fetchAllRows';
 
 interface Equipment {
   id: string;
@@ -21,6 +22,7 @@ interface Equipment {
   estado: string;
   empresas?: {
     name: string;
+    estado?: string | null;
   } | null;
 }
 
@@ -35,12 +37,15 @@ const InventoryReport = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [tipos, setTipos] = useState<string[]>([]);
+  const [estados, setEstados] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     operadora: '',
     status: '',
     tipo: '',
+    estado: '',
     numero_serie: ''
   });
+
 
   useEffect(() => {
     fetchData();
@@ -52,31 +57,47 @@ const InventoryReport = () => {
 
   const fetchData = async () => {
     try {
-      // Buscar equipamentos com join das empresas
-      const { data: equipmentData, error: equipmentError } = await supabase
-        .from('equipamentos')
-        .select(`
-          *,
-          empresas(name)
-        `)
-        .order('data_entrada', { ascending: false });
-
-      if (equipmentError) throw equipmentError;
+      // Buscar equipamentos com join das empresas (paginado — limite de 1000 linhas do Supabase)
+      const equipmentData = await fetchAllRows<Equipment>((from, to) =>
+        supabase
+          .from('equipamentos')
+          .select(`
+            *,
+            empresas(name, estado)
+          `)
+          .order('data_entrada', { ascending: false })
+          .range(from, to) as any
+      );
 
       // Buscar empresas
       const { data: companyData, error: companyError } = await supabase
         .from('empresas')
-        .select('id, name')
+        .select('id, name, estado')
         .order('name');
 
       if (companyError) throw companyError;
 
-      setEquipments((equipmentData || []) as Equipment[]);
+      // Estados cadastrados
+      const { data: estadosData } = await supabase
+        .from('estados')
+        .select('nome')
+        .eq('ativo', true)
+        .order('nome');
+
+      setEquipments(equipmentData);
       setCompanies(companyData || []);
-      const uniqueTipos = Array.from(
-        new Set(((equipmentData || []) as Equipment[]).map(e => e.tipo).filter(Boolean))
-      ).sort();
-      setTipos(uniqueTipos);
+      setTipos(Array.from(new Set(equipmentData.map(e => e.tipo).filter(Boolean))).sort());
+      setEstados(
+        Array.from(
+          new Set(
+            [
+              ...(estadosData?.map(e => e.nome) || []),
+              ...(companyData?.map(c => c.estado) || []),
+              ...equipmentData.map(e => getEquipmentEstado(e)),
+            ].filter(Boolean) as string[]
+          )
+        ).sort()
+      );
     } catch (error: any) {
       console.error('Erro ao buscar dados:', error);
       toast({
@@ -104,6 +125,10 @@ const InventoryReport = () => {
       filtered = filtered.filter(eq => eq.tipo === filters.tipo);
     }
 
+    if (filters.estado) {
+      filtered = filtered.filter(eq => getEquipmentEstado(eq) === filters.estado);
+    }
+
     if (filters.numero_serie) {
       filtered = filtered.filter(eq => 
         eq.numero_serie.toLowerCase().includes(filters.numero_serie.toLowerCase())
@@ -125,9 +150,11 @@ const InventoryReport = () => {
       operadora: '',
       status: '',
       tipo: '',
+      estado: '',
       numero_serie: ''
     });
   };
+
 
   const buildExport = () => ({
     title: 'Relatório de Inventário',
@@ -139,7 +166,7 @@ const InventoryReport = () => {
       eq.numero_serie || '-',
       eq.empresas?.name || '-',
       eq.status || '-',
-      eq.estado || 'Não informado',
+      getEquipmentEstado(eq) || 'Não informado',
       eq.data_entrada ? new Date(eq.data_entrada).toLocaleDateString('pt-BR') : '-',
       eq.data_saida ? new Date(eq.data_saida).toLocaleDateString('pt-BR') : '-',
     ]),
@@ -225,6 +252,25 @@ const InventoryReport = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Estado (UF)</label>
+              <Select
+                value={filters.estado || 'all'}
+                onValueChange={(value) => handleFilterChange('estado', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {estados.map((e) => (
+                    <SelectItem key={e} value={e}>{e}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Número de Série</label>
@@ -317,7 +363,7 @@ const InventoryReport = () => {
                          'Defeito'}
                       </span>
                     </TableCell>
-                    <TableCell>{equipment.estado || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
+                    <TableCell>{getEquipmentEstado(equipment) || <span className="text-muted-foreground italic">Não informado</span>}</TableCell>
                     <TableCell>
                       {equipment.data_entrada ? new Date(equipment.data_entrada).toLocaleDateString('pt-BR') : '-'}
                     </TableCell>
