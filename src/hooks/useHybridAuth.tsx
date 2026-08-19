@@ -34,16 +34,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const testConnection = async (): Promise<boolean> => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos timeout
-    
-    const { error } = await supabase
-      .from('usuarios')
-      .select('count')
-      .limit(1)
-      .abortSignal(controller.signal);
-    
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    // Endpoint público (não depende de RLS/permissões de tabela)
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/health`,
+      {
+        headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string },
+        signal: controller.signal,
+      }
+    );
+
     clearTimeout(timeoutId);
-    return !error;
+    return res.ok;
   } catch (error) {
     console.log('🔍 Teste de conexão falhou:', error);
     return false;
@@ -184,15 +187,27 @@ export const HybridAuthProvider = ({ children }: { children: React.ReactNode }) 
   const loadUser = async () => {
     try {
       console.log('👤 Carregando sessão do usuário...');
-      
+
       const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        setUser(userData);
-        console.log(`✅ Sessão restaurada: ${userData.name} ${userData.surname} (${userData.userType})`);
-      } else {
+      if (!savedUser) {
         console.log('ℹ️ Nenhuma sessão salva');
+        return;
       }
+
+      const userData = JSON.parse(savedUser);
+
+      // Sessão local só vale se houver sessão real no Supabase (RLS depende disso)
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        console.log('⚠️ Sessão do Supabase ausente - é necessário entrar novamente');
+        localStorage.removeItem('currentUser');
+        setUser(null);
+        return;
+      }
+
+      setUser(userData);
+      console.log(`✅ Sessão restaurada: ${userData.name} ${userData.surname} (${userData.userType})`);
     } catch (error) {
       console.error('❌ Erro ao carregar sessão:', error);
     } finally {
