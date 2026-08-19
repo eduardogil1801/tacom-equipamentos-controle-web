@@ -46,9 +46,18 @@ interface FilterValues {
   selectedState: string;
 }
 
+const EMPTY_FILTERS: FilterValues = {
+  searchTerm: '',
+  selectedCompany: '',
+  selectedStatus: '',
+  selectedType: '',
+  selectedModel: '',
+  selectedState: '',
+};
+
 const EquipmentList: React.FC = () => {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
-  const [filteredEquipments, setFilteredEquipments] = useState<Equipment[]>([]);
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -91,7 +100,6 @@ const EquipmentList: React.FC = () => {
       );
 
       setEquipments(equipmentsData);
-      setFilteredEquipments(equipmentsData);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -105,24 +113,26 @@ const EquipmentList: React.FC = () => {
     }
   };
 
-  const handleFiltersChange = (filters: FilterValues) => {
+  const handleFiltersChange = (newFilters: FilterValues) => setFilters(newFilters);
+
+  const handleClearFilters = () => setFilters(EMPTY_FILTERS);
+
+  const filteredEquipments = useMemo(() => {
     let filtered = [...equipments];
 
-    // Search term filter
     if (filters.searchTerm) {
-      filtered = filtered.filter(eq => 
-        eq.numero_serie.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        eq.tipo.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        (eq.modelo && eq.modelo.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+      const term = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(eq =>
+        eq.numero_serie.toLowerCase().includes(term) ||
+        eq.tipo.toLowerCase().includes(term) ||
+        (eq.modelo && eq.modelo.toLowerCase().includes(term))
       );
     }
 
-    // Company filter
     if (filters.selectedCompany && filters.selectedCompany !== 'all') {
       filtered = filtered.filter(eq => eq.id_empresa === filters.selectedCompany);
     }
 
-    // Status filter
     if (filters.selectedStatus && filters.selectedStatus !== 'all') {
       if (filters.selectedStatus === 'disponivel') {
         filtered = filtered.filter(eq => !eq.data_saida);
@@ -133,28 +143,21 @@ const EquipmentList: React.FC = () => {
       }
     }
 
-    // Type filter
     if (filters.selectedType && filters.selectedType !== 'all') {
       filtered = filtered.filter(eq => eq.tipo === filters.selectedType);
     }
 
-    // Model filter
     if (filters.selectedModel && filters.selectedModel !== 'all') {
       filtered = filtered.filter(eq => eq.modelo === filters.selectedModel);
     }
 
-    // State filter (usa o estado da empresa, com fallback no estado do equipamento)
+    // Estado: usa o estado da empresa, com fallback no estado do equipamento
     if (filters.selectedState && filters.selectedState !== 'all') {
       filtered = filtered.filter(eq => matchesEstado(eq, filters.selectedState));
     }
 
-
-    setFilteredEquipments(filtered);
-  };
-
-  const handleClearFilters = () => {
-    setFilteredEquipments(equipments);
-  };
+    return filtered;
+  }, [equipments, filters]);
 
   const handleAddNew = () => {
     console.log('handleAddNew called');
@@ -398,7 +401,7 @@ const EquipmentList: React.FC = () => {
                   <TableCell>{equipment.tipo}</TableCell>
                   <TableCell>{equipment.modelo || '-'}</TableCell>
                   <TableCell>{equipment.empresas?.name || 'N/A'}</TableCell>
-                  <TableCell>{equipment.empresas?.estado || equipment.estado || '-'}</TableCell>
+                  <TableCell>{getEquipmentEstado(equipment) || '-'}</TableCell>
                   <TableCell>{getStatusBadge(equipment)}</TableCell>
                   <TableCell>
                     {equipment.data_entrada ? new Date(equipment.data_entrada + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
