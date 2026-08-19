@@ -46,8 +46,10 @@ const EquipmentDistributionReport: React.FC = () => {
   const [equipmentData, setEquipmentData] = useState<EquipmentData[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState<string>('all');
 
   useEffect(() => {
     loadData();
@@ -57,24 +59,30 @@ const EquipmentDistributionReport: React.FC = () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('equipamentos')
-        .select('tipo, modelo, status');
+      const data = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from('equipamentos')
+          .select('tipo, modelo, status, estado, empresas(estado)')
+          .range(from, to) as any
+      );
 
-      if (error) throw error;
+      // Extrair tipos, status e estados únicos
+      const types = [...new Set(data.map(eq => `${eq.tipo}${eq.modelo ? ` ${eq.modelo}` : ''}`))].sort();
+      const statuses = [...new Set(data.map(eq => eq.status).filter(Boolean))].sort() as string[];
+      const states = [...new Set(data.map(eq => getEquipmentEstado(eq)).filter(Boolean))].sort() as string[];
 
-      // Extrair tipos e status únicos
-      const types = [...new Set(data?.map(eq => `${eq.tipo}${eq.modelo ? ` ${eq.modelo}` : ''}`) || [])].sort();
-      const statuses = [...new Set(data?.map(eq => eq.status).filter(Boolean) || [])].sort();
-      
       setAvailableTypes(types);
       setAvailableStatuses(statuses);
+      setAvailableStates(states);
 
       // Processar dados para contagem
-      const processedData = data?.reduce((acc: EquipmentData[], equipment) => {
+      const processedData = data.reduce((acc: EquipmentData[], equipment) => {
         const key = `${equipment.tipo}${equipment.modelo ? ` ${equipment.modelo}` : ''}`;
-        const existing = acc.find(item => item.tipo === key && item.status === equipment.status);
-        
+        const estado = getEquipmentEstado(equipment) || 'Não informado';
+        const existing = acc.find(
+          item => item.tipo === key && item.status === equipment.status && item.estado === estado
+        );
+
         if (existing) {
           existing.count += 1;
         } else {
@@ -82,11 +90,12 @@ const EquipmentDistributionReport: React.FC = () => {
             tipo: key,
             modelo: equipment.modelo,
             status: equipment.status || 'N/A',
+            estado,
             count: 1
           });
         }
         return acc;
-      }, []) || [];
+      }, []);
 
       setEquipmentData(processedData);
     } catch (error) {
@@ -112,9 +121,15 @@ const EquipmentDistributionReport: React.FC = () => {
     if (selectedStatuses.length > 0) {
       filtered = filtered.filter(item => selectedStatuses.includes(item.status));
     }
+
+    if (selectedState !== 'all') {
+      filtered = filtered.filter(item => item.estado === selectedState);
+    }
     
     return filtered;
-  }, [equipmentData, selectedTypes, selectedStatuses]);
+  }, [equipmentData, selectedTypes, selectedStatuses, selectedState]);
+
+
 
   const exportToCSV = () => {
     const headers = ['Tipo/Modelo', 'Status', 'Quantidade'];
