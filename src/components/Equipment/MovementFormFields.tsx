@@ -105,9 +105,19 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
     !movementData.defeito_encontrado_id &&
     !movementData.outro_defeito_id;
 
+  const INTERNAL_TACOM_NAMES = ['TACOM SISTEMAS POA', 'TACOM PROJETOS SC'];
+
+  const internalCompanies = useMemo(
+    () => companies.filter(c => INTERNAL_TACOM_NAMES.includes(c.name)),
+    [companies]
+  );
+
   const getDestinationCompanies = () => {
     if (movementData.tipo_movimento === 'envio_manutencao') {
       return companies.filter(c => c.name === 'TACOM PROJETOS (CTG)');
+    }
+    if (movementData.tipo_movimento === 'movimentacao_interna') {
+      return internalCompanies.length > 0 ? internalCompanies : companies;
     }
     return companies;
   };
@@ -121,6 +131,12 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
     return companies;
   };
 
+  // Nome da empresa interna selecionada (para filtrar equipamentos)
+  const selectedInternalCompanyName = useMemo(() => {
+    if (movementData.tipo_movimento !== 'movimentacao_interna') return undefined;
+    return companies.find(c => c.id === movementData.empresa_destino)?.name;
+  }, [movementData.tipo_movimento, movementData.empresa_destino, companies]);
+
   // Obter label do item selecionado
   const getSelectedLabel = (items: MaintenanceType[], selectedId: string | undefined) => {
     if (!selectedId) return '';
@@ -130,10 +146,18 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 
   React.useEffect(() => {
     if (movementData.tipo_movimento === 'movimentacao_interna') {
-      const tacomCompany = companies.find(c => c.name === 'TACOM SISTEMAS POA');
-      if (tacomCompany) {
-        onInputChange('empresa_destino', tacomCompany.id);
-        onInputChange('empresa_origem', tacomCompany.name);
+      const current = companies.find(c => c.id === movementData.empresa_destino);
+      if (current && INTERNAL_TACOM_NAMES.includes(current.name)) {
+        // Mantém a escolha do usuário, apenas espelha a origem
+        if (movementData.empresa_origem !== current.name) {
+          onInputChange('empresa_origem', current.name);
+        }
+        return;
+      }
+      const defaultCompany = companies.find(c => c.name === 'TACOM SISTEMAS POA') || internalCompanies[0];
+      if (defaultCompany) {
+        onInputChange('empresa_destino', defaultCompany.id);
+        onInputChange('empresa_origem', defaultCompany.name);
       }
     } else if (movementData.tipo_movimento === 'envio_manutencao') {
       const tacomCtgCompany = companies.find(c => c.name === 'TACOM PROJETOS (CTG)');
@@ -141,7 +165,8 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
         onInputChange('empresa_destino', tacomCtgCompany.id);
       }
     }
-  }, [movementData.tipo_movimento, companies, onInputChange]);
+  }, [movementData.tipo_movimento, movementData.empresa_destino, movementData.empresa_origem, companies, internalCompanies, onInputChange]);
+
 
   return (
     <>
