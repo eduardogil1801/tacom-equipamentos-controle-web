@@ -239,9 +239,15 @@ export const useMovementForm = () => {
         console.log(`\n=== PROCESSANDO EQUIPAMENTO ${equipment.numero_serie} ===`);
 
         const destCompany = destCompanyGlobal;
-        const origemCompany = equipment.id_empresa
-          ? companies.find(c => c.id === equipment.id_empresa)
+        const manualOrigem = movementData.empresa_origem
+          ? companies.find(
+              c => c.name === movementData.empresa_origem || c.id === movementData.empresa_origem
+            )
           : undefined;
+        const origemCompany = manualOrigem || (equipment.id_empresa
+          ? companies.find(c => c.id === equipment.id_empresa)
+          : undefined);
+
 
         const movementInsertData: any = {
           id_equipamento: equipment.id,
