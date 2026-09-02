@@ -123,10 +123,11 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   };
 
   const getOriginCompanies = () => {
-    if (movementData.tipo_movimento === 'envio_manutencao') {
-      return companies.filter(c => 
-        c.name === 'TACOM SISTEMAS POA' || c.name === 'TACOM PROJETOS SC'
-      );
+    if (
+      movementData.tipo_movimento === 'envio_manutencao' ||
+      movementData.tipo_movimento === 'movimentacao_interna'
+    ) {
+      return companies.filter(c => INTERNAL_TACOM_NAMES.includes(c.name));
     }
     return companies;
   };
@@ -134,8 +135,9 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
   // Nome da empresa interna selecionada (para filtrar equipamentos)
   const selectedInternalCompanyName = useMemo(() => {
     if (movementData.tipo_movimento !== 'movimentacao_interna') return undefined;
-    return companies.find(c => c.id === movementData.empresa_destino)?.name;
-  }, [movementData.tipo_movimento, movementData.empresa_destino, companies]);
+    return movementData.empresa_origem || undefined;
+  }, [movementData.tipo_movimento, movementData.empresa_origem]);
+
 
   // Obter label do item selecionado
   const getSelectedLabel = (items: MaintenanceType[], selectedId: string | undefined) => {
