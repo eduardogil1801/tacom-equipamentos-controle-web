@@ -254,7 +254,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             <Select
               value={movementData.empresa_destino}
               onValueChange={(value) => onInputChange('empresa_destino', value)}
-              disabled={movementData.tipo_movimento === 'movimentacao_interna' || movementData.tipo_movimento === 'envio_manutencao'}
+              disabled={movementData.tipo_movimento === 'envio_manutencao'}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a empresa destino" />
