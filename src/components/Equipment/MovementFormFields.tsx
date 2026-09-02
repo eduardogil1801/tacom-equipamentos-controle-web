@@ -217,7 +217,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
             onEquipmentSelect={onEquipmentSelect}
             onRemoveEquipment={onRemoveEquipment}
             equipmentType={movementData.tipo_equipamento}
-            companyFilter={movementData.tipo_movimento === 'movimentacao_interna' ? 'TACOM SISTEMAS POA' : undefined}
+            companyFilter={selectedInternalCompanyName}
           />
 
           <div>
