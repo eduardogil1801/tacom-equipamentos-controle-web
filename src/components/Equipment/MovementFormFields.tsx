@@ -219,8 +219,10 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 
           <div>
             <Label htmlFor="empresa_origem">Empresa Origem</Label>
-            {movementData.tipo_movimento === 'envio_manutencao' ? (
+            {movementData.tipo_movimento === 'envio_manutencao' ||
+            movementData.tipo_movimento === 'movimentacao_interna' ? (
               <Select
+
                 value={movementData.empresa_origem}
                 onValueChange={(value) => onInputChange('empresa_origem', value)}
               >
