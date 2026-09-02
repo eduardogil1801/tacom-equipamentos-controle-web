@@ -165,7 +165,7 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
         onInputChange('empresa_destino', tacomCtgCompany.id);
       }
     }
-  }, [movementData.tipo_movimento, movementData.empresa_destino, companies, internalCompanies, onInputChange]);
+  }, [movementData.tipo_movimento, movementData.empresa_destino, movementData.empresa_origem, companies, internalCompanies, onInputChange]);
 
 
 
