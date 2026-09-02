@@ -148,14 +148,18 @@ const MovementFormFields: React.FC<MovementFormFieldsProps> = ({
 
   React.useEffect(() => {
     if (movementData.tipo_movimento === 'movimentacao_interna') {
+      if (!INTERNAL_TACOM_NAMES.includes(movementData.empresa_origem || '')) {
+        const defaultOrigin = companies.find(c => c.name === 'TACOM SISTEMAS POA') || internalCompanies[0];
+        if (defaultOrigin) onInputChange('empresa_origem', defaultOrigin.name);
+      }
       const current = companies.find(c => c.id === movementData.empresa_destino);
-      // Mantém a escolha do usuário; a origem continua vindo do equipamento
       if (current && INTERNAL_TACOM_NAMES.includes(current.name)) return;
       const defaultCompany = companies.find(c => c.name === 'TACOM SISTEMAS POA') || internalCompanies[0];
       if (defaultCompany) {
         onInputChange('empresa_destino', defaultCompany.id);
       }
     } else if (movementData.tipo_movimento === 'envio_manutencao') {
+
       const tacomCtgCompany = companies.find(c => c.name === 'TACOM PROJETOS (CTG)');
       if (tacomCtgCompany) {
         onInputChange('empresa_destino', tacomCtgCompany.id);
